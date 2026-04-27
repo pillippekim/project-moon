@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Moon - 작업일보 시스템</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; min-height: 100vh; }
+
+/* 상단 헤더 */
+.top-bar { background: white; border-bottom: 1px solid #e5e5e5; padding: 0 1.5rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+.logo { font-size: 16px; font-weight: 700; color: #111; letter-spacing: -0.3px; }
+.logo span { color: #2563eb; }
+.top-date { font-size: 13px; color: #888; }
+
+.container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+
+/* 환영 배너 */
+.welcome { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1.5rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+.welcome-text h2 { font-size: 20px; font-weight: 600; color: #111; margin-bottom: 4px; }
+.welcome-text p { font-size: 14px; color: #888; }
+.welcome-icon { font-size: 40px; }
+
+/* 섹션 타이틀 */
+.section-title { font-size: 13px; font-weight: 500; color: #888; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* 메뉴 그리드 */
+.menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+.menu-card { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1.25rem; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; text-decoration: none; display: block; }
+.menu-card:hover { border-color: #2563eb; box-shadow: 0 2px 8px rgba(37,99,235,0.08); }
+.menu-card.disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+.menu-icon { font-size: 24px; margin-bottom: 10px; }
+.menu-name { font-size: 15px; font-weight: 600; color: #111; margin-bottom: 4px; }
+.menu-desc { font-size: 12px; color: #888; line-height: 1.4; }
+.menu-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; margin-top: 8px; font-weight: 500; }
+.badge-ready { background: #f0fdf4; color: #16a34a; }
+.badge-soon { background: #f9f9f9; color: #aaa; }
+
+/* 관리자 메뉴 */
+.admin-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+.admin-card { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1.25rem; cursor: pointer; transition: border-color 0.15s; text-decoration: none; display: block; }
+.admin-card:hover { border-color: #16a34a; }
+.admin-card.disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+
+/* 하단 상태 */
+.status-bar { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1rem 1.25rem; display: flex; gap: 2rem; align-items: center; }
+.status-item { display: flex; align-items: center; gap: 8px; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; }
+.status-dot.green { background: #16a34a; }
+.status-dot.gray { background: #ddd; }
+.status-label { font-size: 13px; color: #888; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="logo">Project <span>Moon</span></div>
+  <div class="top-date" id="topDate"></div>
+</div>
+
+<div class="container">
+
+  <div class="welcome">
+    <div class="welcome-text">
+      <h2>작업일보 시스템</h2>
+      <p>공정별 작업일보 입력 및 데이터 관리 플랫폼</p>
+    </div>
+    <div class="welcome-icon">🏭</div>
+  </div>
+
+  <!-- 작업일보 입력 -->
+  <div class="section-title">작업일보 입력</div>
+  <div class="menu-grid">
+    <a href="packaging.html" class="menu-card">
+      <div class="menu-icon">📦</div>
+      <div class="menu-name">포장반</div>
+      <div class="menu-desc">포장 작업일보 입력</div>
+      <span class="menu-badge badge-ready">운영중</span>
+    </a>
+    <div class="menu-card disabled">
+      <div class="menu-icon">✂️</div>
+      <div class="menu-name">재단</div>
+      <div class="menu-desc">재단 작업일보 입력</div>
+      <span class="menu-badge badge-soon">준비중</span>
+    </div>
+    <div class="menu-card disabled">
+      <div class="menu-icon">🖌️</div>
+      <div class="menu-name">도포(약칠반)</div>
+      <div class="menu-desc">도포 작업일보 입력</div>
+      <span class="menu-badge badge-soon">준비중</span>
+    </div>
+    <div class="menu-card disabled">
+      <div class="menu-icon">🔍</div>
+      <div class="menu-name">검사</div>
+      <div class="menu-desc">검사 작업일보 입력</div>
+      <span class="menu-badge badge-soon">준비중</span>
+    </div>
+    <div class="menu-card disabled">
+      <div class="menu-icon">⚙️</div>
+      <div class="menu-name">쇼트</div>
+      <div class="menu-desc">쇼트 작업일보 입력</div>
+      <span class="menu-badge badge-soon">준비중</span>
+    </div>
+    <div class="menu-card disabled">
+      <div class="menu-icon">🏗️</div>
+      <div class="menu-name">성형</div>
+      <div class="menu-desc">성형 작업일보 입력</div>
+      <span class="menu-badge badge-soon">준비중</span>
+    </div>
+  </div>
+
+  <!-- 관리자 메뉴 -->
+  <div class="section-title">관리자</div>
+  <div class="admin-grid">
+    <a href="admin.html" class="admin-card">
+      <div class="menu-icon">📊</div>
+      <div class="menu-name">데이터 조회 및 추출</div>
+      <div class="menu-desc">공정별 데이터 조회, 필터링, 엑셀 다운로드</div>
+      <span class="menu-badge badge-ready">운영중</span>
+    </a>
+    <a href="master.html" class="admin-card">
+      <div class="menu-icon">🗂️</div>
+      <div class="menu-name">기준정보 관리</div>
+      <div class="menu-desc">사번/품번/품명, 작업자 목록 관리</div>
+      <span class="menu-badge badge-ready">운영중</span>
+    </a>
+    <div class="admin-card disabled">
+      <div class="menu-icon">📈</div>
+      <div class="menu-name">통합 대시보드</div>
+      <div class="menu-desc">전 공정 실시간 현황 및 집계</div>
+      <span class="menu-badge badge-soon">준비중</span>
+    </div>
+    <div class="admin-card disabled">
+      <div class="menu-icon">🔗</div>
+      <div class="menu-name">ERP 연동</div>
+      <div class="menu-desc">MES/ERP 데이터 연동 관리</div>
+      <span class="menu-badge badge-soon">준비중</span>
+    </div>
+  </div>
+
+  <!-- 상태바 -->
+  <div class="status-bar">
+    <div class="status-item">
+      <div class="status-dot green"></div>
+      <span class="status-label">DB 연결됨 (Supabase · Seoul)</span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot green"></div>
+      <span class="status-label">포장반 운영중</span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot gray"></div>
+      <span class="status-label">나머지 공정 준비중</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const d = new Date();
+  const days = ['일','월','화','수','목','금','토'];
+  document.getElementById('topDate').textContent =
+    d.getFullYear() + '년 ' + (d.getMonth()+1) + '월 ' + d.getDate() + '일 (' + days[d.getDay()] + ')';
+</script>
+</body>
+</html>

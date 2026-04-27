@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기준정보 관리 - Project Moon</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 1rem; }
+.app { max-width: 900px; margin: 0 auto; }
+.top-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
+.back-btn { font-size: 13px; color: #2563eb; background: none; border: none; cursor: pointer; font-family: inherit; padding: 0; }
+.back-btn:hover { text-decoration: underline; }
+.nav-sep { color: #ddd; }
+.nav-title { font-size: 13px; color: #888; }
+.card { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.card-title { font-size: 15px; font-weight: 600; color: #111; }
+.card-sub { font-size: 12px; color: #888; margin-top: 2px; }
+.btn-add { font-size: 13px; padding: 7px 16px; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; }
+.btn-add:hover { opacity: 0.9; }
+
+/* 입력 폼 */
+.form-row { display: grid; gap: 10px; margin-bottom: 1rem; padding: 1rem; background: #f9f9f9; border-radius: 8px; border: 1px solid #eee; }
+.form-grid-3 { grid-template-columns: 1fr 1fr 1fr auto; align-items: end; }
+.form-grid-2 { grid-template-columns: 1fr 1fr auto auto; align-items: end; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 12px; color: #888; }
+.form-input { font-size: 13px; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 10px; outline: none; font-family: inherit; color: #111; background: white; }
+.form-input:focus { border-color: #2563eb; }
+.form-select { font-size: 13px; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 10px; outline: none; font-family: inherit; color: #111; background: white; cursor: pointer; }
+.btn-save { font-size: 13px; padding: 8px 18px; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; white-space: nowrap; height: 36px; }
+.btn-cancel-form { font-size: 13px; padding: 8px 14px; border-radius: 8px; background: transparent; color: #888; border: 1px solid #ddd; cursor: pointer; font-family: inherit; height: 36px; }
+
+/* 테이블 */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { font-size: 12px; font-weight: 500; color: #888; padding: 8px 12px; background: #f9f9f9; border-bottom: 1px solid #eee; text-align: left; }
+td { padding: 9px 12px; border-bottom: 1px solid #f0f0f0; color: #111; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #fafafa; }
+.btn-del { font-size: 12px; padding: 4px 10px; border-radius: 6px; background: transparent; color: #e53e3e; border: 1px solid #fca5a5; cursor: pointer; font-family: inherit; }
+.btn-del:hover { background: #fff0f0; }
+.active-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+.active-y { background: #f0fdf4; color: #16a34a; }
+.active-n { background: #f9f9f9; color: #aaa; }
+.empty-row td { text-align: center; color: #aaa; padding: 1.5rem; }
+.toast { display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #111; color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; z-index: 999; }
+.toast.show { display: block; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="top-nav">
+    <button class="back-btn" onclick="location.href='index.html'">← 메인으로</button>
+    <span class="nav-sep">/</span>
+    <span class="nav-title">기준정보 관리</span>
+  </div>
+
+  <!-- 제품 기준정보 -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">제품 기준정보</div>
+        <div class="card-sub">사번 ↔ 고객 품번/품명 연동 관리</div>
+      </div>
+      <button class="btn-add" onclick="toggleForm('product')">+ 제품 추가</button>
+    </div>
+
+    <div class="form-row form-grid-3" id="productForm" style="display:none">
+      <div class="form-group">
+        <span class="form-label">사번 (필수)</span>
+        <input class="form-input" id="p_sabun" placeholder="예: 509040" />
+      </div>
+      <div class="form-group">
+        <span class="form-label">고객 품번</span>
+        <input class="form-input" id="p_partno" placeholder="예: 83479-3J000" />
+      </div>
+      <div class="form-group">
+        <span class="form-label">품명</span>
+        <input class="form-input" id="p_partname" placeholder="예: STOPPER-WDW REG" />
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn-cancel-form" onclick="toggleForm('product')">취소</button>
+        <button class="btn-save" onclick="saveProduct()">저장</button>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>사번</th>
+          <th>고객 품번</th>
+          <th>품명</th>
+          <th>등록일</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="productTable">
+        <tr class="empty-row"><td colspan="5">로딩 중...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 작업자 기준정보 -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">작업자 기준정보</div>
+        <div class="card-sub">공정별 작업자 목록 관리</div>
+      </div>
+      <button class="btn-add" onclick="toggleForm('worker')">+ 작업자 추가</button>
+    </div>
+
+    <div class="form-row form-grid-2" id="workerForm" style="display:none">
+      <div class="form-group">
+        <span class="form-label">이름 (필수)</span>
+        <input class="form-input" id="w_name" placeholder="예: 홍길동" />
+      </div>
+      <div class="form-group">
+        <span class="form-label">공정</span>
+        <select class="form-select" id="w_process">
+          <option value="포장">포장</option>
+          <option value="재단">재단</option>
+          <option value="도포">도포</option>
+          <option value="검사">검사</option>
+          <option value="쇼트">쇼트</option>
+          <option value="성형">성형</option>
+        </select>
+      </div>
+      <button class="btn-cancel-form" onclick="toggleForm('worker')">취소</button>
+      <button class="btn-save" onclick="saveWorker()">저장</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>이름</th>
+          <th>공정</th>
+          <th>상태</th>
+          <th>등록일</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="workerTable">
+        <tr class="empty-row"><td colspan="5">로딩 중...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://vpaixxlhzkwtgcllimvn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwYWl4eGxoemt3dGdjbGxpbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNzk4NjMsImV4cCI6MjA5MTk1NTg2M30.V8Bj0cMbM0E2TFhklYYa7TM-vO6Fi70ctACA7uUf4Ig';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function fmtDate(str) {
+  if (!str) return '-';
+  return str.slice(0, 10);
+}
+
+function toggleForm(type) {
+  const el = document.getElementById(type === 'product' ? 'productForm' : 'workerForm');
+  el.style.display = el.style.display === 'none' ? 'grid' : 'none';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// 제품 목록 로드
+async function loadProducts() {
+  const { data, error } = await db.from('products').select('*').order('sabun');
+  const tbody = document.getElementById('productTable');
+  if (error || !data.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">등록된 제품이 없습니다.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(r => `
+    <tr>
+      <td style="font-weight:500">${r.sabun}</td>
+      <td>${r.part_no || '-'}</td>
+      <td>${r.part_name || '-'}</td>
+      <td style="color:#aaa;font-size:12px">${fmtDate(r.created_at)}</td>
+      <td><button class="btn-del" onclick="deleteProduct(${r.id})">삭제</button></td>
+    </tr>
+  `).join('');
+}
+
+// 제품 저장
+async function saveProduct() {
+  const sabun = document.getElementById('p_sabun').value.trim();
+  const partNo = document.getElementById('p_partno').value.trim();
+  const partName = document.getElementById('p_partname').value.trim();
+  if (!sabun) { showToast('사번을 입력해주세요.'); return; }
+  const { error } = await db.from('products').insert({ sabun, part_no: partNo, part_name: partName });
+  if (error) { showToast('저장 실패: ' + error.message); return; }
+  document.getElementById('p_sabun').value = '';
+  document.getElementById('p_partno').value = '';
+  document.getElementById('p_partname').value = '';
+  toggleForm('product');
+  showToast('제품이 추가됐어요 ✓');
+  loadProducts();
+}
+
+// 제품 삭제
+async function deleteProduct(id) {
+  if (!confirm('삭제하시겠습니까?')) return;
+  const { error } = await db.from('products').delete().eq('id', id);
+  if (error) { showToast('삭제 실패: ' + error.message); return; }
+  showToast('삭제됐어요.');
+  loadProducts();
+}
+
+// 작업자 목록 로드
+async function loadWorkers() {
+  const { data, error } = await db.from('workers').select('*').order('process').order('name');
+  const tbody = document.getElementById('workerTable');
+  if (error || !data.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">등록된 작업자가 없습니다.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(r => `
+    <tr>
+      <td style="font-weight:500">${r.name}</td>
+      <td>${r.process}</td>
+      <td><span class="active-badge ${r.active ? 'active-y' : 'active-n'}">${r.active ? '재직중' : '퇴직'}</span></td>
+      <td style="color:#aaa;font-size:12px">${fmtDate(r.created_at)}</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn-del" style="color:#888;border-color:#ddd" onclick="toggleWorker(${r.id}, ${r.active})">${r.active ? '비활성화' : '활성화'}</button>
+        <button class="btn-del" onclick="deleteWorker(${r.id})">삭제</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// 작업자 저장
+async function saveWorker() {
+  const name = document.getElementById('w_name').value.trim();
+  const process = document.getElementById('w_process').value;
+  if (!name) { showToast('이름을 입력해주세요.'); return; }
+  const { error } = await db.from('workers').insert({ name, process });
+  if (error) { showToast('저장 실패: ' + error.message); return; }
+  document.getElementById('w_name').value = '';
+  toggleForm('worker');
+  showToast('작업자가 추가됐어요 ✓');
+  loadWorkers();
+}
+
+// 작업자 활성/비활성
+async function toggleWorker(id, current) {
+  const { error } = await db.from('workers').update({ active: !current }).eq('id', id);
+  if (error) { showToast('변경 실패'); return; }
+  showToast(current ? '비활성화됐어요.' : '활성화됐어요.');
+  loadWorkers();
+}
+
+// 작업자 삭제
+async function deleteWorker(id) {
+  if (!confirm('삭제하시겠습니까?')) return;
+  const { error } = await db.from('workers').delete().eq('id', id);
+  if (error) { showToast('삭제 실패: ' + error.message); return; }
+  showToast('삭제됐어요.');
+  loadWorkers();
+}
+
+loadProducts();
+loadWorkers();
+</script>
+</body>
+</html>

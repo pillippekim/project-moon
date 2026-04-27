@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>포장반 작업일지</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 1rem; }
+.app { max-width: 780px; margin: 0 auto; }
+.card { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+.header-row { display: flex; justify-content: space-between; align-items: center; }
+.header-title { font-size: 18px; font-weight: 600; color: #111; }
+.header-sub { font-size: 13px; color: #888; margin-top: 2px; }
+.status-badge { font-size: 12px; padding: 4px 10px; border-radius: 8px; background: #eff6ff; color: #2563eb; font-weight: 500; }
+.meta-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem; }
+.field-group { background: white; border: 1px solid #e5e5e5; border-radius: 8px; padding: 0.75rem 1rem; }
+.field-label { font-size: 12px; color: #888; margin-bottom: 6px; }
+.field-input { width: 100%; font-size: 15px; font-weight: 500; background: transparent; border: none; outline: none; color: #111; font-family: inherit; }
+.field-text { font-size: 15px; font-weight: 500; color: #111; min-height: 22px; }
+.table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+.table-title { font-size: 14px; font-weight: 500; color: #111; }
+.add-btn { font-size: 13px; padding: 5px 14px; border-radius: 8px; border: 1px solid #ddd; background: transparent; color: #333; cursor: pointer; font-family: inherit; }
+.add-btn:hover { background: #f5f5f5; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+th { font-size: 12px; font-weight: 500; color: #888; padding: 8px 10px; background: #f9f9f9; border-bottom: 1px solid #eee; text-align: left; }
+td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; font-size: 13px; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+.td-input { width: 100%; font-size: 13px; background: transparent; border: none; outline: none; color: #111; font-family: inherit; padding: 2px 0; }
+.td-input:focus { background: #f5f5f5; border-radius: 4px; padding: 2px 4px; }
+.badge-wrap { display: flex; align-items: center; gap: 4px; }
+.badge-wrap .td-input { flex: 1; }
+.scan-btn { flex-shrink: 0; background: #eff6ff; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 11px; color: #2563eb; font-weight: 500; white-space: nowrap; font-family: inherit; }
+.name-hint { font-size: 11px; color: #aaa; margin-top: 1px; }
+.del-btn { background: none; border: none; cursor: pointer; color: #ccc; font-size: 18px; padding: 0 4px; line-height: 1; }
+.del-btn:hover { color: #e53e3e; }
+.summary-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1rem; }
+.stat-card { background: #f9f9f9; border-radius: 8px; padding: 0.85rem 1rem; }
+.stat-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+.stat-num { font-size: 22px; font-weight: 600; color: #111; }
+.stat-num.blue { color: #2563eb; }
+.stat-unit { font-size: 13px; color: #aaa; font-weight: 400; }
+.remarks-label { font-size: 13px; font-weight: 500; color: #888; margin-bottom: 8px; }
+.optional { font-size: 11px; color: #aaa; margin-left: 5px; border: 1px dashed #ddd; border-radius: 4px; padding: 1px 5px; font-weight: 400; }
+textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid #eee; border-radius: 8px; padding: 8px 12px; color: #111; resize: none; outline: none; font-family: inherit; }
+.footer-row { display: flex; gap: 10px; justify-content: flex-end; margin-bottom: 2rem; }
+.btn-reset { font-size: 14px; padding: 10px 20px; border-radius: 8px; background: transparent; color: #888; border: 1px solid #ddd; cursor: pointer; font-family: inherit; }
+.btn-submit { font-size: 14px; padding: 10px 28px; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; font-weight: 500; font-family: inherit; }
+.btn-submit:disabled { background: #aaa; cursor: not-allowed; }
+.scan-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
+.scan-overlay.open { display: flex; }
+.scan-box { background: white; border-radius: 12px; padding: 1.5rem; width: 300px; }
+.scan-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; color: #111; }
+.scan-sub { font-size: 13px; color: #888; margin-bottom: 1rem; line-height: 1.5; }
+.scan-input { width: 100%; font-size: 14px; border: 1px solid #ddd; border-radius: 8px; padding: 9px 12px; outline: none; font-family: inherit; color: #111; }
+.scan-btns { display: flex; gap: 8px; margin-top: 1rem; }
+.scan-ok { flex: 1; font-size: 13px; padding: 9px; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; font-weight: 500; font-family: inherit; }
+.scan-cancel { font-size: 13px; padding: 9px 16px; border-radius: 8px; background: transparent; color: #888; border: 1px solid #ddd; cursor: pointer; font-family: inherit; }
+.toast { display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #111; color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; z-index: 999; white-space: nowrap; }
+.toast.show { display: block; }
+.td-select { width: 100%; font-size: 13px; background: transparent; border: none; outline: none; color: #111; font-family: inherit; cursor: pointer; padding: 2px 0; }
+.badge-list { display: flex; flex-direction: column; gap: 4px; }
+.badge-item { display: flex; align-items: center; gap: 4px; }
+.badge-item .td-input { flex: 1; }
+.badge-num { font-size: 10px; color: #bbb; min-width: 16px; }
+.badge-add { font-size: 11px; color: #2563eb; background: none; border: none; cursor: pointer; padding: 2px 0; font-family: inherit; text-align: left; margin-top: 2px; }
+.badge-add:hover { text-decoration: underline; }
+.badge-del { background: none; border: none; cursor: pointer; color: #ccc; font-size: 14px; padding: 0 2px; line-height: 1; }
+.badge-del:hover { color: #e53e3e; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="card">
+    <div class="header-row">
+      <div>
+        <div class="header-title">포장반 작업일지</div>
+        <div class="header-sub">포장공정 / 실시간 입력</div>
+      </div>
+      <span class="status-badge">작성중</span>
+    </div>
+  </div>
+
+  <div class="meta-row">
+    <div class="field-group">
+      <div class="field-label">작성일</div>
+      <input class="field-input" type="date" id="workDate" onchange="onDateChange()" />
+    </div>
+    <div class="field-group">
+      <div class="field-label">요일</div>
+      <div class="field-text" id="dayDisplay">-</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-header">
+      <span class="table-title">작업 내역</span>
+      <button class="add-btn" onclick="addRow()">+ 행 추가</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:30px">NO</th>
+          <th style="width:72px">사번</th>
+          <th style="width:110px">고객 품번</th>
+          <th style="width:130px">품명</th>
+          <th style="width:90px">작업자</th>
+          <th style="width:120px">뱃지 NO.</th>
+          <th style="width:65px">포장수량</th>
+          <th>비고</th>
+          <th style="width:30px"></th>
+        </tr>
+      </thead>
+      <tbody id="rowBody"></tbody>
+    </table>
+  </div>
+
+  <div class="summary-row">
+    <div class="stat-card">
+      <div class="stat-label">입력 행 수</div>
+      <div class="stat-num" id="cntRows">0 <span class="stat-unit">행</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">총 포장수량</div>
+      <div class="stat-num blue" id="cntQty">0 <span class="stat-unit">EA</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">작업자 수</div>
+      <div class="stat-num" id="cntWorkers">0 <span class="stat-unit">명</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="remarks-label">특이사항 <span class="optional">선택</span></div>
+    <textarea id="remarks" rows="3" placeholder="특이사항을 입력하세요"></textarea>
+  </div>
+
+  <div class="footer-row">
+    <button class="btn-reset" onclick="resetForm()">초기화</button>
+    <button class="btn-submit" id="submitBtn" onclick="submitForm()">제출하기</button>
+  </div>
+
+</div>
+
+<!-- 스캔 모달 -->
+<div class="scan-overlay" id="scanModal">
+  <div class="scan-box">
+    <div class="scan-title">바코드 입력</div>
+    <div class="scan-sub">이동전표 바코드를 스캔하거나 직접 입력하세요.</div>
+    <input class="scan-input" id="scanInput" type="text" placeholder="예: M26033018"
+      onkeydown="if(event.key==='Enter') confirmScan()" />
+    <div class="scan-btns">
+      <button class="scan-cancel" onclick="closeModal()">취소</button>
+      <button class="scan-ok" onclick="confirmScan()">입력 완료</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const SUPABASE_URL = 'https://vpaixxlhzkwtgcllimvn.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwYWl4eGxoemt3dGdjbGxpbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNzk4NjMsImV4cCI6MjA5MTk1NTg2M30.V8Bj0cMbM0E2TFhklYYa7TM-vO6Fi70ctACA7uUf4Ig';
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const DAYS = ['일','월','화','수','목','금','토'];
+  const WORKERS = ['김태선', '황경미'];
+
+  const PRODUCTS = {
+    '509040': { partNo: '83479-3J000',  partName: 'STOPPER-WDW REG' },
+    '502209': { partNo: '2400935',      partName: "STRIKER ASS'Y-T/GATE DAMPER" },
+    '502308': { partNo: '9536566',      partName: 'SEAL KEY' }
+  };
+
+  let rows = [];
+  let uid = 0;
+  let scanTarget = null;
+
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+
+  function onDateChange() {
+    const val = document.getElementById('workDate').value;
+    if (!val) { document.getElementById('dayDisplay').textContent = '-'; return; }
+    const parts = val.split('-');
+    const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    document.getElementById('dayDisplay').textContent = DAYS[d.getDay()] + '요일';
+  }
+
+  function addRow() {
+    uid++;
+    rows.push({ id: uid, sabun:'', partNo:'', partName:'', worker:'', badges:[''], qty:'', note:'' });
+    renderRows();
+  }
+
+  function removeRow(id) {
+    rows = rows.filter(r => r.id !== id);
+    renderRows();
+  }
+
+  function setSabunText(id, val) {
+    const r = rows.find(r => r.id === id);
+    if (r) r.sabun = val;
+  }
+
+  function applySabun(id, val) {
+    const r = rows.find(r => r.id === id);
+    if (!r) return;
+    r.sabun = val;
+    const prod = PRODUCTS[val];
+    r.partNo   = prod ? prod.partNo   : '';
+    r.partName = prod ? prod.partName : '';
+    const tbody = document.getElementById('rowBody');
+    const rowIdx = rows.indexOf(r);
+    const tr = tbody.rows[rowIdx];
+    if (!tr) return;
+    // 고객 품번 셀(2), 품명 셀(3) 업데이트
+    tr.cells[2].textContent = r.partNo   || '-';
+    tr.cells[2].style.color = r.partNo   ? '#111' : '#bbb';
+    tr.cells[3].textContent = r.partName || '-';
+    tr.cells[3].style.color = r.partName ? '#111' : '#bbb';
+    updateSummary();
+  }
+
+  function setField(id, field, val) {
+    const r = rows.find(r => r.id === id);
+    if (r) r[field] = val;
+    if (field === 'qty') updateSummary();
+  }
+
+  function setBadge(id, idx, val) {
+    const r = rows.find(r => r.id === id);
+    if (r) r.badges[idx] = val;
+  }
+
+  function addBadge(id) {
+    const r = rows.find(r => r.id === id);
+    if (r) { r.badges.push(''); renderRows(); }
+  }
+
+  function removeBadge(id, idx) {
+    const r = rows.find(r => r.id === id);
+    if (r && r.badges.length > 1) { r.badges.splice(idx, 1); renderRows(); }
+  }
+
+  function renderRows() {
+    document.getElementById('rowBody').innerHTML = rows.map((r, i) => `
+      <tr>
+        <td style="color:#bbb;font-size:12px">${i+1}</td>
+        <td>
+          <input class="td-input" type="text" value="${r.sabun}" placeholder="사번입력"
+            oninput="setSabunText(${r.id},this.value)" onblur="applySabun(${r.id},this.value)" onkeydown="if(event.key==='Enter'||event.key==='Tab') applySabun(${r.id},this.value)" />
+        </td>
+        <td style="font-size:12px;color:${r.partNo?'#111':'#bbb'}">${r.partNo||'-'}</td>
+        <td style="font-size:12px;color:${r.partName?'#111':'#bbb'}">${r.partName||'-'}</td>
+        <td>
+          <select class="td-select" onchange="setField(${r.id},'worker',this.value)">
+            <option value="" ${!r.worker?'selected':''}>선택</option>
+            ${WORKERS.map(w => `<option value="${w}" ${r.worker===w?'selected':''}>${w}</option>`).join('')}
+          </select>
+        </td>
+        <td>
+          <div class="badge-list">
+            ${r.badges.map((b, bi) => `
+              <div class="badge-item">
+                <span class="badge-num">${bi+1}</span>
+                <input class="td-input" type="text" value="${b}" placeholder="스캔 또는 입력"
+                  oninput="setBadge(${r.id},${bi},this.value)" />
+                <button class="scan-btn" onclick="openModal(${r.id},${bi})">스캔</button>
+                ${bi>0 ? `<button class="badge-del" onclick="removeBadge(${r.id},${bi})">×</button>` : ''}
+              </div>
+            `).join('')}
+            <button class="badge-add" onclick="addBadge(${r.id})">+ 뱃지 추가</button>
+          </div>
+        </td>
+        <td><input class="td-input" type="number" value="${r.qty}" placeholder="0" min="0"
+          oninput="setField(${r.id},'qty',this.value)" /></td>
+        <td><input class="td-input" type="text" value="${r.note}" placeholder="-"
+          oninput="setField(${r.id},'note',this.value)" /></td>
+        <td><button class="del-btn" onclick="removeRow(${r.id})">×</button></td>
+      </tr>
+    `).join('');
+    updateSummary();
+  }
+
+  function updateSummary() {
+    const total = rows.reduce((s,r) => s+(parseInt(r.qty)||0), 0);
+    const workers = new Set(rows.filter(r=>r.worker).map(r=>r.worker)).size;
+    document.getElementById('cntRows').innerHTML = rows.length+' <span class="stat-unit">행</span>';
+    document.getElementById('cntQty').innerHTML = total.toLocaleString()+' <span class="stat-unit">EA</span>';
+    document.getElementById('cntWorkers').innerHTML = workers+' <span class="stat-unit">명</span>';
+  }
+
+  let scanBadgeIdx = 0;
+
+  function openModal(id, badgeIdx) {
+    scanTarget = id;
+    scanBadgeIdx = badgeIdx || 0;
+    document.getElementById('scanInput').value = '';
+    document.getElementById('scanModal').classList.add('open');
+    setTimeout(() => document.getElementById('scanInput').focus(), 100);
+  }
+
+  function closeModal() {
+    document.getElementById('scanModal').classList.remove('open');
+    scanTarget = null;
+  }
+
+  function confirmScan() {
+    const val = document.getElementById('scanInput').value.trim();
+    if (!val) return;
+    setBadge(scanTarget, scanBadgeIdx, val);
+    closeModal();
+    renderRows();
+  }
+
+  async function submitForm() {
+    const workDate = document.getElementById('workDate').value;
+    const remarks = document.getElementById('remarks').value;
+    const valid = rows.filter(r => r.sabun || r.badges.some(b=>b) || r.qty);
+    if (!workDate) { showToast('작성일을 입력해주세요.'); return; }
+    if (valid.length === 0) { showToast('작업 내역을 1건 이상 입력해주세요.'); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.textContent = '저장 중...';
+
+    const records = valid.map(r => ({
+      work_date: workDate,
+      worker_id: r.sabun,
+      worker_name: r.worker,
+      badge_nos: r.badges.filter(b => b.trim() !== ''),
+      quantity: parseInt(r.qty)||0,
+      note: r.note,
+      remarks: remarks
+    }));
+
+    const { error } = await db.from('packaging_reports').insert(records);
+    if (error) {
+      showToast('저장 실패: ' + error.message);
+      btn.disabled = false; btn.textContent = '제출하기';
+    } else {
+      showToast('저장 완료! DB에 정상 저장됐어요 ✓');
+      setTimeout(resetForm, 1800);
+    }
+  }
+
+  function resetForm() {
+    rows = []; uid = 0;
+    document.getElementById('remarks').value = '';
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = false; btn.textContent = '제출하기';
+    addRow(); addRow(); addRow();
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // 초기화
+  document.getElementById('workDate').value = todayStr();
+  onDateChange();
+  addRow(); addRow(); addRow();
+</script>
+</body>
+</html>

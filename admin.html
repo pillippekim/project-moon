@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>포장반 작업일보 - 관리자</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 1rem; }
+.app { max-width: 1000px; margin: 0 auto; }
+.card { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+.header-row { display: flex; justify-content: space-between; align-items: center; }
+.header-title { font-size: 18px; font-weight: 600; color: #111; }
+.header-sub { font-size: 13px; color: #888; margin-top: 2px; }
+.admin-badge { font-size: 12px; padding: 4px 10px; border-radius: 8px; background: #f0fdf4; color: #16a34a; font-weight: 500; }
+
+/* 필터 */
+.filter-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto auto; gap: 10px; align-items: end; }
+.filter-group { display: flex; flex-direction: column; gap: 5px; }
+.filter-label { font-size: 12px; color: #888; }
+.filter-input { font-size: 13px; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 10px; outline: none; font-family: inherit; color: #111; background: white; }
+.filter-input:focus { border-color: #2563eb; }
+.btn-search { font-size: 13px; padding: 8px 20px; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; white-space: nowrap; height: 36px; }
+.btn-search:hover { opacity: 0.9; }
+.btn-excel { font-size: 13px; padding: 8px 20px; border-radius: 8px; background: #16a34a; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; white-space: nowrap; height: 36px; }
+.btn-excel:hover { opacity: 0.9; }
+.btn-excel:disabled { background: #aaa; cursor: not-allowed; }
+
+/* 요약 카드 */
+.summary-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1rem; }
+.stat-card { background: #f9f9f9; border-radius: 8px; padding: 0.85rem 1rem; }
+.stat-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+.stat-num { font-size: 22px; font-weight: 600; color: #111; }
+.stat-num.blue { color: #2563eb; }
+.stat-num.green { color: #16a34a; }
+.stat-unit { font-size: 13px; color: #aaa; font-weight: 400; }
+
+/* 테이블 */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { font-size: 12px; font-weight: 500; color: #888; padding: 9px 12px; background: #f9f9f9; border-bottom: 1px solid #eee; text-align: left; white-space: nowrap; }
+td { padding: 9px 12px; border-bottom: 1px solid #f0f0f0; color: #111; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #fafafa; }
+.empty-row td { text-align: center; color: #aaa; padding: 2rem; }
+.loading { text-align: center; color: #aaa; padding: 2rem; font-size: 13px; }
+
+/* 배지 태그 */
+.badge-tag { display: inline-block; font-size: 11px; background: #eff6ff; color: #2563eb; border-radius: 4px; padding: 2px 6px; margin: 1px; }
+
+/* 페이지네이션 */
+.page-row { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }
+.page-info { font-size: 13px; color: #888; }
+.page-btns { display: flex; gap: 6px; }
+.page-btn { font-size: 13px; padding: 5px 12px; border-radius: 6px; border: 1px solid #e5e5e5; background: white; cursor: pointer; font-family: inherit; color: #111; }
+.page-btn:hover { background: #f5f5f5; }
+.page-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
+.page-btn:disabled { color: #ccc; cursor: not-allowed; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- 헤더 -->
+  <div class="card">
+    <div class="header-row">
+      <div>
+        <div class="header-title">포장반 작업일보 관리자</div>
+        <div class="header-sub">데이터 조회 및 엑셀 추출</div>
+      </div>
+      <span class="admin-badge">관리자 모드</span>
+    </div>
+  </div>
+
+  <!-- 필터 -->
+  <div class="card">
+    <div class="filter-row">
+      <div class="filter-group">
+        <span class="filter-label">시작일</span>
+        <input class="filter-input" type="date" id="dateFrom" />
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">종료일</span>
+        <input class="filter-input" type="date" id="dateTo" />
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">작업자</span>
+        <select class="filter-input" id="filterWorker">
+          <option value="">전체</option>
+          <option value="김태선">김태선</option>
+          <option value="황경미">황경미</option>
+        </select>
+      </div>
+      <button class="btn-search" onclick="loadData()">조회</button>
+      <button class="btn-excel" id="excelBtn" onclick="downloadExcel()" disabled>엑셀 다운로드</button>
+    </div>
+  </div>
+
+  <!-- 요약 -->
+  <div class="summary-row">
+    <div class="stat-card">
+      <div class="stat-label">조회 건수</div>
+      <div class="stat-num" id="sumCount">- <span class="stat-unit">건</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">총 포장수량</div>
+      <div class="stat-num blue" id="sumQty">- <span class="stat-unit">EA</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">작업일수</div>
+      <div class="stat-num green" id="sumDays">- <span class="stat-unit">일</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">작업자 수</div>
+      <div class="stat-num" id="sumWorkers">- <span class="stat-unit">명</span></div>
+    </div>
+  </div>
+
+  <!-- 테이블 -->
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>NO</th>
+            <th>작업일</th>
+            <th>사번</th>
+            <th>작업자</th>
+            <th>뱃지 NO.</th>
+            <th>포장수량</th>
+            <th>비고</th>
+            <th>특이사항</th>
+            <th>제출일시</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr class="empty-row"><td colspan="9">조회 조건을 설정하고 조회 버튼을 눌러주세요.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="page-row">
+      <span class="page-info" id="pageInfo"></span>
+      <div class="page-btns" id="pageBtns"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SUPABASE_URL = 'https://vpaixxlhzkwtgcllimvn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwYWl4eGxoemt3dGdjbGxpbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNzk4NjMsImV4cCI6MjA5MTk1NTg2M30.V8Bj0cMbM0E2TFhklYYa7TM-vO6Fi70ctACA7uUf4Ig';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const PRODUCTS = {
+  '509040': { partNo: '83479-3J000',  partName: 'STOPPER-WDW REG' },
+  '502209': { partNo: '2400935',      partName: "STRIKER ASS'Y-T/GATE DAMPER" },
+  '502308': { partNo: '9536566',      partName: 'SEAL KEY' }
+};
+
+const PAGE_SIZE = 20;
+let allData = [];
+let currentPage = 1;
+
+// 기본 날짜 설정 (이번달 1일 ~ 오늘)
+window.onload = () => {
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  document.getElementById('dateFrom').value = fmt(firstDay);
+  document.getElementById('dateTo').value = fmt(today);
+  loadData();
+};
+
+function fmt(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function fmtDatetime(str) {
+  if (!str) return '-';
+  const d = new Date(str);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' +
+    String(d.getDate()).padStart(2,'0') + ' ' +
+    String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
+async function loadData() {
+  const dateFrom = document.getElementById('dateFrom').value;
+  const dateTo   = document.getElementById('dateTo').value;
+  const worker   = document.getElementById('filterWorker').value;
+
+  document.getElementById('tableBody').innerHTML = '<tr><td colspan="9" class="loading">조회 중...</td></tr>';
+  document.getElementById('excelBtn').disabled = true;
+
+  let query = db.from('packaging_reports')
+    .select('*')
+    .order('work_date', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  if (dateFrom) query = query.gte('work_date', dateFrom);
+  if (dateTo)   query = query.lte('work_date', dateTo);
+  if (worker)   query = query.eq('worker_name', worker);
+
+  const { data, error } = await query;
+
+  if (error) {
+    document.getElementById('tableBody').innerHTML = `<tr class="empty-row"><td colspan="9">조회 실패: ${error.message}</td></tr>`;
+    return;
+  }
+
+  allData = data || [];
+  currentPage = 1;
+  renderTable();
+  renderSummary();
+  document.getElementById('excelBtn').disabled = allData.length === 0;
+}
+
+function renderTable() {
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageData = allData.slice(start, start + PAGE_SIZE);
+  const tbody = document.getElementById('tableBody');
+
+  if (allData.length === 0) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">조회된 데이터가 없습니다.</td></tr>';
+    document.getElementById('pageInfo').textContent = '';
+    document.getElementById('pageBtns').innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = pageData.map((r, i) => {
+    const badges = (r.badge_nos || []).map(b => `<span class="badge-tag">${b}</span>`).join('') || '-';
+    const prod = PRODUCTS[r.worker_id] || {};
+    const sabunCell = r.worker_id
+      ? `${r.worker_id}<br><span style="font-size:11px;color:#888">${prod.partNo || ''}</span>`
+      : '-';
+    return `<tr>
+      <td style="color:#bbb;font-size:12px">${start + i + 1}</td>
+      <td>${r.work_date || '-'}</td>
+      <td>${sabunCell}</td>
+      <td>${r.worker_name || '-'}</td>
+      <td>${badges}</td>
+      <td style="font-weight:500;color:#2563eb">${(r.quantity || 0).toLocaleString()}</td>
+      <td style="color:#888">${r.note || '-'}</td>
+      <td style="color:#888">${r.remarks || '-'}</td>
+      <td style="color:#aaa;font-size:12px">${fmtDatetime(r.submitted_at)}</td>
+    </tr>`;
+  }).join('');
+
+  // 페이지네이션
+  const totalPages = Math.ceil(allData.length / PAGE_SIZE);
+  document.getElementById('pageInfo').textContent = `전체 ${allData.length}건 / ${currentPage} 페이지`;
+
+  let btns = '';
+  btns += `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>이전</button>`;
+  for (let p = 1; p <= totalPages; p++) {
+    btns += `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+  }
+  btns += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>다음</button>`;
+  document.getElementById('pageBtns').innerHTML = btns;
+}
+
+function goPage(p) {
+  const totalPages = Math.ceil(allData.length / PAGE_SIZE);
+  if (p < 1 || p > totalPages) return;
+  currentPage = p;
+  renderTable();
+}
+
+function renderSummary() {
+  const totalQty  = allData.reduce((s, r) => s + (r.quantity || 0), 0);
+  const days      = new Set(allData.map(r => r.work_date)).size;
+  const workers   = new Set(allData.filter(r => r.worker_name).map(r => r.worker_name)).size;
+  document.getElementById('sumCount').innerHTML   = allData.length.toLocaleString() + ' <span class="stat-unit">건</span>';
+  document.getElementById('sumQty').innerHTML     = totalQty.toLocaleString() + ' <span class="stat-unit">EA</span>';
+  document.getElementById('sumDays').innerHTML    = days + ' <span class="stat-unit">일</span>';
+  document.getElementById('sumWorkers').innerHTML = workers + ' <span class="stat-unit">명</span>';
+}
+
+function downloadExcel() {
+  if (allData.length === 0) return;
+
+  const dateFrom = document.getElementById('dateFrom').value || '';
+  const dateTo   = document.getElementById('dateTo').value   || '';
+
+  const excelData = allData.map((r, i) => {
+    const prod = PRODUCTS[r.worker_id] || {};
+    return {
+      'NO':       i + 1,
+      '작업일':   r.work_date || '',
+      '사번':     r.worker_id || '',
+      '고객 품번': prod.partNo || '',
+      '품명':     prod.partName || '',
+      '작업자':   r.worker_name || '',
+      '뱃지 NO.': (r.badge_nos || []).join(', '),
+      '포장수량': r.quantity || 0,
+      '비고':     r.note || '',
+      '특이사항': r.remarks || '',
+      '제출일시': fmtDatetime(r.submitted_at)
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(excelData);
+
+  // 컬럼 너비 설정
+  ws['!cols'] = [
+    {wch:6}, {wch:12}, {wch:10}, {wch:16}, {wch:28},
+    {wch:10}, {wch:16}, {wch:10}, {wch:16}, {wch:20}, {wch:18}
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '포장반 작업일보');
+
+  const fileName = `포장반_작업일보_${dateFrom}_${dateTo}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+}
+</script>
+</body>
+</html>
