@@ -337,7 +337,10 @@ async function uploadDoc() {
 
   document.getElementById('progressFill').style.width = '50%';
 
-  const filePath = `${sabun}/${docType}/${version}_${Date.now()}_${selectedFile.name}`;
+  // 한글 파일명 처리 - 영문/숫자만 남기고 나머지는 언더스코어로 변환
+  const safeFileName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const safeDocType = docType.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const filePath = `${sabun}/${safeDocType}/${version}_${Date.now()}_${safeFileName}`;
   const { error: uploadError } = await db.storage.from('documents')
     .upload(filePath, selectedFile, { contentType: 'application/pdf' });
 
