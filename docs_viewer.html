@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>문서 조회 - Project Moon</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; min-height: 100vh; }
+.top-bar { background: white; border-bottom: 1px solid #e5e5e5; padding: 0 1.25rem; height: 52px; display: flex; align-items: center; justify-content: space-between; }
+.logo { font-size: 15px; font-weight: 700; color: #111; }
+.logo span { color: #2563eb; }
+.back-btn { font-size: 13px; color: #2563eb; background: none; border: none; cursor: pointer; font-family: inherit; }
+
+/* 검색 화면 */
+.search-screen { max-width: 480px; margin: 4rem auto; padding: 1rem; }
+.search-card { background: white; border-radius: 16px; border: 1px solid #e5e5e5; padding: 2rem; text-align: center; }
+.search-icon { font-size: 48px; margin-bottom: 1rem; }
+.search-title { font-size: 20px; font-weight: 600; color: #111; margin-bottom: 6px; }
+.search-sub { font-size: 14px; color: #888; margin-bottom: 1.5rem; }
+.search-input-wrap { display: flex; gap: 8px; margin-bottom: 10px; }
+.search-input { flex: 1; font-size: 18px; font-weight: 500; border: 2px solid #e5e5e5; border-radius: 10px; padding: 12px 16px; outline: none; font-family: inherit; color: #111; text-align: center; letter-spacing: 2px; }
+.search-input:focus { border-color: #2563eb; }
+.search-btn { font-size: 14px; padding: 12px 20px; border-radius: 10px; background: #2563eb; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; white-space: nowrap; }
+.search-hint { font-size: 12px; color: #aaa; }
+
+/* 결과 화면 */
+.result-screen { display: none; max-width: 700px; margin: 0 auto; padding: 1rem; }
+.product-info { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1rem 1.25rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
+.product-sabun { font-size: 22px; font-weight: 700; color: #111; }
+.product-sub { font-size: 13px; color: #888; margin-top: 2px; }
+.doc-count { font-size: 13px; color: #2563eb; background: #eff6ff; padding: 4px 12px; border-radius: 8px; }
+
+.doc-section { margin-bottom: 1rem; }
+.section-title { font-size: 13px; font-weight: 500; color: #888; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.doc-card { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1rem 1.25rem; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: border-color 0.15s; }
+.doc-card:hover { border-color: #2563eb; }
+.doc-card-left { display: flex; align-items: center; gap: 12px; }
+.doc-icon { font-size: 28px; }
+.doc-name { font-size: 15px; font-weight: 500; color: #111; margin-bottom: 3px; }
+.doc-meta { font-size: 12px; color: #888; }
+.doc-type-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; margin-right: 6px; }
+.type-검사기준서 { background: #eff6ff; color: #2563eb; }
+.type-작업표준서 { background: #f0fdf4; color: #16a34a; }
+.type-검사협정서 { background: #fff7ed; color: #ea580c; }
+.type-관리계획서 { background: #fdf4ff; color: #9333ea; }
+.type-외관검사기준서 { background: #fef9c3; color: #ca8a04; }
+.version-tag { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 6px; background: #f3f4f6; color: #555; }
+.btn-open { font-size: 13px; padding: 8px 18px; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; white-space: nowrap; }
+
+.empty-docs { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 2rem; text-align: center; color: #aaa; font-size: 14px; }
+.btn-back-search { font-size: 13px; padding: 8px 18px; border-radius: 8px; background: transparent; color: #2563eb; border: 1px solid #ddd; cursor: pointer; font-family: inherit; }
+
+/* PDF 뷰어 */
+.viewer-screen { display: none; position: fixed; inset: 0; background: #111; z-index: 200; flex-direction: column; }
+.viewer-bar { background: #1e1e1e; padding: 10px 16px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.viewer-title { font-size: 14px; color: white; font-weight: 500; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.viewer-close { font-size: 13px; padding: 6px 16px; border-radius: 6px; background: transparent; color: #aaa; border: 1px solid #444; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.viewer-close:hover { color: white; }
+iframe { flex: 1; border: none; }
+
+.loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; z-index: 100; display: none; }
+.loading-text { font-size: 14px; color: #888; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="logo">Project <span>Moon</span></div>
+  <button class="back-btn" onclick="goHome()">← 메인으로</button>
+</div>
+
+<!-- 검색 화면 -->
+<div class="search-screen" id="searchScreen">
+  <div class="search-card">
+    <div class="search-icon">🔍</div>
+    <div class="search-title">문서 조회</div>
+    <div class="search-sub">사번을 입력하면 해당 제품의<br>검사기준서 및 작업표준서를 확인할 수 있어요</div>
+    <div class="search-input-wrap">
+      <input class="search-input" id="searchInput" type="text" placeholder="사번 입력"
+        maxlength="10" onkeydown="if(event.key==='Enter') searchDocs()" />
+      <button class="search-btn" onclick="searchDocs()">조회</button>
+    </div>
+    <div class="search-hint">예: 502284 · 509040 · 502308</div>
+  </div>
+</div>
+
+<!-- 결과 화면 -->
+<div class="result-screen" id="resultScreen">
+  <div class="product-info">
+    <div>
+      <div class="product-sabun" id="resultSabun"></div>
+      <div class="product-sub" id="resultSub"></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span class="doc-count" id="docCount"></span>
+      <button class="btn-back-search" onclick="backToSearch()">다시 검색</button>
+    </div>
+  </div>
+  <div id="docList"></div>
+</div>
+
+<!-- PDF 뷰어 -->
+<div class="viewer-screen" id="viewerScreen" style="display:none;flex-direction:column">
+  <div class="viewer-bar">
+    <button class="viewer-close" onclick="closeViewer()">✕ 닫기</button>
+    <div class="viewer-title" id="viewerTitle"></div>
+  </div>
+  <iframe id="pdfFrame" src=""></iframe>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-text">조회 중...</div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://vpaixxlhzkwtgcllimvn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwYWl4eGxoemt3dGdjbGxpbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNzk4NjMsImV4cCI6MjA5MTk1NTg2M30.V8Bj0cMbM0E2TFhklYYa7TM-vO6Fi70ctACA7uUf4Ig';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const PRODUCTS = {
+  '509040': { partNo: '83479-3J000',  partName: 'STOPPER-WDW REG' },
+  '502209': { partNo: '2400935',      partName: "STRIKER ASS'Y-T/GATE DAMPER" },
+  '502308': { partNo: '9536566',      partName: 'SEAL KEY' },
+  '502284': { partNo: '9556086',      partName: 'BUSH-MTG D/LATCH PWR ACTR' }
+};
+
+const DOC_ICONS = {
+  '검사기준서': '📋', '외관검사기준서': '🖼️',
+  '작업표준서': '📖', '검사협정서': '🤝', '관리계획서': '📊'
+};
+
+const DOC_ORDER = ['검사기준서','외관검사기준서','작업표준서','검사협정서','관리계획서'];
+
+async function searchDocs() {
+  const sabun = document.getElementById('searchInput').value.trim();
+  if (!sabun) return;
+
+  document.getElementById('loadingOverlay').style.display = 'flex';
+
+  const { data, error } = await db.from('documents')
+    .select('*')
+    .eq('sabun', sabun)
+    .eq('is_current', true)
+    .order('doc_type');
+
+  document.getElementById('loadingOverlay').style.display = 'none';
+
+  const prod = PRODUCTS[sabun] || {};
+  document.getElementById('resultSabun').textContent = '사번 ' + sabun;
+  document.getElementById('resultSub').textContent = prod.partNo
+    ? prod.partNo + ' · ' + prod.partName
+    : '등록된 제품 정보 없음';
+  document.getElementById('docCount').textContent = (data ? data.length : 0) + '건의 문서';
+
+  const listEl = document.getElementById('docList');
+
+  if (!data || data.length === 0) {
+    listEl.innerHTML = '<div class="empty-docs">등록된 문서가 없어요.<br>관리자에게 문의해주세요.</div>';
+  } else {
+    // 유형별 그룹핑
+    const grouped = {};
+    DOC_ORDER.forEach(t => { grouped[t] = []; });
+    data.forEach(d => {
+      if (!grouped[d.doc_type]) grouped[d.doc_type] = [];
+      grouped[d.doc_type].push(d);
+    });
+
+    listEl.innerHTML = DOC_ORDER.filter(t => grouped[t].length > 0).map(type => `
+      <div class="doc-section">
+        <div class="section-title">${type}</div>
+        ${grouped[type].map(r => `
+          <div class="doc-card" onclick="openViewer('${r.file_url}','${r.doc_name}','${r.doc_type}','${r.version}')">
+            <div class="doc-card-left">
+              <div class="doc-icon">${DOC_ICONS[r.doc_type] || '📄'}</div>
+              <div>
+                <div class="doc-name">${r.doc_name}</div>
+                <div class="doc-meta">
+                  <span class="doc-type-badge type-${r.doc_type}">${r.doc_type}</span>
+                  <span class="version-tag">${r.version}</span>
+                  <span style="margin-left:6px;color:#aaa">${fmtDate(r.created_at)} 등록</span>
+                </div>
+              </div>
+            </div>
+            <button class="btn-open">열기 →</button>
+          </div>
+        `).join('')}
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('searchScreen').style.display = 'none';
+  document.getElementById('resultScreen').style.display = 'block';
+}
+
+function backToSearch() {
+  document.getElementById('searchScreen').style.display = 'block';
+  document.getElementById('resultScreen').style.display = 'none';
+}
+
+function openViewer(url, name, type, version) {
+  document.getElementById('viewerTitle').textContent = name + ' · ' + version;
+  document.getElementById('pdfFrame').src = url;
+  const vs = document.getElementById('viewerScreen');
+  vs.style.display = 'flex';
+}
+
+function closeViewer() {
+  document.getElementById('viewerScreen').style.display = 'none';
+  document.getElementById('pdfFrame').src = '';
+}
+
+function goHome() { location.href = 'index.html'; }
+
+function fmtDate(str) {
+  if (!str) return '';
+  return str.slice(0,10);
+}
+</script>
+</body>
+</html>
