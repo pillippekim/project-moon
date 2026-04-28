@@ -116,7 +116,7 @@ iframe { flex: 1; border: none; width: 100%; height: 100%; }
   <div class="viewer-content">
     <div class="pdf-loading" id="pdfLoading">
       <div class="pdf-loading-spinner"></div>
-      <div class="pdf-loading-text">문서 불러오는 중...</div>
+      <div class="pdf-loading-text">문서 불러오는 중... (최초 로딩은 5~10초 소요될 수 있어요)</div>
     </div>
     <iframe id="pdfFrame" src=""
       oncontextmenu="return false"
@@ -229,10 +229,10 @@ function openViewer(url, name, type, version) {
   frame.style.opacity = '0';
   frame.src = '';
 
-  // 3. 약간의 딜레이 후 PDF 로드 시작 (뷰어가 먼저 뜨도록)
+  // 3. Google Docs Viewer로 감싸서 로드 (안드로이드 태블릿 포함 모든 기기 지원)
   requestAnimationFrame(() => {
-    const viewerUrl = url + '#toolbar=0&navpanes=0&scrollbar=1&view=FitH';
-    frame.src = viewerUrl;
+    const googleViewerUrl = 'https://docs.google.com/viewer?url=' + encodeURIComponent(url) + '&embedded=true';
+    frame.src = googleViewerUrl;
   });
 }
 
