@@ -106,8 +106,12 @@ iframe { flex: 1; border: none; }
   <div class="viewer-bar">
     <button class="viewer-close" onclick="closeViewer()">✕ 닫기</button>
     <div class="viewer-title" id="viewerTitle"></div>
+    <span style="font-size:11px;color:#666;background:#2a2a2a;padding:3px 10px;border-radius:4px">📋 열람 전용</span>
   </div>
-  <iframe id="pdfFrame" src=""></iframe>
+  <iframe id="pdfFrame" src=""
+    oncontextmenu="return false"
+    style="pointer-events:auto"
+  ></iframe>
 </div>
 
 <div class="loading-overlay" id="loadingOverlay">
@@ -183,7 +187,7 @@ async function searchDocs() {
                 </div>
               </div>
             </div>
-            <button class="btn-open">열기 →</button>
+            <button class="btn-open" oncontextmenu="return false">열기 →</button>
           </div>
         `).join('')}
       </div>
@@ -201,7 +205,10 @@ function backToSearch() {
 
 function openViewer(url, name, type, version) {
   document.getElementById('viewerTitle').textContent = name + ' · ' + version;
-  document.getElementById('pdfFrame').src = url;
+  // iframe에 #toolbar=0&navpanes=0 파라미터로 다운로드 버튼 숨김
+  // 추가로 Google Docs Viewer를 통해 열어서 다운로드 방지
+  const viewerUrl = url + '#toolbar=0&navpanes=0&scrollbar=1&view=FitH';
+  document.getElementById('pdfFrame').src = viewerUrl;
   const vs = document.getElementById('viewerScreen');
   vs.style.display = 'flex';
 }
@@ -210,6 +217,11 @@ function closeViewer() {
   document.getElementById('viewerScreen').style.display = 'none';
   document.getElementById('pdfFrame').src = '';
 }
+
+// 뷰어 영역 우클릭 방지
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('viewerScreen').addEventListener('contextmenu', e => e.preventDefault());
+});
 
 function goHome() { location.href = 'index.html'; }
 
