@@ -11,28 +11,64 @@
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 1rem; }
 .app { max-width: 900px; margin: 0 auto; }
 .top-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
-.back-btn { font-size: 13px; color: #2563eb; background: none; border: none; cursor: pointer; font-family: inherit; padding: 0; }
+.back-btn { font-size: 13px; color: #2563eb; background: none; border: none; cursor: pointer; font-family: inherit; }
 .back-btn:hover { text-decoration: underline; }
 .nav-sep { color: #ddd; }
 .nav-title { font-size: 13px; color: #888; }
 .card { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+
+/* 메인 탭 */
+.main-tabs { display: flex; gap: 0; margin-bottom: 1rem; background: white; border-radius: 12px; border: 1px solid #e5e5e5; overflow: hidden; }
+.main-tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-size: 14px; font-weight: 500; color: #888; border: none; background: transparent; font-family: inherit; transition: all 0.15s; border-bottom: 2.5px solid transparent; }
+.main-tab:hover { color: #2563eb; background: #f9f9f9; }
+.main-tab.active { color: #2563eb; border-bottom-color: #2563eb; background: #eff6ff; }
+
+/* 섹션 */
+.section { display: none; }
+.section.active { display: block; }
+
+/* 카드 헤더 */
 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
 .card-title { font-size: 15px; font-weight: 600; color: #111; }
 .card-sub { font-size: 12px; color: #888; margin-top: 2px; }
-.btn-add { font-size: 13px; padding: 7px 16px; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; }
-.btn-add:hover { opacity: 0.9; }
+.header-actions { display: flex; gap: 8px; align-items: center; }
 
-/* 입력 폼 */
-.form-row { display: grid; gap: 10px; margin-bottom: 1rem; padding: 1rem; background: #f9f9f9; border-radius: 8px; border: 1px solid #eee; }
-.form-grid-3 { grid-template-columns: 1fr 1fr 1fr auto; align-items: end; }
-.form-grid-2 { grid-template-columns: 1fr 1fr auto auto; align-items: end; }
+/* 검색바 */
+.search-bar { display: flex; gap: 8px; margin-bottom: 1rem; }
+.search-input { flex: 1; font-size: 13px; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 12px; outline: none; font-family: inherit; color: #111; }
+.search-input:focus { border-color: #2563eb; }
+.btn-search { font-size: 13px; padding: 8px 16px; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; font-family: inherit; white-space: nowrap; }
+
+/* 버튼 */
+.btn-add { font-size: 13px; padding: 7px 16px; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; }
+.btn-excel { font-size: 13px; padding: 7px 14px; border-radius: 8px; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; cursor: pointer; font-family: inherit; }
+.btn-template { font-size: 13px; padding: 7px 14px; border-radius: 8px; background: #f9f9f9; color: #555; border: 1px solid #e5e5e5; cursor: pointer; font-family: inherit; }
+
+/* 업로드 섹션 */
+.upload-section { background: #f9f9f9; border: 1.5px dashed #ddd; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1rem; display: none; }
+.upload-section.open { display: block; }
+.excel-zone { border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; background: white; margin-bottom: 12px; transition: all 0.15s; }
+.excel-zone:hover { border-color: #2563eb; background: #eff6ff; }
+.excel-zone.dragover { border-color: #2563eb; background: #eff6ff; border-style: solid; }
+.excel-preview { margin-bottom: 12px; }
+.preview-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.preview-table th { background: #f9f9f9; padding: 6px 8px; border-bottom: 1px solid #eee; text-align: left; color: #888; }
+.preview-table td { padding: 6px 8px; border-bottom: 1px solid #f5f5f5; }
+.preview-count { font-size: 12px; color: #555; margin-bottom: 8px; }
+
+/* 폼 */
+.form-row { display: none; background: #f9f9f9; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; border: 1px solid #eee; }
+.form-row.open { display: block; }
+.form-grid { display: grid; gap: 10px; align-items: end; margin-bottom: 10px; }
+.form-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-grid-2 { grid-template-columns: 1fr 1fr; }
 .form-group { display: flex; flex-direction: column; gap: 5px; }
 .form-label { font-size: 12px; color: #888; }
-.form-input { font-size: 13px; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 10px; outline: none; font-family: inherit; color: #111; background: white; }
-.form-input:focus { border-color: #2563eb; }
-.form-select { font-size: 13px; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 10px; outline: none; font-family: inherit; color: #111; background: white; cursor: pointer; }
-.btn-save { font-size: 13px; padding: 8px 18px; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; white-space: nowrap; height: 36px; }
-.btn-cancel-form { font-size: 13px; padding: 8px 14px; border-radius: 8px; background: transparent; color: #888; border: 1px solid #ddd; cursor: pointer; font-family: inherit; height: 36px; }
+.form-input, .form-select { font-size: 13px; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 10px; outline: none; font-family: inherit; color: #111; background: white; }
+.form-input:focus, .form-select:focus { border-color: #2563eb; }
+.form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.btn-save { font-size: 13px; padding: 8px 18px; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; }
+.btn-cancel-form { font-size: 13px; padding: 8px 14px; border-radius: 8px; background: transparent; color: #888; border: 1px solid #ddd; cursor: pointer; font-family: inherit; }
 
 /* 테이블 */
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -42,164 +78,221 @@ tr:last-child td { border-bottom: none; }
 tr:hover td { background: #fafafa; }
 .btn-del { font-size: 12px; padding: 4px 10px; border-radius: 6px; background: transparent; color: #e53e3e; border: 1px solid #fca5a5; cursor: pointer; font-family: inherit; }
 .btn-del:hover { background: #fff0f0; }
+.btn-edit-sm { font-size: 12px; padding: 4px 10px; border-radius: 6px; background: #f0fdf4; color: #16a34a; border: none; cursor: pointer; font-family: inherit; margin-right: 4px; }
 .active-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
 .active-y { background: #f0fdf4; color: #16a34a; }
 .active-n { background: #f9f9f9; color: #aaa; }
 .empty-row td { text-align: center; color: #aaa; padding: 1.5rem; }
-.upload-section { background: #f9f9f9; border: 1.5px dashed #ddd; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1rem; display: none; }
-.upload-section.open { display: block; }
-.upload-tabs { display: flex; gap: 8px; margin-bottom: 1rem; }
-.upload-tab { font-size: 13px; padding: 7px 16px; border-radius: 8px; border: 1.5px solid #e5e5e5; background: white; cursor: pointer; font-family: inherit; color: #555; }
-.upload-tab.active { border-color: #2563eb; background: #eff6ff; color: #2563eb; font-weight: 500; }
-.multi-row-area { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-.multi-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: center; }
-.excel-zone { border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; background: white; margin-bottom: 12px; }
-.excel-zone:hover { border-color: #2563eb; background: #eff6ff; }
-.excel-zone-text { font-size: 13px; color: #888; }
-.excel-preview { margin-bottom: 12px; }
-.preview-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.preview-table th { background: #f9f9f9; padding: 6px 8px; border-bottom: 1px solid #eee; text-align: left; color: #888; }
-.preview-table td { padding: 6px 8px; border-bottom: 1px solid #f5f5f5; }
-.preview-count { font-size: 12px; color: #888; margin-bottom: 8px; }
-.btn-download-template { font-size: 12px; padding: 6px 14px; border-radius: 6px; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; cursor: pointer; font-family: inherit; }
-.section-actions { display: flex; justify-content: space-between; align-items: center; }
-.toast { display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #111; color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; z-index: 999; }
+
+/* 더보기/접기 */
+.show-more-row { text-align: center; padding: 10px; border-top: 1px solid #f0f0f0; }
+.btn-show-more { font-size: 13px; color: #2563eb; background: none; border: none; cursor: pointer; font-family: inherit; padding: 4px 12px; }
+.btn-show-more:hover { text-decoration: underline; }
+.count-badge { display: inline-block; font-size: 11px; background: #f3f4f6; color: #555; border-radius: 10px; padding: 2px 8px; margin-left: 6px; }
+
+/* 수정 모달 */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal-box { background: white; border-radius: 12px; padding: 1.5rem; width: 420px; }
+.modal-title { font-size: 15px; font-weight: 600; color: #111; margin-bottom: 1rem; }
+.modal-grid { display: grid; gap: 10px; margin-bottom: 1rem; }
+.modal-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+.modal-input, .modal-select { width: 100%; font-size: 13px; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 10px; outline: none; font-family: inherit; color: #111; }
+.modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+.btn-modal-cancel { font-size: 13px; padding: 9px 18px; border-radius: 8px; background: transparent; color: #888; border: 1px solid #ddd; cursor: pointer; font-family: inherit; }
+.btn-modal-save { font-size: 13px; padding: 9px 18px; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; }
+
+.toast { display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #111; color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; z-index: 999; white-space: nowrap; }
 .toast.show { display: block; }
 </style>
 </head>
 <body>
 <div class="app">
-
   <div class="top-nav">
     <button class="back-btn" onclick="location.href='index.html'">← 메인으로</button>
     <span class="nav-sep">/</span>
     <span class="nav-title">기준정보 관리</span>
   </div>
 
-  <!-- 제품 기준정보 -->
-  <div class="card">
-    <div class="card-header">
-      <div>
-        <div class="card-title">제품 기준정보</div>
-        <div class="card-sub">사번 ↔ 고객 품번/품명 연동 관리</div>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn-download-template" onclick="downloadTemplate()">양식 다운로드</button>
-        <button class="btn-add" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0" onclick="toggleUploadSection()">엑셀 업로드</button>
-        <button class="btn-add" onclick="toggleForm('product')">+ 행 추가</button>
-      </div>
-    </div>
+  <!-- 메인 탭 -->
+  <div class="main-tabs">
+    <button class="main-tab active" onclick="switchTab('product')" id="tabBtn_product">🔧 제품 기준정보</button>
+    <button class="main-tab" onclick="switchTab('worker')" id="tabBtn_worker">👤 작업자 기준정보</button>
+  </div>
 
-    <!-- 엑셀 업로드 섹션 -->
-    <div class="upload-section" id="uploadSection"
-      ondragover="onExcelDragOver(event)"
-      ondragleave="onExcelDragLeaveSection(event)"
-      ondrop="onExcelDrop(event)">
-      <div style="font-size:13px;font-weight:500;color:#111;margin-bottom:10px">엑셀 업로드</div>
-      <div class="excel-zone" id="excelZone"
-        onclick="document.getElementById('excelInput').click()">
-        <div style="font-size:24px;margin-bottom:6px">📊</div>
-        <div class="excel-zone-text">엑셀 파일을 클릭하거나 드래그해서 올려주세요<br><span style="font-size:11px;color:#aaa">양식: 사번 | 고객품번 | 품명 (헤더 포함)</span></div>
-        <div id="excelSelected" style="font-size:13px;color:#2563eb;font-weight:500;margin-top:6px"></div>
-      </div>
-      <input type="file" id="excelInput" accept=".xlsx,.xls" style="display:none" onchange="onExcelSelect(event)" />
-      <div id="excelPreview" class="excel-preview" style="display:none">
-        <div class="preview-count" id="previewCount"></div>
-        <div style="max-height:200px;overflow-y:auto">
-          <table class="preview-table">
-            <thead><tr><th>사번</th><th>고객품번</th><th>품명</th></tr></thead>
-            <tbody id="previewBody"></tbody>
-          </table>
+  <!-- 제품 섹션 -->
+  <div class="section active" id="section_product">
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">제품 기준정보</div>
+          <div class="card-sub">사번 ↔ 고객 품번/품명 연동 관리</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn-template" onclick="downloadTemplate()">양식 다운로드</button>
+          <button class="btn-excel" onclick="toggleUpload('product')">엑셀 업로드</button>
+          <button class="btn-add" onclick="toggleForm('product')">+ 행 추가</button>
         </div>
       </div>
-      <div style="display:flex;justify-content:flex-end;gap:8px">
-        <button class="btn-cancel-form" onclick="toggleUploadSection()">취소</button>
-        <button class="btn-save" id="excelUploadBtn" onclick="uploadExcel()" disabled>업로드</button>
+
+      <!-- 검색 -->
+      <div class="search-bar">
+        <input class="search-input" id="searchProduct" placeholder="🔍 사번 또는 품명 검색" oninput="filterProducts()" />
+      </div>
+
+      <!-- 엑셀 업로드 -->
+      <div class="upload-section" id="uploadSection_product"
+        ondragover="onExcelDragOver(event)"
+        ondragleave="onExcelDragLeaveSection(event)"
+        ondrop="onExcelDrop(event)">
+        <div style="font-size:13px;font-weight:500;color:#111;margin-bottom:10px">
+          📊 엑셀 업로드
+          <span style="font-size:11px;color:#888;font-weight:400;margin-left:8px">ERP 다운로드 파일 그대로 올려주세요</span>
+        </div>
+        <div class="excel-zone" id="excelZone" onclick="document.getElementById('excelInput').click()">
+          <div style="font-size:24px;margin-bottom:6px">📎</div>
+          <div style="font-size:13px;color:#888">엑셀 파일을 클릭하거나 드래그해서 올려주세요</div>
+          <div id="excelSelected" style="font-size:13px;color:#2563eb;font-weight:500;margin-top:6px"></div>
+        </div>
+        <input type="file" id="excelInput" accept=".xlsx,.xls" style="display:none" onchange="onExcelSelect(event)" />
+        <div id="excelPreview" class="excel-preview" style="display:none">
+          <div class="preview-count" id="previewCount"></div>
+          <div style="max-height:180px;overflow-y:auto">
+            <table class="preview-table">
+              <thead><tr><th>사번</th><th>고객품번</th><th>품명</th></tr></thead>
+              <tbody id="previewBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
+          <button class="btn-cancel-form" onclick="toggleUpload('product')">취소</button>
+          <button class="btn-save" id="excelUploadBtn" onclick="uploadExcel()" disabled>업로드</button>
+        </div>
+      </div>
+
+      <!-- 행 추가 폼 -->
+      <div class="form-row" id="form_product">
+        <div class="form-grid form-grid-3">
+          <div class="form-group">
+            <span class="form-label">사번 *</span>
+            <input class="form-input" id="p_sabun" placeholder="예: 502284" />
+          </div>
+          <div class="form-group">
+            <span class="form-label">고객 품번</span>
+            <input class="form-input" id="p_partno" placeholder="예: 9556086" />
+          </div>
+          <div class="form-group">
+            <span class="form-label">품명</span>
+            <input class="form-input" id="p_partname" placeholder="예: BUSH-MTG" />
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-cancel-form" onclick="toggleForm('product')">취소</button>
+          <button class="btn-save" onclick="saveProduct()">저장</button>
+        </div>
+      </div>
+
+      <!-- 제품 목록 -->
+      <table>
+        <thead>
+          <tr>
+            <th>사번</th>
+            <th>고객 품번</th>
+            <th>품명</th>
+            <th>등록일</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="productTable"></tbody>
+      </table>
+      <div class="show-more-row" id="productMoreRow" style="display:none">
+        <button class="btn-show-more" id="productMoreBtn" onclick="toggleShowAll('product')"></button>
       </div>
     </div>
-
-    <div class="form-row form-grid-3" id="productForm" style="display:none">
-      <div class="form-group">
-        <span class="form-label">사번 (필수)</span>
-        <input class="form-input" id="p_sabun" placeholder="예: 509040" />
-      </div>
-      <div class="form-group">
-        <span class="form-label">고객 품번</span>
-        <input class="form-input" id="p_partno" placeholder="예: 83479-3J000" />
-      </div>
-      <div class="form-group">
-        <span class="form-label">품명</span>
-        <input class="form-input" id="p_partname" placeholder="예: STOPPER-WDW REG" />
-      </div>
-      <div style="display:flex;gap:6px">
-        <button class="btn-cancel-form" onclick="toggleForm('product')">취소</button>
-        <button class="btn-save" onclick="saveProduct()">저장</button>
-      </div>
-    </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th>사번</th>
-          <th>고객 품번</th>
-          <th>품명</th>
-          <th>등록일</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="productTable">
-        <tr class="empty-row"><td colspan="5">로딩 중...</td></tr>
-      </tbody>
-    </table>
   </div>
 
-  <!-- 작업자 기준정보 -->
-  <div class="card">
-    <div class="card-header">
-      <div>
-        <div class="card-title">작업자 기준정보</div>
-        <div class="card-sub">공정별 작업자 목록 관리</div>
+  <!-- 작업자 섹션 -->
+  <div class="section" id="section_worker">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">작업자 기준정보</div>
+          <div class="card-sub">공정별 작업자 목록 관리</div>
+        </div>
+        <button class="btn-add" onclick="toggleForm('worker')">+ 작업자 추가</button>
       </div>
-      <button class="btn-add" onclick="toggleForm('worker')">+ 작업자 추가</button>
-    </div>
 
-    <div class="form-row form-grid-2" id="workerForm" style="display:none">
-      <div class="form-group">
-        <span class="form-label">이름 (필수)</span>
-        <input class="form-input" id="w_name" placeholder="예: 홍길동" />
+      <!-- 검색 -->
+      <div class="search-bar">
+        <input class="search-input" id="searchWorker" placeholder="🔍 이름 또는 공정 검색" oninput="filterWorkers()" />
       </div>
-      <div class="form-group">
-        <span class="form-label">공정</span>
-        <select class="form-select" id="w_process">
-          <option value="포장">포장</option>
-          <option value="재단">재단</option>
-          <option value="도포">도포</option>
-          <option value="검사">검사</option>
-          <option value="쇼트">쇼트</option>
-          <option value="성형">성형</option>
-        </select>
-      </div>
-      <button class="btn-cancel-form" onclick="toggleForm('worker')">취소</button>
-      <button class="btn-save" onclick="saveWorker()">저장</button>
-    </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>이름</th>
-          <th>공정</th>
-          <th>상태</th>
-          <th>등록일</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="workerTable">
-        <tr class="empty-row"><td colspan="5">로딩 중...</td></tr>
-      </tbody>
-    </table>
+      <!-- 행 추가 폼 -->
+      <div class="form-row" id="form_worker">
+        <div class="form-grid form-grid-2">
+          <div class="form-group">
+            <span class="form-label">이름 *</span>
+            <input class="form-input" id="w_name" placeholder="예: 홍길동" />
+          </div>
+          <div class="form-group">
+            <span class="form-label">공정</span>
+            <select class="form-select" id="w_process">
+              <option value="포장">포장</option>
+              <option value="재단">재단</option>
+              <option value="도포">도포</option>
+              <option value="검사">검사</option>
+              <option value="쇼트">쇼트</option>
+              <option value="성형">성형</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-cancel-form" onclick="toggleForm('worker')">취소</button>
+          <button class="btn-save" onclick="saveWorker()">저장</button>
+        </div>
+      </div>
+
+      <!-- 작업자 목록 -->
+      <table>
+        <thead>
+          <tr><th>이름</th><th>공정</th><th>상태</th><th>등록일</th><th></th></tr>
+        </thead>
+        <tbody id="workerTable"></tbody>
+      </table>
+      <div class="show-more-row" id="workerMoreRow" style="display:none">
+        <button class="btn-show-more" id="workerMoreBtn" onclick="toggleShowAll('worker')"></button>
+      </div>
+    </div>
   </div>
-
 </div>
+
+<!-- 수정 모달 (제품) -->
+<div class="modal-overlay" id="editProductModal">
+  <div class="modal-box">
+    <div class="modal-title">✏️ 제품 수정</div>
+    <input type="hidden" id="ep_id" />
+    <div class="modal-grid">
+      <div>
+        <div class="modal-label">사번</div>
+        <input class="modal-input" id="ep_sabun" />
+      </div>
+      <div>
+        <div class="modal-label">고객 품번</div>
+        <input class="modal-input" id="ep_partno" />
+      </div>
+      <div>
+        <div class="modal-label">품명</div>
+        <input class="modal-input" id="ep_partname" />
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-modal-cancel" onclick="closeModal('editProductModal')">취소</button>
+      <button class="btn-modal-save" onclick="saveEditProduct()">저장</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -207,16 +300,12 @@ const SUPABASE_URL = 'https://vpaixxlhzkwtgcllimvn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwYWl4eGxoemt3dGdjbGxpbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNzk4NjMsImV4cCI6MjA5MTk1NTg2M30.V8Bj0cMbM0E2TFhklYYa7TM-vO6Fi70ctACA7uUf4Ig';
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-function fmtDate(str) {
-  if (!str) return '-';
-  return str.slice(0, 10);
-}
+const PAGE_SIZE = 10;
+let allProducts = [], allWorkers = [];
+let showAllProduct = false, showAllWorker = false;
+let excelData = [];
 
-function toggleForm(type) {
-  const el = document.getElementById(type === 'product' ? 'productForm' : 'workerForm');
-  el.style.display = el.style.display === 'none' ? 'grid' : 'none';
-}
-
+function fmtDate(str) { return str ? str.slice(0,10) : '-'; }
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -224,188 +313,96 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-const PRODUCT_DATA = [{"sabun": "502002", "part_no": "9535044", "part_name": "D/LATCH CUSHION(LH)"}, {"sabun": "502011", "part_no": "9535041", "part_name": "D/LATCH STOP"}, {"sabun": "502103", "part_no": "9535084", "part_name": "LATCH ASSY T/LID RUBBER STOP"}, {"sabun": "502104", "part_no": "9535095(7306155)", "part_name": "BUMPER"}, {"sabun": "502105", "part_no": "9530011", "part_name": "R/CUSHION"}, {"sabun": "502106", "part_no": "9530017(7305073)", "part_name": "CUSHION"}, {"sabun": "502107", "part_no": "9530002B", "part_name": "BUMPER"}, {"sabun": "502108", "part_no": "9530023(7302062)", "part_name": "STOPPER"}, {"sabun": "502108-4", "part_no": "9530023B", "part_name": "STOPPER"}, {"sabun": "502109", "part_no": "1110058(7306205)", "part_name": "CHECKER"}, {"sabun": "502110", "part_no": "9530022", "part_name": "PAD STOP"}, {"sabun": "502111", "part_no": "9535081(7302035)", "part_name": "RUBBER"}, {"sabun": "502112", "part_no": "9535082", "part_name": "RUBBER INSULATOR"}, {"sabun": "502113", "part_no": "9530012", "part_name": "RUBBER"}, {"sabun": "502114", "part_no": "9530018", "part_name": "CUSHION"}, {"sabun": "502116", "part_no": "9535097(7306131)", "part_name": "RUBBER"}, {"sabun": "502117", "part_no": "9530013", "part_name": "STOPPER"}, {"sabun": "502118", "part_no": "9530009", "part_name": "PAD STOP"}, {"sabun": "502119", "part_no": "9530008", "part_name": "PAD"}, {"sabun": "502120", "part_no": "9530028", "part_name": "PEDAL"}, {"sabun": "502137", "part_no": "9535103", "part_name": "RUBBER"}, {"sabun": "502138", "part_no": "9535101", "part_name": "STOPPER"}, {"sabun": "502012", "part_no": "9535042", "part_name": "D/LATCH R/CUSHION"}, {"sabun": "502139", "part_no": "9535102", "part_name": "RUBBER"}, {"sabun": "502140", "part_no": "9530060", "part_name": "RUBBER STOP"}, {"sabun": "502141", "part_no": "9535106", "part_name": "DAMPER"}, {"sabun": "502142", "part_no": "2400440", "part_name": "DAMPER"}, {"sabun": "502144", "part_no": "9530056", "part_name": "PAD STRIKE"}, {"sabun": "502145", "part_no": "9530057", "part_name": "DAMPER"}, {"sabun": "502013", "part_no": "9535043", "part_name": "D/LATCH STOP"}, {"sabun": "502145-1", "part_no": "9536285", "part_name": "DAMPER"}, {"sabun": "502146", "part_no": "9530061", "part_name": "DAMPER"}, {"sabun": "502147", "part_no": "9530062", "part_name": "CUSH LATCH"}, {"sabun": "502149", "part_no": "9535115", "part_name": "DAMPER"}, {"sabun": "502150", "part_no": "9530064", "part_name": "DAMPER"}, {"sabun": "502151", "part_no": "9530065", "part_name": "DAMPER"}, {"sabun": "502014", "part_no": "7304416(9535048)", "part_name": "D/LATCH STOP"}, {"sabun": "502153", "part_no": "9535119", "part_name": "STOP-CALIPER"}, {"sabun": "502154", "part_no": "9535118", "part_name": "BUMPER"}, {"sabun": "502155", "part_no": "9530068", "part_name": "DAMPER"}, {"sabun": "502155-1", "part_no": "9536323", "part_name": "DAMPER"}, {"sabun": "502155-2", "part_no": "3600177", "part_name": "DAMPER"}, {"sabun": "502156", "part_no": "9530074", "part_name": "GLASS PAD"}, {"sabun": "502157", "part_no": "9535346(7306139)", "part_name": "RUBBER"}, {"sabun": "502159", "part_no": "9520216", "part_name": "STOPPER"}, {"sabun": "502161", "part_no": "9530085", "part_name": "LATCH DAMPER"}, {"sabun": "502163", "part_no": "9530070", "part_name": "DAMPER"}, {"sabun": "502164", "part_no": "9530071(7306152)", "part_name": "CAP MOTOR"}, {"sabun": "502165", "part_no": "9535349", "part_name": "BUMPER STRIKER"}, {"sabun": "502166", "part_no": "2309395(330615)", "part_name": "DAMPER PAWL"}, {"sabun": "502167", "part_no": "9595257", "part_name": "TUBE"}, {"sabun": "502167-4", "part_no": "9595257B", "part_name": "TUBE"}, {"sabun": "502169", "part_no": "9530072(7306151)", "part_name": "CAP"}, {"sabun": "502170", "part_no": "2590578", "part_name": "DAMPER"}, {"sabun": "502171", "part_no": "9536001(7306154)", "part_name": "CAP"}, {"sabun": "502172", "part_no": "9555676", "part_name": "DAMPER"}, {"sabun": "502173", "part_no": "9535990", "part_name": "STOPPER"}, {"sabun": "502176", "part_no": "2390227", "part_name": "CAB"}, {"sabun": "502177", "part_no": "9535356", "part_name": "CUSHION"}, {"sabun": "502179", "part_no": "9535344", "part_name": "DAMPER"}, {"sabun": "502182", "part_no": "9535360B", "part_name": "STOPPER"}, {"sabun": "502183", "part_no": "9535362", "part_name": "STOPPER"}, {"sabun": "502184", "part_no": "9535359", "part_name": "LATCH"}, {"sabun": "502185", "part_no": "11299-02500", "part_name": "TUBE SPRING"}, {"sabun": "502186", "part_no": "9530077B", "part_name": "DAMPER"}, {"sabun": "502189", "part_no": "9520091", "part_name": "HOOD LATCH"}, {"sabun": "502190", "part_no": "9595300", "part_name": "TUBE LATCH SPRING"}, {"sabun": "502192", "part_no": "9530083B", "part_name": "SLAM BUMPER"}, {"sabun": "502003", "part_no": "9535045(7304411)", "part_name": "D/LATCH CUSHION(RH)"}, {"sabun": "502193", "part_no": "9525667", "part_name": "S/LOCK DAMPER"}, {"sabun": "502195", "part_no": "9536235", "part_name": "CUSHION"}, {"sabun": "502196", "part_no": "9535358", "part_name": "PAWL DAMPER"}, {"sabun": "502197", "part_no": "9530076", "part_name": "T/G CUSHION"}, {"sabun": "502198", "part_no": "9536002", "part_name": "CUSHION LH"}, {"sabun": "502198-1", "part_no": "9536683", "part_name": "CUSHION LH"}, {"sabun": "502199", "part_no": "9536003", "part_name": "CUSHION RH"}, {"sabun": "502200", "part_no": "2330566/8330044", "part_name": "LATCH ASSY"}, {"sabun": "502014-1", "part_no": "9535001", "part_name": "D/LATCH STOP"}, {"sabun": "502201", "part_no": "9535381", "part_name": "DAMPER PAWL"}, {"sabun": "502202", "part_no": "9535373", "part_name": "RUBBER CUSHION"}, {"sabun": "502203", "part_no": "7300843", "part_name": "SHAFT DAMPER"}, {"sabun": "502205", "part_no": "9536254", "part_name": "STOPPER"}, {"sabun": "502206", "part_no": "9536258", "part_name": "DAMPER"}, {"sabun": "502207", "part_no": "9536256", "part_name": "DAMPER"}, {"sabun": "502208", "part_no": "9535387", "part_name": "DAMPER"}, {"sabun": "502015", "part_no": "7304446(9535067)", "part_name": "T/LID STOP"}, {"sabun": "502209", "part_no": "7301382(2400935)", "part_name": "LM T/G STRIKER"}, {"sabun": "502210", "part_no": "9536274", "part_name": "DAMPER"}, {"sabun": "502212", "part_no": "9536292B", "part_name": "RUBBER"}, {"sabun": "502213", "part_no": "9536281", "part_name": "DAMPER"}, {"sabun": "502214", "part_no": "7303656/9530107", "part_name": "RUBBER STOP"}, {"sabun": "502215", "part_no": "9536288", "part_name": "DAMPER"}, {"sabun": "502216", "part_no": "9536279", "part_name": "TUBE"}, {"sabun": "502217", "part_no": "9536280", "part_name": "DAMPER LH"}, {"sabun": "502218", "part_no": "9536282(8110066)/7306146", "part_name": "TF BUMPER"}, {"sabun": "502219", "part_no": "9526248", "part_name": "MD SEAL KEY"}, {"sabun": "502220", "part_no": "9536286", "part_name": "DAMPER RH"}, {"sabun": "502221", "part_no": "9536314", "part_name": "DAMPER CLAW"}, {"sabun": "502222", "part_no": "9536317", "part_name": "DAMPER OVER SLAM"}, {"sabun": "502223", "part_no": "9536393", "part_name": "DAMPER PAWL"}, {"sabun": "502224", "part_no": "7304059(9536402)", "part_name": "DAMPER B/PLATE-DRIVE"}, {"sabun": "502225", "part_no": "7301526", "part_name": "C200 T/G STRIKER"}, {"sabun": "502226", "part_no": "9536325/8110079/7306121", "part_name": "DAMPER-T/LID"}, {"sabun": "502227", "part_no": "7304187(9536322)", "part_name": "RUBBER-DRIVE UNIT"}, {"sabun": "502228", "part_no": "7304186(9536321)", "part_name": "RUBBER B/PLATE-DRIVE UNIT"}, {"sabun": "502231", "part_no": "9536339", "part_name": "RUBBER-ERROR/LEV"}, {"sabun": "502232", "part_no": "9536338", "part_name": "RUBBER-CUSHION"}, {"sabun": "502233", "part_no": "9536336", "part_name": "DAMPER-CAM"}, {"sabun": "502236", "part_no": "224013/C300272/9536334", "part_name": "CAP1 MOTOR"}, {"sabun": "502237", "part_no": "224014/C300273/9536335", "part_name": "CAP2 MOTOR"}, {"sabun": "502239", "part_no": "9536341", "part_name": "SEAL-T/LID"}, {"sabun": "502240", "part_no": "9536331(C300053B)", "part_name": "DAMPER"}, {"sabun": "502241", "part_no": "9536342", "part_name": "DAMPER"}, {"sabun": "502242", "part_no": "9536345", "part_name": "DAMPER"}, {"sabun": "502243", "part_no": "9536318", "part_name": "DAMPER"}, {"sabun": "502244", "part_no": "8500557(9536333)", "part_name": "TUBE LATCH SPRING"}, {"sabun": "502245", "part_no": "9526682/9527219(YP)", "part_name": "PLUG HINGE"}, {"sabun": "502246", "part_no": "9536349(12422-06300)", "part_name": "DAMPER"}, {"sabun": "502247", "part_no": "E71-31351-B(9536353B)", "part_name": "RING-D/LATCH"}, {"sabun": "502248", "part_no": "9536340", "part_name": "RUBBER-T/LID"}, {"sabun": "502250", "part_no": "9536332", "part_name": "DAMPER"}, {"sabun": "502251", "part_no": "2390463(8390116)", "part_name": "BUMPER SUB ASSY"}, {"sabun": "502252", "part_no": "2306667(7301565)", "part_name": "CS CLAW-D/LATCH"}, {"sabun": "502037", "part_no": "9535054", "part_name": "CUSHION"}, {"sabun": "502253", "part_no": "9536358B", "part_name": "DAMPER-D/CHECKER"}, {"sabun": "502254", "part_no": "9536373", "part_name": "RP OPEN DAMPER"}, {"sabun": "502257", "part_no": "9536386", "part_name": "BUFFER STRIKER"}, {"sabun": "502258", "part_no": "9536394(C301017)", "part_name": "TL WHEEL DAMPER"}, {"sabun": "502259", "part_no": "9536391", "part_name": "DAMPER CINCHING LEVER"}, {"sabun": "502260", "part_no": "9536389", "part_name": "DAMPER CANCEL LEVER LH"}, {"sabun": "502261", "part_no": "9536390", "part_name": "DAMPER CANCEL LEVER RH"}, {"sabun": "502039", "part_no": "9535010", "part_name": "CUSHION NO2"}, {"sabun": "502262", "part_no": "7301691(9536388)", "part_name": "DAMPER-BACK PLATE"}, {"sabun": "502263", "part_no": "9536397(C301034)", "part_name": "SEAL-RUBBER POWER ACT R LH"}, {"sabun": "502264", "part_no": "9536398(C301035)", "part_name": "SEAL-RUBBER POWER ACT R RH"}, {"sabun": "502265", "part_no": "9527003(C301011)", "part_name": "BUSH-MT G POWER"}, {"sabun": "502266", "part_no": "9536392", "part_name": "CLAW DAMPER"}, {"sabun": "502267", "part_no": "9536383", "part_name": "DAMPER-S/BK RR"}, {"sabun": "502269", "part_no": "9536433", "part_name": "DAMPER-STRIKER"}, {"sabun": "502270", "part_no": "9536405/C301053/2309419", "part_name": "DAMPER POWER SUB ASSY"}, {"sabun": "502271", "part_no": "9536412", "part_name": "UM DAMPER"}, {"sabun": "502272", "part_no": "9536411", "part_name": "DAMPER"}, {"sabun": "502004", "part_no": "7304415", "part_name": "D/LATCH STOP"}, {"sabun": "502040", "part_no": "9535007", "part_name": "CUSHION"}, {"sabun": "502273", "part_no": "7302225(9599018)", "part_name": "DAMPER"}, {"sabun": "502274", "part_no": "9536461", "part_name": "DAMPER"}, {"sabun": "502275", "part_no": "9536426(C301060)", "part_name": "PAD-MEMBRANE"}, {"sabun": "502276", "part_no": "9536428", "part_name": "UM DAMPER"}, {"sabun": "502277", "part_no": "9536429", "part_name": "GC DAMPER"}, {"sabun": "502278", "part_no": "9536446", "part_name": "DAMPER"}, {"sabun": "502279", "part_no": "9536447", "part_name": "DAMPER"}, {"sabun": "502280", "part_no": "9536451", "part_name": "TL DAMPER"}, {"sabun": "502282", "part_no": "9536453(C301179)", "part_name": "BUFFER-WHEEL D/LAT DDL"}, {"sabun": "502284", "part_no": "9556086(C301307)", "part_name": "BUSH-MTG D/LATCH PWRACT R"}, {"sabun": "502285", "part_no": "9536468", "part_name": "DAMPER"}, {"sabun": "502286", "part_no": "9536460B", "part_name": "DAMPER"}, {"sabun": "502287", "part_no": "2490324", "part_name": "A YG STRIKER T/LID ASSY"}, {"sabun": "502290", "part_no": "9536482", "part_name": "DAMPER SEAT LOCK"}, {"sabun": "502291", "part_no": "9536485", "part_name": "DAMPER RUBBER"}, {"sabun": "502292", "part_no": "9536486(F05770VN)", "part_name": "O-RING"}, {"sabun": "502293", "part_no": "2490334", "part_name": "LF PE STK"}, {"sabun": "502041", "part_no": "9535008", "part_name": "CUSHION(LH)"}, {"sabun": "502294", "part_no": "2490329", "part_name": "YB T/G STRIKER"}, {"sabun": "502295", "part_no": "9536479", "part_name": "DAMPER"}, {"sabun": "502296", "part_no": "9536498", "part_name": "DAMPER"}, {"sabun": "502297", "part_no": "2490333", "part_name": "IG STRIKER"}, {"sabun": "502298", "part_no": "9536502", "part_name": "DAMPER"}, {"sabun": "502299", "part_no": "9536643", "part_name": "DAMPER"}, {"sabun": "502042", "part_no": "9535984", "part_name": "CUSHION(RH)"}, {"sabun": "502300", "part_no": "9536644", "part_name": "DAMPER"}, {"sabun": "502301", "part_no": "9536552(13821-03100)", "part_name": "T1XX DAMPER"}, {"sabun": "502302", "part_no": "9536521", "part_name": "RING-SEAL"}, {"sabun": "502304A", "part_no": "2350810", "part_name": "DAMPER"}, {"sabun": "502305", "part_no": "9536581", "part_name": "DAMPER"}, {"sabun": "502306", "part_no": "9536582", "part_name": "DAMPER"}, {"sabun": "502307", "part_no": "2400989", "part_name": "PD T/G STRIKER"}, {"sabun": "502308", "part_no": "9536566", "part_name": "DN8 SEAL KEY"}, {"sabun": "502309", "part_no": "9536573", "part_name": "DAMPER"}, {"sabun": "502043", "part_no": "9535006", "part_name": "CUSHION"}, {"sabun": "502310", "part_no": "9536572", "part_name": "DAMPER"}, {"sabun": "502311", "part_no": "7303564(9536571)", "part_name": "DAMPER"}, {"sabun": "502312", "part_no": "7305170(9536567)", "part_name": "DAMPER"}, {"sabun": "502313", "part_no": "2490355", "part_name": "Lfa PE"}, {"sabun": "502314", "part_no": "7303558(9536592)", "part_name": "DAMPER"}, {"sabun": "502315", "part_no": "9536585", "part_name": "DAMPER-T/GATE LATCH OVERSLAM"}, {"sabun": "502316", "part_no": "9577468", "part_name": "WIRE DAMPER"}, {"sabun": "502317", "part_no": "9599243", "part_name": "DAMPER"}, {"sabun": "502047", "part_no": "9535021", "part_name": "CUSHION"}, {"sabun": "502318", "part_no": "9599380", "part_name": "RIT RING FRUNK"}, {"sabun": "502319", "part_no": "7306231", "part_name": "DAMPER"}, {"sabun": "502320", "part_no": "9599496", "part_name": "SEAL MOTOR SEAL"}, {"sabun": "502321", "part_no": "9528438", "part_name": "DAMPER"}, {"sabun": "502337", "part_no": "7306236", "part_name": "DAMPER"}, {"sabun": "502323", "part_no": "9536626", "part_name": "R1T SEAL SHAFT"}, {"sabun": "502324", "part_no": "9599373", "part_name": "RIT RING-6-X"}, {"sabun": "502325", "part_no": "9599374", "part_name": "R1T SEAL FRUNK"}, {"sabun": "502326", "part_no": "7305634", "part_name": "DAMPER"}, {"sabun": "502048", "part_no": "9535029", "part_name": "DAMPER"}, {"sabun": "502327", "part_no": "9536634", "part_name": "DAMPER"}, {"sabun": "502331", "part_no": "7306300", "part_name": "DAMPER"}, {"sabun": "502333", "part_no": "2400935", "part_name": "DAMPER"}, {"sabun": "502335", "part_no": "9536686B", "part_name": "DAMPER"}, {"sabun": "503002", "part_no": "10162", "part_name": "TORSION RUBBER"}, {"sabun": "503003", "part_no": "10234", "part_name": "TORSION RUBBER"}, {"sabun": "503013", "part_no": "Ø15,12 흡착고무", "part_name": "Ø15/12 흡착고무"}, {"sabun": "503015", "part_no": "70039", "part_name": "DAMPER"}, {"sabun": "503016", "part_no": "70047", "part_name": "CMC BOOT"}, {"sabun": "503017", "part_no": "503017", "part_name": "CRC BOOT"}, {"sabun": "503022", "part_no": "71882", "part_name": "PROTECT 마개"}, {"sabun": "503024", "part_no": "70321", "part_name": "DAMPER"}, {"sabun": "503026", "part_no": "70634", "part_name": "O-RING"}, {"sabun": "503027", "part_no": "70560", "part_name": "B/SCREW_검정"}, {"sabun": "503027-1", "part_no": "73667", "part_name": "B/SCREW_녹색"}, {"sabun": "503029", "part_no": "21835", "part_name": "THREAD PROTXTOR"}, {"sabun": "503032", "part_no": "72949", "part_name": "WELLSEAL"}, {"sabun": "503033", "part_no": "70350", "part_name": "THREAD PROTXTOR"}, {"sabun": "502050", "part_no": "F82320-03-05", "part_name": "STOPPER"}, {"sabun": "503039", "part_no": "70145", "part_name": "BOOT"}, {"sabun": "503045", "part_no": "90025", "part_name": "BOOT"}, {"sabun": "503046", "part_no": "72578", "part_name": "BOOT"}, {"sabun": "503047", "part_no": "71326", "part_name": "B/SCREW CAP"}, {"sabun": "503049", "part_no": "71420", "part_name": "DAMPER"}, {"sabun": "503050", "part_no": "26981", "part_name": "T/RUB"}, {"sabun": "503051", "part_no": "71477", "part_name": "STOP PLATE"}, {"sabun": "503052", "part_no": "71517", "part_name": "CMC BOOT"}, {"sabun": "503053", "part_no": "73152", "part_name": "BOOT"}, {"sabun": "503054", "part_no": "71991", "part_name": "PAD"}, {"sabun": "502052", "part_no": "9535009", "part_name": "CUSHION(LH)"}, {"sabun": "503055", "part_no": "71195", "part_name": "SEAL NIPPLE"}, {"sabun": "503076", "part_no": "73651", "part_name": "SEAL NIPPLE"}, {"sabun": "503058", "part_no": "71886", "part_name": "BOOT"}, {"sabun": "503059", "part_no": "90173", "part_name": "CSC BOOT"}, {"sabun": "503061", "part_no": "72240", "part_name": "BOOT"}, {"sabun": "503062", "part_no": "36436", "part_name": "T/RUBBER ASSY"}, {"sabun": "503063", "part_no": "36334", "part_name": "T/RUBBER ASSY"}, {"sabun": "503065", "part_no": "72314", "part_name": "NIPPLE SEAL"}, {"sabun": "503066", "part_no": "72376", "part_name": "BUSHING"}, {"sabun": "503067", "part_no": "72312", "part_name": "STOP PLATE"}, {"sabun": "502053", "part_no": "9535004", "part_name": "CUSHION(RH)"}, {"sabun": "503069", "part_no": "73375", "part_name": "STOP PLATE"}, {"sabun": "503070", "part_no": "90158", "part_name": "O-RING"}, {"sabun": "503071", "part_no": "72667", "part_name": "KANT SEAL"}, {"sabun": "503072", "part_no": "72644", "part_name": "GUIDE O-RING"}, {"sabun": "503073", "part_no": "72557(구.72713)", "part_name": "KANT SEAL"}, {"sabun": "503077", "part_no": "47071", "part_name": "BOOT"}, {"sabun": "503078", "part_no": "47074", "part_name": "O-RING"}, {"sabun": "503079", "part_no": "90740", "part_name": "BOOT"}, {"sabun": "503079-1", "part_no": "91478", "part_name": "B/SCREW"}, {"sabun": "502054", "part_no": "9535005", "part_name": "STOPPER-HOOK"}, {"sabun": "503080", "part_no": "48533", "part_name": "RUBBER"}, {"sabun": "503077S", "part_no": "48502", "part_name": "BOOT"}, {"sabun": "503081", "part_no": "74441", "part_name": "WALL SEAL(NEW)"}, {"sabun": "503083", "part_no": "50900(내수)", "part_name": "T/RUBBER ASSY"}, {"sabun": "503085", "part_no": "91169", "part_name": "BOOT"}, {"sabun": "503088", "part_no": "90749", "part_name": "DUST COVER"}, {"sabun": "503088-1", "part_no": "91479", "part_name": "DUST COVER"}, {"sabun": "503089", "part_no": "91084", "part_name": "DUST COVER"}, {"sabun": "503090", "part_no": "91331", "part_name": "DUST COVER"}, {"sabun": "502055", "part_no": "9535003", "part_name": "STOPPER POLE PIN"}, {"sabun": "503091", "part_no": "54229", "part_name": "ROD RUBBER"}, {"sabun": "503092", "part_no": "54230", "part_name": "SEALING BOOT1"}, {"sabun": "503093", "part_no": "54275", "part_name": "SEALING BOOT2"}, {"sabun": "503094", "part_no": "57095", "part_name": "SEALING RUBBER"}, {"sabun": "503095", "part_no": "56771", "part_name": "SEALING BOOT"}, {"sabun": "503096", "part_no": "56734", "part_name": "SEALING RUBBER"}, {"sabun": "503097", "part_no": "91361", "part_name": "DUST COVER"}, {"sabun": "503099", "part_no": "57691", "part_name": "O-RING"}, {"sabun": "503100", "part_no": "58681", "part_name": "T/RUBBER ASSY"}, {"sabun": "503101", "part_no": "75378", "part_name": "BOOT"}, {"sabun": "502056", "part_no": "9535011", "part_name": "CUSHION"}, {"sabun": "503102", "part_no": "91502", "part_name": "BOOT"}, {"sabun": "503104", "part_no": "59469", "part_name": "T/RUB ASSY"}, {"sabun": "503A01", "part_no": "70529", "part_name": "BOOT ASSY"}, {"sabun": "503A02", "part_no": "71093", "part_name": "BOOT ASSY"}, {"sabun": "503A03", "part_no": "71091", "part_name": "BOOT ASSY"}, {"sabun": "503A05", "part_no": "71094", "part_name": "BOOT ASSY"}, {"sabun": "503A06", "part_no": "71096", "part_name": "BOOT ASSY"}, {"sabun": "503A07", "part_no": "70088", "part_name": "BOOT ASSY"}, {"sabun": "503A09", "part_no": "70896", "part_name": "BOOT ASSY"}, {"sabun": "502057", "part_no": "9535028", "part_name": "RUBBER-PAWL"}, {"sabun": "503A10", "part_no": "70954", "part_name": "BOOT ASSY"}, {"sabun": "503A11", "part_no": "71089", "part_name": "BOOT ASSY"}, {"sabun": "503A13", "part_no": "71808", "part_name": "BOOT ASSY"}, {"sabun": "503A15", "part_no": "71999", "part_name": "BOOT ASSY"}, {"sabun": "503A16", "part_no": "72066", "part_name": "BOOT ASSY"}, {"sabun": "503A17", "part_no": "72401", "part_name": "BOOT ASSY"}, {"sabun": "503A18", "part_no": "72431", "part_name": "BOOT ASSY"}, {"sabun": "503A19", "part_no": "72678", "part_name": "BOOT ASSY"}, {"sabun": "503A20", "part_no": "73691/74121", "part_name": "BOOT ASSY"}, {"sabun": "503A21", "part_no": "74122", "part_name": "BOOT ASSY"}, {"sabun": "503A22", "part_no": "74198", "part_name": "BOOT ASSY"}, {"sabun": "503A23", "part_no": "74686", "part_name": "BOOT ASSY"}, {"sabun": "503A24", "part_no": "74771", "part_name": "BOOT ASSY"}, {"sabun": "503A25", "part_no": "74737", "part_name": "BOOT ASSY"}, {"sabun": "503A26", "part_no": "74990", "part_name": "BOOT ASSY"}, {"sabun": "503A27", "part_no": "75016", "part_name": "BOOT ASSY"}, {"sabun": "503A28", "part_no": "75123", "part_name": "BOOT ASSY"}, {"sabun": "503P01", "part_no": "70081", "part_name": "F/TUBE COVER"}, {"sabun": "502058-2", "part_no": "2310192", "part_name": "T/LID LATCH"}, {"sabun": "503P02", "part_no": "70396", "part_name": "F/TUBE COVER"}, {"sabun": "503P03", "part_no": "70636", "part_name": "F/TUBE COVER"}, {"sabun": "503P04", "part_no": "70549", "part_name": "F/TUBE COVER"}, {"sabun": "503P05", "part_no": "70637", "part_name": "F/TUBE COVER"}, {"sabun": "503P07", "part_no": "70639", "part_name": "F/TUBE COVER"}, {"sabun": "503P08", "part_no": "70615", "part_name": "F/TUBE COVER"}, {"sabun": "503P09", "part_no": "70640", "part_name": "F/TUBE COVER"}, {"sabun": "503P10", "part_no": "70617", "part_name": "F/TUBE COVER"}, {"sabun": "503P11", "part_no": "74199", "part_name": "F/TUBE COVER"}, {"sabun": "503P12", "part_no": "90997", "part_name": "F/TUBE COVER"}, {"sabun": "502058-1", "part_no": "2310205", "part_name": "T/LID LATCH"}, {"sabun": "504001", "part_no": "2084C030", "part_name": "SEAL"}, {"sabun": "504003", "part_no": "2084D390A", "part_name": "SEAL"}, {"sabun": "504005", "part_no": "2084K040", "part_name": "O-RING"}, {"sabun": "504007", "part_no": "2084J640", "part_name": "CAP"}, {"sabun": "504008", "part_no": "2084K231", "part_name": "OIL SEAL"}, {"sabun": "504014", "part_no": "2057G220", "part_name": "VALVE"}, {"sabun": "504017", "part_no": "2084K130", "part_name": "O-RING"}, {"sabun": "502058", "part_no": "2310205B", "part_name": "T/LID LATCH"}, {"sabun": "504022", "part_no": "2084K190", "part_name": "PACKING"}, {"sabun": "504022-20", "part_no": "3085N030", "part_name": "SCREW ASSY"}, {"sabun": "504023", "part_no": "2147M010", "part_name": "O-RING"}, {"sabun": "504024", "part_no": "2084D300", "part_name": "CAP"}, {"sabun": "504025", "part_no": "2084C280", "part_name": "PACKING"}, {"sabun": "504026", "part_no": "2084C200", "part_name": "HOLDER"}, {"sabun": "504027", "part_no": "2084C400", "part_name": "PACKING"}, {"sabun": "504028", "part_no": "3099A300-1", "part_name": "RETAINER"}, {"sabun": "502059", "part_no": "7300711/2302972", "part_name": "LATCH"}, {"sabun": "504029", "part_no": "2084E230", "part_name": "O-RING"}, {"sabun": "504032", "part_no": "2084K220", "part_name": "SEAL"}, {"sabun": "504033", "part_no": "2084E140", "part_name": "SEAL"}, {"sabun": "504035", "part_no": "3099B100", "part_name": "RETAINER ASSY"}, {"sabun": "504038", "part_no": "2084C201", "part_name": "HOLDER"}, {"sabun": "504040", "part_no": "2084L050", "part_name": "HOLDER"}, {"sabun": "504040-1", "part_no": "2084H600", "part_name": "SEAL"}, {"sabun": "502005", "part_no": "9535047", "part_name": "D/LATCH STOP"}, {"sabun": "504043", "part_no": "2084F500", "part_name": "ISOLATOR"}, {"sabun": "504044", "part_no": "2084F700", "part_name": "HOLDER"}, {"sabun": "505001", "part_no": "2068-8280", "part_name": "GASKET"}, {"sabun": "505006", "part_no": "20682501", "part_name": "GASKET"}, {"sabun": "505007", "part_no": "2068-2070", "part_name": "GASKET"}, {"sabun": "505008", "part_no": "20687621", "part_name": "GASKET"}, {"sabun": "505013", "part_no": "21045552", "part_name": "GASKET"}, {"sabun": "505017", "part_no": "2084Y530", "part_name": "O/R"}, {"sabun": "505018", "part_no": "2084Y520", "part_name": "O/R"}, {"sabun": "502060", "part_no": "7300708/2302939", "part_name": "Y1 D/LAT"}, {"sabun": "505019-20", "part_no": "3005H051", "part_name": "VALVE GUID ASSY"}, {"sabun": "505020-20", "part_no": "3005H070", "part_name": "VALVE GUIDE ASSY"}, {"sabun": "505024", "part_no": "20845653", "part_name": "O-RING"}, {"sabun": "505029", "part_no": "20845751", "part_name": "SEAL"}, {"sabun": "505037", "part_no": "2116-1673", "part_name": "GASKET"}, {"sabun": "505042", "part_no": "2068-2675", "part_name": "GASKET"}, {"sabun": "505045", "part_no": "2147D600", "part_name": "WIRE PROTECTOR"}, {"sabun": "505046", "part_no": "2084K321", "part_name": "SEAL MT G"}, {"sabun": "502061", "part_no": "7300712/8300476", "part_name": "LATCH"}, {"sabun": "505047", "part_no": "2084K310", "part_name": "SEAL"}, {"sabun": "505048", "part_no": "20845961", "part_name": "SEAL"}, {"sabun": "505049", "part_no": "2084A120", "part_name": "GASKET"}, {"sabun": "505052", "part_no": "2084M300", "part_name": "SEAL"}, {"sabun": "505053", "part_no": "2084X300", "part_name": "SEAL"}, {"sabun": "505054", "part_no": "2084U500", "part_name": "SEAL"}, {"sabun": "505056", "part_no": "2084F150", "part_name": "SEAL"}, {"sabun": "505057", "part_no": "2068B100", "part_name": "GASKET COVER"}, {"sabun": "505058", "part_no": "2084Z130", "part_name": "HEV/PHEV"}, {"sabun": "505062", "part_no": "2084A451", "part_name": "RUBBER CUSHION"}, {"sabun": "505062-1", "part_no": "2084A452", "part_name": "RUBBER CUSHION"}, {"sabun": "505063", "part_no": "2084A250", "part_name": "GASKET"}, {"sabun": "505H01", "part_no": "2084D460", "part_name": "VENT HOSE"}, {"sabun": "505H02", "part_no": "2084Q930", "part_name": "VENT HOSE"}, {"sabun": "505H03", "part_no": "2084A370", "part_name": "VENT HOSE"}, {"sabun": "505H04", "part_no": "2084D413", "part_name": "HOSE"}, {"sabun": "505H05", "part_no": "2084J350", "part_name": "HOSE"}, {"sabun": "505H06", "part_no": "2084B141", "part_name": "HOSE"}, {"sabun": "505H07", "part_no": "2084G520", "part_name": "VENT HOSE"}, {"sabun": "502062", "part_no": "7300714B/2310341B", "part_name": "XD LATCH"}, {"sabun": "505H08", "part_no": "2084H450", "part_name": "VENT HOSE"}, {"sabun": "505H09", "part_no": "2084Q960", "part_name": "VENT HOSE"}, {"sabun": "505H10", "part_no": "2084G530", "part_name": "VENT HOSE"}, {"sabun": "505H11", "part_no": "2084C110", "part_name": "VENT HOSE"}, {"sabun": "505H12", "part_no": "2084T102", "part_name": "VENT HOSE"}, {"sabun": "505H13", "part_no": "2084Q100", "part_name": "VENT HOSE"}, {"sabun": "505H14", "part_no": "2084Q130", "part_name": "VENT HOSE"}, {"sabun": "505H15", "part_no": "2084Q140", "part_name": "VENT HOSE"}, {"sabun": "505H16", "part_no": "2084Q120", "part_name": "VENT HOSE"}, {"sabun": "505H17", "part_no": "2084Q950", "part_name": "VENT HOSE"}, {"sabun": "505H18", "part_no": "2084G510-1", "part_name": "VENT HOSE"}, {"sabun": "505H19", "part_no": "2084G550", "part_name": "VENT HOSE"}, {"sabun": "505H20", "part_no": "2084C120", "part_name": "VENT HOSE"}, {"sabun": "505H21", "part_no": "2084C130", "part_name": "VENT HOSE"}, {"sabun": "505H22", "part_no": "2084B610", "part_name": "FEED HOSE"}, {"sabun": "509013", "part_no": "82477-27000", "part_name": "CUSHION"}, {"sabun": "509014", "part_no": "82479-33000", "part_name": "STOPPER"}, {"sabun": "509015", "part_no": "98819-33000", "part_name": "DAMPER"}, {"sabun": "509016", "part_no": "82498-KA000", "part_name": "DAMPER-RR DR GLASS LH"}, {"sabun": "509017", "part_no": "82499-KA000", "part_name": "DAMPER-RR DR GLASS RH"}, {"sabun": "509021", "part_no": "82479-27000", "part_name": "STOPPER"}, {"sabun": "509022", "part_no": "82409-27000", "part_name": "TUBE"}, {"sabun": "509026", "part_no": "82479-25000", "part_name": "RUBBER BUMPER"}, {"sabun": "509027", "part_no": "83488-LS000", "part_name": "R/BUMPER"}, {"sabun": "509031", "part_no": "82498-3A000", "part_name": "DAMPER"}, {"sabun": "509032", "part_no": "82496-3F000", "part_name": "BOOT ASSY"}, {"sabun": "509034", "part_no": "81451-1D000", "part_name": "BOOT-DR"}, {"sabun": "509035", "part_no": "83498-1D000", "part_name": "DAMPER RR"}, {"sabun": "502066", "part_no": "7300717/8320089", "part_name": "LATCH"}, {"sabun": "509036", "part_no": "83499-1D000", "part_name": "DAMPER RR"}, {"sabun": "509038", "part_no": "83496-T9R00", "part_name": "BUMPER GLASS SLAM"}, {"sabun": "509039", "part_no": "82479-1D000", "part_name": "STOPPER DR"}, {"sabun": "509040", "part_no": "83479-3J000", "part_name": "BUMPER DOWNSTOP"}, {"sabun": "509041", "part_no": "82393-VE011", "part_name": "BUMPER-DR WDW"}, {"sabun": "509042", "part_no": "82393-VE012", "part_name": "BUMPER-FR CARRIER"}, {"sabun": "509044", "part_no": "81460-7M020", "part_name": "AIR OUTLET SEAL"}, {"sabun": "509049", "part_no": "82498-1M200", "part_name": "DAMPER CARRIER"}, {"sabun": "509050", "part_no": "82393-1M200", "part_name": "BUMPER-DR DOWN STOP"}, {"sabun": "509051", "part_no": "96331-VP000", "part_name": "SEAL-WATER PROOFING"}, {"sabun": "509052", "part_no": "82479-VP010", "part_name": "VW250 BUMPER"}, {"sabun": "509053", "part_no": "83479-VP010", "part_name": "DAMPER"}, {"sabun": "509054", "part_no": "82479-OU000", "part_name": "STOPPER DR"}, {"sabun": "502067", "part_no": "9535024", "part_name": "PAWL"}, {"sabun": "509055", "part_no": "81460-3J001", "part_name": "SEALING COVER"}, {"sabun": "509056", "part_no": "10091-VP000", "part_name": "MASKING CAP"}, {"sabun": "509057", "part_no": "82495-Y1X10", "part_name": "STOPPER"}, {"sabun": "509058", "part_no": "82498-A3000", "part_name": "DAMPER WDW REG ANTIRATTLE"}, {"sabun": "509059", "part_no": "82498-A7200", "part_name": "DAMPER-SHOE"}, {"sabun": "509060", "part_no": "82475-V1210", "part_name": "RUBBER"}, {"sabun": "509061", "part_no": "82479-V1210", "part_name": "RUBBER"}, {"sabun": "509062", "part_no": "82393-QM010", "part_name": "RUBBER"}, {"sabun": "509063", "part_no": "82479-QM010", "part_name": "RUBBER"}, {"sabun": "509064", "part_no": "83479-QM010", "part_name": "RUBBER"}, {"sabun": "502006", "part_no": "81141-73000", "part_name": "D/LATCH PAWL"}, {"sabun": "509065", "part_no": "82489-VG010", "part_name": "RUBBER"}, {"sabun": "509066", "part_no": "83479-VG010", "part_name": "RUBBER"}, {"sabun": "509067", "part_no": "82479-D1000", "part_name": "RUBBER"}, {"sabun": "509068", "part_no": "82489-W2000", "part_name": "DAMPER"}, {"sabun": "509069", "part_no": "82498-NS000", "part_name": "RUBBER"}, {"sabun": "509070", "part_no": "82489-V1210", "part_name": "RUBBER"}, {"sabun": "509071", "part_no": "82470-DBL10", "part_name": "RUBBER"}, {"sabun": "509072", "part_no": "15730-A1C10", "part_name": "RUBBER"}, {"sabun": "509073", "part_no": "83479-V3610", "part_name": "RUBBER"}, {"sabun": "509074", "part_no": "83489-S3710", "part_name": "RUBBER"}, {"sabun": "509075", "part_no": "82479-CZ010", "part_name": "RUBBER"}, {"sabun": "509077", "part_no": "42473-E1P00", "part_name": "RUBBER"}, {"sabun": "509078", "part_no": "93100-K8030", "part_name": "SEALING RUBBER"}, {"sabun": "509079", "part_no": "81189-2B000", "part_name": "STOP RUBBER-HOOD LATCH"}, {"sabun": "510002", "part_no": "1209-230120-10", "part_name": "RUBBER"}, {"sabun": "510004", "part_no": "31195-3B000", "part_name": "RUBBER"}, {"sabun": "510005", "part_no": "1209-110210-10", "part_name": "RUBBER"}, {"sabun": "510006", "part_no": "4043-870270", "part_name": "RUBBER"}, {"sabun": "519001", "part_no": "KA-008", "part_name": "BOOT"}, {"sabun": "519002", "part_no": "KA-007", "part_name": "STOP RUBBER"}, {"sabun": "519003", "part_no": "KA-012", "part_name": "O-RING"}, {"sabun": "519004", "part_no": "KA-002", "part_name": "MOTOR RUBBER"}, {"sabun": "519006", "part_no": "GASKET RUBBER", "part_name": "GASKET RUBBER"}, {"sabun": "519007", "part_no": "GROMMET RUBBER", "part_name": "GROMMET RUBBER"}, {"sabun": "520008", "part_no": "61051-7D000", "part_name": "大"}, {"sabun": "520009", "part_no": "61052-7D000", "part_name": "小"}, {"sabun": "521021", "part_no": "KP4502-A4", "part_name": "주 클러치 레버손잡이"}, {"sabun": "521033", "part_no": "CB2310-A4", "part_name": "주유캡 35"}, {"sabun": "521040", "part_no": "CB5716-A4", "part_name": "레버손잡이"}, {"sabun": "521041", "part_no": "CBC307-A4", "part_name": "조작레버(적)"}, {"sabun": "521052", "part_no": "CC2224-A4", "part_name": "완충고무C"}, {"sabun": "521077", "part_no": "TC4504-A4", "part_name": "완충고무C"}, {"sabun": "521082", "part_no": "KP6040-A4", "part_name": "주유마개"}, {"sabun": "521082-2", "part_no": "KP6040-A4", "part_name": "주유마개"}, {"sabun": "521082-1", "part_no": "RA00008799", "part_name": "주유마개"}, {"sabun": "521085", "part_no": "TTD665-A4", "part_name": "고무마개10"}, {"sabun": "521088", "part_no": "TTD43-A4", "part_name": "고무마개15"}, {"sabun": "521089", "part_no": "TTC401-A4", "part_name": "연료탱크 방진고무"}, {"sabun": "521090", "part_no": "TTD644-A4", "part_name": "쿠션고무"}, {"sabun": "521096", "part_no": "TTC519-A4", "part_name": "그로메트 20.5"}, {"sabun": "521098", "part_no": "TB4028-A4", "part_name": "그로메트 8"}, {"sabun": "521098-1", "part_no": "TTB947-A4", "part_name": "그로메트 8"}, {"sabun": "521101", "part_no": "TT3612-A4", "part_name": "사이드커버 패킹"}, {"sabun": "521105", "part_no": "TT2926-A4", "part_name": "노브"}, {"sabun": "521108", "part_no": "VD0635-B4", "part_name": "통기관"}, {"sabun": "521109", "part_no": "VD0641-D4", "part_name": "간격와셔"}, {"sabun": "521110", "part_no": "VD0947-B4", "part_name": "주유캡"}, {"sabun": "521111", "part_no": "VD0637-B4", "part_name": "완충고무"}, {"sabun": "521113", "part_no": "AF0103-A4", "part_name": "패킹(실린더라이터)"}, {"sabun": "521114", "part_no": "CEH2040-A4", "part_name": "방진고무"}, {"sabun": "502068", "part_no": "82518", "part_name": "R/CUSHION"}, {"sabun": "521115", "part_no": "CEF701-A4", "part_name": "마개62"}, {"sabun": "521116", "part_no": "CE2606-B4", "part_name": "방진실50"}, {"sabun": "521117", "part_no": "CE2409-A4", "part_name": "방진실120"}, {"sabun": "521118", "part_no": "CEK006-A4", "part_name": "배터리 취부밴드"}, {"sabun": "521118-1", "part_no": "TZD689-A4", "part_name": "에어클리너 취부밴드"}, {"sabun": "521121", "part_no": "CED630-A4", "part_name": "마개 그로밋30"}, {"sabun": "521122", "part_no": "CE9118-A3", "part_name": "탈곡실 커버 손잡이"}, {"sabun": "521136", "part_no": "TTI849-A3", "part_name": "패킹(후미등)"}, {"sabun": "521137", "part_no": "VD0435-A3", "part_name": "먼지막이 캡"}, {"sabun": "521157", "part_no": "TTK108-A3", "part_name": "완충고무"}, {"sabun": "521158", "part_no": "TH2519-A3", "part_name": "링크고정 고무조합"}, {"sabun": "521159", "part_no": "TN0151-A4", "part_name": "고무 클램프"}, {"sabun": "521160", "part_no": "HL0544-A4", "part_name": "브리더밸브"}, {"sabun": "521171", "part_no": "CVF701-A4", "part_name": "마개72"}, {"sabun": "521173", "part_no": "TZ3626-A4", "part_name": "패킹"}, {"sabun": "521175", "part_no": "TZ0143", "part_name": "패킹"}, {"sabun": "521177", "part_no": "TC4504-A4", "part_name": "고무"}, {"sabun": "521178", "part_no": "TC4606-A4", "part_name": "그로메트"}, {"sabun": "521179", "part_no": "TC5812-A4", "part_name": "고무부츠"}, {"sabun": "521180", "part_no": "TC6202-A4", "part_name": "부츠(축커버)"}, {"sabun": "521181", "part_no": "TC8811-A4", "part_name": "부츠"}, {"sabun": "521182", "part_no": "TCF416-A3", "part_name": "마운트(하)"}, {"sabun": "521184", "part_no": "TCB610-A4", "part_name": "페달부츠"}, {"sabun": "521188", "part_no": "TCE302-A4", "part_name": "그로메트25"}, {"sabun": "521190", "part_no": "TCE712-A4", "part_name": "그로메트30"}, {"sabun": "521191", "part_no": "HRA12033-A4", "part_name": "방진고무"}, {"sabun": "521192", "part_no": "TCE912-A3", "part_name": "커버 RH(발판가드)"}, {"sabun": "521193", "part_no": "TCE914-A3", "part_name": "커버 LH(발판가드)"}, {"sabun": "521194", "part_no": "TCF415-A4", "part_name": "마운트(상)"}, {"sabun": "521208", "part_no": "KS7212-A4", "part_name": "완충고무"}, {"sabun": "521209", "part_no": "FB2912-A3", "part_name": "스티어링 자바라"}, {"sabun": "521210", "part_no": "FB8052-A4", "part_name": "완충고무"}, {"sabun": "521212", "part_no": "RN2636-A4", "part_name": "배터리받이고무"}, {"sabun": "521214", "part_no": "RN1411-B4", "part_name": "방진고무"}, {"sabun": "502007", "part_no": "81111-73000", "part_name": "D/LATCH CUSHION(LH)"}, {"sabun": "521216", "part_no": "CFB802-A4", "part_name": "부싱"}, {"sabun": "521217", "part_no": "RN7530-A4", "part_name": "레버손잡이(흑색)"}, {"sabun": "521217-1", "part_no": "RN7825-A4", "part_name": "레버손잡이(적색)"}, {"sabun": "521219", "part_no": "RN2601", "part_name": "배터리 고정밴드조합"}, {"sabun": "521221", "part_no": "FLV241-A4", "part_name": "방진고무"}, {"sabun": "521222", "part_no": "RN7109-A4", "part_name": "쿠션고무"}, {"sabun": "521223", "part_no": "CA00003164A", "part_name": "방진고무"}, {"sabun": "521224", "part_no": "TA00019155A", "part_name": "방진고무"}, {"sabun": NaN, "part_no": "ME2515-B3", "part_name": "배터리고정밴드"}, {"sabun": "521225", "part_no": "TA00049780A", "part_name": "전차축커버"}, {"sabun": "521226", "part_no": "TA00049148A", "part_name": "고무판(프로펠러축 커버)"}, {"sabun": "521227", "part_no": "TA00049828A", "part_name": "CABIN 변속부츠"}, {"sabun": "521228", "part_no": "TA00049928A", "part_name": "PTO변속부츠"}, {"sabun": "521229", "part_no": "TA00053003A", "part_name": "페달부츠"}, {"sabun": "521230", "part_no": "TA00055258A", "part_name": "고무플러그"}, {"sabun": "521231", "part_no": "RA00019197", "part_name": "레버손잡이(적색)"}, {"sabun": "521233", "part_no": "TA00062432A", "part_name": "고무마개(SCV)"}, {"sabun": "521234", "part_no": "TA00062022A", "part_name": "고무마개"}, {"sabun": "521235", "part_no": "TA00062020A", "part_name": "고무마개"}, {"sabun": "521236", "part_no": "TA00062586A", "part_name": "고무판"}, {"sabun": "502069", "part_no": "9535032", "part_name": "CUP-CYL"}, {"sabun": "521237", "part_no": "TA00062205A", "part_name": "부변속부츠"}, {"sabun": "523001", "part_no": "TT10030000A", "part_name": "DUST COVER 大"}, {"sabun": "523003", "part_no": "TC56010105A", "part_name": "DUST COVER 大"}, {"sabun": "523004", "part_no": "TC56010207A", "part_name": "DUST COVER 小"}, {"sabun": "502072", "part_no": "9535033", "part_name": "CAP"}, {"sabun": "524001", "part_no": "73370-14000", "part_name": "RUBBER"}, {"sabun": "531001", "part_no": "154123-2500", "part_name": "DAMPER"}, {"sabun": "531002", "part_no": "716856", "part_name": "B/CLUTCH"}, {"sabun": "531003", "part_no": "6559150", "part_name": "RUBBER"}, {"sabun": "532001", "part_no": "39309-U110", "part_name": "RUBBER"}, {"sabun": "537001", "part_no": "OK87A0650", "part_name": "SEAL ASSY"}, {"sabun": "536005", "part_no": "방진고무", "part_name": "방진고무"}, {"sabun": "541001", "part_no": "GH84369A", "part_name": "RUBBER"}, {"sabun": "502079", "part_no": "9535039", "part_name": "PACKING"}, {"sabun": "541003", "part_no": "3F848-65105", "part_name": "그로메트"}, {"sabun": "544001", "part_no": "9827205", "part_name": "SEAL CAP"}, {"sabun": "544003", "part_no": "W000568", "part_name": "PACKING"}, {"sabun": "545004", "part_no": "15015208", "part_name": "ATTACHING STRIP"}, {"sabun": "545005", "part_no": "15106638", "part_name": "STOPPER"}, {"sabun": "551006", "part_no": "97855-K150", "part_name": "RUBBER BUSH"}, {"sabun": "554002", "part_no": "25368693", "part_name": "ISOLATOR"}, {"sabun": "554003", "part_no": "25377821", "part_name": "ISOLATOR"}, {"sabun": "502080", "part_no": "9535068", "part_name": "CUSHION"}, {"sabun": "557002", "part_no": "28085719", "part_name": "ISOLATOR"}, {"sabun": "561001", "part_no": "9520131(2210114)", "part_name": "LEVER STOP"}, {"sabun": "561002", "part_no": "9520130(2210112)", "part_name": "B/OVER SLAM"}, {"sabun": "561003", "part_no": "9520129(2210113)", "part_name": "RATCHET STOP"}, {"sabun": "561004", "part_no": "11284-00500", "part_name": "DAMPER"}, {"sabun": "561005", "part_no": "11259-01100", "part_name": "DAMPER STRIKER"}, {"sabun": "561020(561006)", "part_no": "82620", "part_name": "BUMPER OVER SLAM"}, {"sabun": "561007", "part_no": "330407(300008B)", "part_name": "RUBBER CUSHION"}, {"sabun": "561008", "part_no": "82517", "part_name": "PAWL"}, {"sabun": "502081", "part_no": "2320024", "part_name": "LATCH"}, {"sabun": "561015", "part_no": "230328", "part_name": "PAWL DAMPER"}, {"sabun": "561016", "part_no": "230329-1", "part_name": "LATCH T/GATE DAMPER"}, {"sabun": "561017", "part_no": "9536237(2220102B)", "part_name": "BUMPER"}, {"sabun": "561018", "part_no": "11592-00600", "part_name": "DAMPER HOOD SEAL"}, {"sabun": "561019", "part_no": "9535108(11530-00300)", "part_name": "RUBBER"}, {"sabun": "561020", "part_no": "82620(1mm증대품)", "part_name": "BUMPER OVER SLAM"}, {"sabun": "561023", "part_no": "9536327", "part_name": "DAMPER"}, {"sabun": "561024", "part_no": "9536329", "part_name": "RUBBER"}, {"sabun": "502082", "part_no": "9535075", "part_name": "O/SLAM BUMPER"}, {"sabun": "561025", "part_no": "222208", "part_name": "A100/PA O-RING"}, {"sabun": "561026", "part_no": "220409(9536371)/C300315", "part_name": "O-RING"}, {"sabun": "561027", "part_no": "220106", "part_name": "A100/PA O-RING"}, {"sabun": "561028", "part_no": "220109(9530059)/C300502", "part_name": "O-RING"}, {"sabun": "564001", "part_no": "9590365", "part_name": "O-RING 小"}, {"sabun": "502086", "part_no": "2350099", "part_name": "DAMPER"}, {"sabun": "564002", "part_no": "9590364", "part_name": "O-RING 中"}, {"sabun": "564003", "part_no": "90148-06300", "part_name": "O-RING 大"}, {"sabun": "592001", "part_no": "HEC149333", "part_name": "RUBBER"}, {"sabun": "598001", "part_no": "점검창PACKING小", "part_name": "점검창PACKING小"}, {"sabun": "598003", "part_no": "W00002", "part_name": "PACKING 中"}, {"sabun": "598005", "part_no": "W00004", "part_name": "PACKING 사각"}, {"sabun": "598008", "part_no": "점검창PACKING", "part_name": "점검창PACKING"}, {"sabun": "598010", "part_no": "P105(O-RING)", "part_name": "P105(O-RING)"}, {"sabun": "598011", "part_no": "P105(O-RING)", "part_name": "P105(O-RING)"}, {"sabun": "502088", "part_no": "9535074", "part_name": "RUBBER PAD"}, {"sabun": "598012", "part_no": "P105(O-RING)", "part_name": "P105(O-RING)"}, {"sabun": "598013", "part_no": "P105(O-RING)", "part_name": "P105(O-RING)"}, {"sabun": "598018", "part_no": "P105-2(O-RING)", "part_name": "P105-2(O-RING)"}, {"sabun": "598019", "part_no": "P105(O-RING)", "part_name": "P105(O-RING)"}, {"sabun": "601001", "part_no": "82995-R0000(RH)", "part_name": "KA4 RH"}, {"sabun": "601002", "part_no": "82990-R0000(LH)", "part_name": "KA4 LH"}, {"sabun": "601003", "part_no": "KJA2A275110", "part_name": "SWITCH X-RING"}, {"sabun": "601004", "part_no": "82995CG000", "part_name": "US4 RH"}, {"sabun": "502008", "part_no": "81121-73000", "part_name": "D/LATCH CUSHION(RH)"}, {"sabun": "502091", "part_no": "9535089", "part_name": "DAMPER"}, {"sabun": "601005", "part_no": "82990CG000", "part_name": "US4 LH"}, {"sabun": "601006", "part_no": "82995CG050", "part_name": "3VAN RH"}, {"sabun": "601007", "part_no": "82990CG050", "part_name": "3VAN LH"}, {"sabun": "601008", "part_no": "O6H2L-0C301", "part_name": "AX STOPPER"}, {"sabun": "601009", "part_no": "GIH5S-0C000(설변전)", "part_name": "GIH5S-0C000(설변전)"}, {"sabun": "601010", "part_no": "GIH5S-0C001(설변후)", "part_name": "GIH5S-0C001(설변후)"}, {"sabun": "620001", "part_no": "TBD", "part_name": "TBD"}, {"sabun": "622007", "part_no": "9536356(2210362)", "part_name": "G1 JCB BUMPER"}, {"sabun": "622008", "part_no": "2234003", "part_name": "STRIKER BUFFER"}, {"sabun": "622009", "part_no": "9536399B(2210385)", "part_name": "BUMPER"}, {"sabun": "622010", "part_no": "9536419(2241004)", "part_name": "BUMPER RH"}, {"sabun": "622011", "part_no": "9536418(2241003)", "part_name": "BUMPER LH"}, {"sabun": "622012", "part_no": "9536250", "part_name": "A100/PA O-RING"}, {"sabun": "630001", "part_no": "JX000-82221", "part_name": "JX000-82221"}, {"sabun": "630002", "part_no": "01080-00004", "part_name": "SENSOR SEAL"}, {"sabun": "630003", "part_no": "01080-00005", "part_name": "WIRE SEAL"}, {"sabun": "630004", "part_no": "01011-00005", "part_name": "SEALING-SWITCH"}, {"sabun": "630005", "part_no": "01011-00014", "part_name": "LED WIRE SEAL"}, {"sabun": "630006", "part_no": "01033-00004", "part_name": "01033-00004"}, {"sabun": "630007", "part_no": "01031-00008", "part_name": "CAP SEAL"}, {"sabun": "630008", "part_no": "01031-00030", "part_name": "CAP SEAL"}, {"sabun": "640001", "part_no": "방진고무", "part_name": "방진고무"}, {"sabun": "640002", "part_no": "GROMMET", "part_name": "GROMMET"}, {"sabun": "801002", "part_no": "230005(10019-01000)", "part_name": "DAMPER"}, {"sabun": "2084G630", "part_no": "2084G630", "part_name": "VENT HOSE"}, {"sabun": "2084G640", "part_no": "2084G640", "part_name": "VENT HOSE"}, {"sabun": "2084Q210", "part_no": "2084Q210", "part_name": "VENT HOSE"}, {"sabun": "502092", "part_no": "9535090", "part_name": "RUBBER PAWL STOP"}, {"sabun": "2084D480", "part_no": "2084D480", "part_name": "VENT HOSE"}, {"sabun": "2084Q220", "part_no": "2084Q220", "part_name": "VENT HOSE"}, {"sabun": "2084F150", "part_no": "2084F150", "part_name": "VENT HOSE"}, {"sabun": "2084B751", "part_no": "2084B751", "part_name": "VENT HOSE"}, {"sabun": "2084E850", "part_no": "2084E850", "part_name": "VENT HOSE"}, {"sabun": "2084Q160", "part_no": "2084Q160", "part_name": "VENT HOSE"}, {"sabun": "2084D470", "part_no": "2084D470", "part_name": "VENT HOSE"}, {"sabun": "3057E400", "part_no": "3057E400", "part_name": "VENT HOSE"}, {"sabun": "3057E380", "part_no": "3057E380", "part_name": "VENT HOSE"}, {"sabun": "521238", "part_no": "RA00023155A", "part_name": "배터리 고정밴드조합"}, {"sabun": "521239", "part_no": "TA00069844A", "part_name": "패킹"}, {"sabun": "502336", "part_no": "2326389", "part_name": "CLAW SUB ASSY"}, {"sabun": "502322", "part_no": "7306449", "part_name": "DAMPER STRIKER"}, {"sabun": "503105", "part_no": "60736", "part_name": "Housing Seal HMC SP2 SBA"}, {"sabun": "503P06", "part_no": "70638", "part_name": "F/TUBE COVER"}, {"sabun": "502334", "part_no": "9599584", "part_name": "R1T SEAL FRUNK"}, {"sabun": "505H23", "part_no": "2084Q910", "part_name": "VENT HOSE"}, {"sabun": "505H24", "part_no": "2084G750", "part_name": "VENT HOSE"}, {"sabun": "505H25", "part_no": "2084G760", "part_name": "VENT HOSE"}, {"sabun": "601011", "part_no": "AYH6L0C301", "part_name": "BN7r BUMPER STRIKER"}, {"sabun": "601012", "part_no": "BEH5L1C301", "part_name": "SX2 MOTOR FIXING CAP"}, {"sabun": "503106", "part_no": "816404", "part_name": "SEALING BOOT_2 AI3"}, {"sabun": "505H26", "part_no": "2084W280", "part_name": "FEED HOSE"}, {"sabun": "502339", "part_no": "7301569", "part_name": "A150 T/GATE STRIKER"}, {"sabun": "509080", "part_no": "82479-HKGN701", "part_name": "STOPPER"}, {"sabun": "502332", "part_no": "9536692B", "part_name": "BN7I SEAL RUBBER"}, {"sabun": "620002", "part_no": "BEE66312", "part_name": "BUMPER-STOP HINGE STRAP"}, {"sabun": "505059", "part_no": "2084F520", "part_name": "ISOLATOR"}, {"sabun": "502329", "part_no": "9536680", "part_name": "R1T O-RING"}, {"sabun": "502341", "part_no": "9536718(구.9536708)", "part_name": "R1T SEAL COVER"}, {"sabun": "502342", "part_no": "9536719(구.9536709)", "part_name": "R1T DAMPER STOP"}, {"sabun": "503A29", "part_no": "B60558", "part_name": "마루티 스즈끼"}, {"sabun": "509081", "part_no": "76190-HKNEPDS01", "part_name": "SEALING-HOUSING"}, {"sabun": "509082", "part_no": "76491-HKNEPDS01", "part_name": "STOPPER RUBBER"}, {"sabun": "509083", "part_no": "76210-HKNEPDS01", "part_name": "O-RING SHAFT"}, {"sabun": "509084", "part_no": "76330-HKNEPDS01", "part_name": "QUADRING-WHEEL GEAR"}, {"sabun": "509085", "part_no": "76315-HKNEPDS01", "part_name": "GROMMET-EXTENSION WIRE"}, {"sabun": "503110", "part_no": "808449", "part_name": "Housing seal SBAI"}, {"sabun": "503111", "part_no": "808459", "part_name": "O-Ring SBAI"}, {"sabun": "502093", "part_no": "9535080", "part_name": "RUBBER FAWL LEVER STOP"}, {"sabun": "650007", "part_no": "45659496", "part_name": "BUMPER"}, {"sabun": "598020", "part_no": "안전롤라", "part_name": "안전롤라"}, {"sabun": "502346", "part_no": "2490380B", "part_name": "AI3 SUV T/GATE STRIKER"}, {"sabun": "502348", "part_no": "9516062", "part_name": "US4 TUBE SPRING-T.S"}, {"sabun": "601013", "part_no": "S1H2L0C301", "part_name": "TM STOPPER"}, {"sabun": "502353", "part_no": "9536725", "part_name": "PAWL DAMPER"}, {"sabun": "503107", "part_no": "고무마개", "part_name": "고무마개"}, {"sabun": "502340", "part_no": "9536705", "part_name": "BL7M DAMPER OVERSLAM"}, {"sabun": "502345", "part_no": "9536726(9536714)", "part_name": "BT1XX / DAMPER-OVERSLAM"}, {"sabun": "502349", "part_no": "9536730", "part_name": "OV / BUMPER"}, {"sabun": "502350", "part_no": "9528808", "part_name": "OV / SEAL JABARA"}, {"sabun": "502351", "part_no": "9536729", "part_name": "OV / SEAL"}, {"sabun": "502343", "part_no": "9528703", "part_name": "X52 / DAMPER-OVERSLAM"}, {"sabun": "502354", "part_no": "9536731", "part_name": "OV / BUMPER-STOP"}, {"sabun": "601016", "part_no": "Z1H1L1C201", "part_name": "A01 TUBE PAWL"}, {"sabun": "509088", "part_no": "82498-RNHJF02", "part_name": "PAD RAIL(ASSY)"}, {"sabun": "660001", "part_no": "X37569-XAF01", "part_name": "고전압 버스바-4T_고무_커버"}, {"sabun": "601015", "part_no": "Z1H4J0C301", "part_name": "A01 CUSHION RUBBER"}, {"sabun": "601014", "part_no": "Z1H4A0C301", "part_name": "A01 RUBBER CUSHION"}, {"sabun": "502097", "part_no": "7300715/2325600", "part_name": "LATCH"}, {"sabun": "509086", "part_no": "82498-STOV6401", "part_name": "OV PAD-RAIL"}, {"sabun": "24DD01", "part_no": "SWK4S-0R/L902", "part_name": "SW BASE STRIKER ASSY,RH"}, {"sabun": "502360", "part_no": "9536744", "part_name": "NE DAMPER-T/GATE"}, {"sabun": "502352", "part_no": "9536734", "part_name": "DAMPER-OVERSLAM"}, {"sabun": "509089", "part_no": "83479-SE38x0.1", "part_name": "SE38"}, {"sabun": "509090", "part_no": "96331-SE27x0.1", "part_name": "SE27"}, {"sabun": "509087", "part_no": "82498-RNAUR01", "part_name": "PAD ANTIRATTLE FR PWR UPR"}, {"sabun": "502355", "part_no": "B0223-KA070", "part_name": "TSD A01 PULLEY COVER SUB ASSY-FR"}, {"sabun": "502356", "part_no": "B0223-KA080", "part_name": "TSD A01 PULLEY COVER SUB ASSY-RR"}, {"sabun": "502098", "part_no": "7300710B/2302963B", "part_name": "LATCH"}, {"sabun": "503112", "part_no": "798453", "part_name": "O-RING(ID140.8×1.78)"}, {"sabun": "503113", "part_no": "798454", "part_name": "O-RING(ID105.8×1.78)"}, {"sabun": "503114", "part_no": "798455", "part_name": "O-RING(ID83×1.78)"}, {"sabun": "503115", "part_no": "798458", "part_name": "O-RING(ID18.6×1.5)"}, {"sabun": "503119", "part_no": "F31303", "part_name": "O-RING(ID126.7×1.78)"}, {"sabun": "650001", "part_no": "45559374", "part_name": "BUMPER-STRIKER"}, {"sabun": "650002", "part_no": "45409353", "part_name": "BUMPER-PAWL"}, {"sabun": "650003", "part_no": "45659353", "part_name": "BUMPER-LOCKING LEVER"}, {"sabun": "650004", "part_no": "45359353", "part_name": "KEY NUT SEAL"}, {"sabun": "650006", "part_no": "45509433", "part_name": "BUMPER-CATCH(SBR+BR)"}, {"sabun": "502101", "part_no": "9535083", "part_name": "CUSHION"}, {"sabun": "502361", "part_no": "9536748", "part_name": "DAMPER-OVERSLAM"}, {"sabun": "502344", "part_no": "7307145", "part_name": "L234 GASKET"}, {"sabun": "601019", "part_no": "82995-SW000", "part_name": "SW STRIKER BASE ASSY (RH)"}, {"sabun": "601020", "part_no": "82990-SW000", "part_name": "SW STRIKER BASE ASSY (LH)"}, {"sabun": "670001", "part_no": "86421-37010", "part_name": "CT1 BUMPER-T/LID HINGE"}, {"sabun": "502358", "part_no": "9536737", "part_name": "DAMPER-PAWL"}, {"sabun": "502359", "part_no": "9536747", "part_name": "루시드 그래비티 RING-11X"}, {"sabun": "502357", "part_no": "7307126", "part_name": "GRAVITY DAMPER-CLAW"}, {"sabun": "503079-2", "part_no": "AA6898", "part_name": "BLEEDER CAP"}, {"sabun": "505060", "part_no": "2084V590", "part_name": "OV1 PORT_O-RING"}, {"sabun": "650008", "part_no": "45269506", "part_name": "Seal ring"}, {"sabun": "601017", "part_no": "82995-SW010", "part_name": "WAV - STRIKER BASE ASSY, RH"}, {"sabun": "601018", "part_no": "82990-SW010", "part_name": "WAV - STRIKER BASE ASSY, LH"}, {"sabun": "509091", "part_no": "83479-VW4268S01", "part_name": "VW426 DAMPER - GLASS"}, {"sabun": "503116", "part_no": "91601", "part_name": "HEV ENGINE CLUTCH HOLDER"}, {"sabun": "503117", "part_no": "57642", "part_name": "HEV ENGINE CLUTCH MOTOR O-RING"}, {"sabun": "503118", "part_no": "D08295", "part_name": "HEV ENGINE CLUTCH DUST CAP"}, {"sabun": "503120", "part_no": "F49916", "part_name": "HEV ENGINE CLUTCH DUST RUBBER"}, {"sabun": "502362", "part_no": "2510107", "part_name": "SW1 PULLEY COVER SUB ASSY-FR"}, {"sabun": "502363", "part_no": "2510110", "part_name": "SW1 PULLEY COVER SUB ASSY-RR"}, {"sabun": "502102", "part_no": "9535085", "part_name": "RUBBER FAWL STOP"}, {"sabun": "502347", "part_no": "9536717", "part_name": "NE-R DAMPER"}, {"sabun": "630009", "part_no": "A1051-50001", "part_name": "OV1 X-RING"}, {"sabun": "503121", "part_no": "BB2892", "part_name": "HEV ENGINE CLUTCH BOOT"}, {"sabun": "650009", "part_no": "41859472", "part_name": "41859472"}, {"sabun": "660002", "part_no": "375M3-XLF01", "part_name": "LQ2 RUBBER CAP-1"}, {"sabun": "660003", "part_no": "375M3-XLF02", "part_name": "LQ2 RUBBER CAP-2"}, {"sabun": "660004", "part_no": "375M3-XLF03", "part_name": "LQ2 RUBBER CAP-3"}, {"sabun": "502365", "part_no": "9536767", "part_name": "FRUNK LATCH SEAL HOUSING"}, {"sabun": "502367", "part_no": "9536757", "part_name": "P VH6 CLAW DAMPER-FLAT DR LATCH"}, {"sabun": "509094", "part_no": "63220-SK316701", "part_name": "SK316 O-RING"}, {"sabun": "503123", "part_no": "TBA2632", "part_name": "NX5 HEV Evaporator Pipe Flange Grommet"}, {"sabun": "502366", "part_no": "9536761", "part_name": "VH6 SEAL-SHAFT"}];
-
-  function toggleUploadSection() {
-    const el = document.getElementById('uploadSection');
-    el.classList.toggle('open');
-  }
-
-  function downloadTemplate() {
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([
-      ['사번','고객품번','품명'],
-      ['502284','9556086','BUSH-MTG D/LATCH PWR ACTR'],
-    ]);
-    ws['!cols'] = [{wch:12},{wch:20},{wch:30}];
-    XLSX.utils.book_append_sheet(wb, ws, '제품기준정보');
-    XLSX.writeFile(wb, '제품기준정보_양식.xlsx');
-  }
-
-  let excelData = [];
-
-  function onExcelDragOver(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    document.getElementById('excelZone').style.borderColor = '#2563eb';
-    document.getElementById('excelZone').style.background = '#eff6ff';
-    document.getElementById('excelZone').style.borderStyle = 'solid';
-  }
-  function onExcelDragLeave(e) {
-    document.getElementById('excelZone').style.borderColor = '';
-    document.getElementById('excelZone').style.background = '';
-    document.getElementById('excelZone').style.borderStyle = 'dashed';
-  }
-  function onExcelDragLeaveSection(e) {
-    // 섹션 완전히 벗어날 때만 스타일 초기화
-    if (!e.currentTarget.contains(e.relatedTarget)) {
-      document.getElementById('excelZone').style.borderColor = '';
-      document.getElementById('excelZone').style.background = '';
-      document.getElementById('excelZone').style.borderStyle = 'dashed';
-    }
-  }
-  function onExcelDrop(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    document.getElementById('excelZone').style.borderColor = '';
-    document.getElementById('excelZone').style.background = '';
-    document.getElementById('excelZone').style.borderStyle = 'dashed';
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-    if (!file.name.match(/\.xlsx?$/i)) { showToast('엑셀 파일(.xlsx)만 가능해요.'); return; }
-    onExcelSelect({ target: { files: [file] } });
-  }
-
-  function onExcelSelect(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    document.getElementById('excelSelected').textContent = '📊 ' + file.name;
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-      const wb = XLSX.read(ev.target.result, {type:'binary'});
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json(ws, {header:1});
-
-      // 헤더 행 자동 탐색 (사번/품번/품목명 컬럼 위치 동적 파악)
-      let headerRow = -1;
-      let colIdx = { sabun: -1, part_no: -1, part_name: -1, active: -1 };
-
-      for (let i = 0; i < Math.min(raw.length, 10); i++) {
-        const row = raw[i];
-        if (!row) continue;
-        const sabunCol    = row.findIndex(v => String(v||'').trim() === '사번');
-        const partNoCol   = row.findIndex(v => String(v||'').trim() === '품번');
-        const partNameCol = row.findIndex(v => String(v||'').trim() === '품목명');
-        if (sabunCol >= 0 && partNoCol >= 0 && partNameCol >= 0) {
-          headerRow = i;
-          colIdx.sabun    = sabunCol;
-          colIdx.part_no  = partNoCol;
-          colIdx.part_name = partNameCol;
-          // 사용 컬럼도 찾기
-          colIdx.active = row.findIndex(v => String(v||'').trim() === '사용');
-          break;
-        }
-      }
-
-      if (headerRow < 0) {
-        showToast('헤더를 찾을 수 없어요. 파일 형식을 확인해주세요.');
-        return;
-      }
-
-      // 데이터 추출
-      excelData = [];
-      for (let i = headerRow + 1; i < raw.length; i++) {
-        const row = raw[i];
-        if (!row || !row[colIdx.sabun]) continue;
-
-        // 사용=YES 또는 사용 컬럼 없는 경우만 포함
-        if (colIdx.active >= 0 && String(row[colIdx.active]||'').trim() !== 'YES') continue;
-
-        const sabun    = String(row[colIdx.sabun]    || '').trim();
-        const part_no  = String(row[colIdx.part_no]  || '').trim();
-        const part_name = String(row[colIdx.part_name] || '').trim();
-        if (!sabun) continue;
-        excelData.push({ sabun, part_no, part_name });
-      }
-
-      // 사번 기준 중복 제거 (첫 번째 것 유지)
-      const seen = new Set();
-      const deduped = [];
-      excelData.forEach(r => {
-        if (!seen.has(r.sabun)) { seen.add(r.sabun); deduped.push(r); }
-      });
-      excelData = deduped;
-
-      const removed = raw.length - headerRow - 1 - excelData.length;
-      document.getElementById('previewCount').innerHTML =
-        `총 <strong>${excelData.length}건</strong> 인식 완료
-        <span style="color:#aaa;margin-left:8px">
-          (사용중 필터 + 중복 제거 적용)
-        </span>`;
-      document.getElementById('previewBody').innerHTML =
-        excelData.slice(0,10).map(r =>
-          `<tr><td>${r.sabun}</td><td>${r.part_no}</td><td>${r.part_name}</td></tr>`
-        ).join('') +
-        (excelData.length > 10
-          ? `<tr><td colspan="3" style="color:#aaa;text-align:center">... 외 ${excelData.length-10}건</td></tr>`
-          : '');
-      document.getElementById('excelPreview').style.display = 'block';
-      document.getElementById('excelUploadBtn').disabled = false;
-    };
-    reader.readAsBinaryString(file);
-  }
-
-  async function uploadExcel() {
-    if (!excelData.length) return;
-    const btn = document.getElementById('excelUploadBtn');
-    btn.disabled = true; btn.textContent = '업로드 중...';
-
-    let done = 0, fail = 0;
-    for (const r of excelData) {
-      if (!r.sabun) continue;
-      const { error } = await db.from('products').upsert(
-        { sabun: r.sabun, part_no: r.part_no, part_name: r.part_name },
-        { onConflict: 'sabun' }
-      );
-      if (error) fail++; else done++;
-    }
-
-    showToast(`${done}건 업로드 완료${fail?', '+fail+'건 실패':''} ✓`);
-    btn.disabled = false; btn.textContent = '업로드';
-    toggleUploadSection();
-    document.getElementById('excelInput').value = '';
-    document.getElementById('excelSelected').textContent = '';
-    document.getElementById('excelPreview').style.display = 'none';
-    excelData = [];
-    loadProducts();
-  }
-
-  // 제품 목록 로드
-async function loadProducts() {
-  const { data, error } = await db.from('products').select('*').order('sabun');
-  const tbody = document.getElementById('productTable');
-  if (error || !data.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">등록된 제품이 없습니다.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = data.map(r => `
-    <tr>
-      <td style="font-weight:500">${r.sabun}</td>
-      <td>${r.part_no || '-'}</td>
-      <td>${r.part_name || '-'}</td>
-      <td style="color:#aaa;font-size:12px">${fmtDate(r.created_at)}</td>
-      <td><button class="btn-del" onclick="deleteProduct(${r.id})">삭제</button></td>
-    </tr>
-  `).join('');
+// 탭 전환
+function switchTab(tab) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.main-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('section_' + tab).classList.add('active');
+  document.getElementById('tabBtn_' + tab).classList.add('active');
 }
 
-// 제품 저장
+function toggleForm(type) {
+  const el = document.getElementById('form_' + type);
+  el.classList.toggle('open');
+}
+
+function toggleUpload(type) {
+  const el = document.getElementById('uploadSection_' + type);
+  el.classList.toggle('open');
+}
+
+// 더보기/접기
+function toggleShowAll(type) {
+  if (type === 'product') {
+    showAllProduct = !showAllProduct;
+    renderProducts(allProducts);
+  } else {
+    showAllWorker = !showAllWorker;
+    renderWorkers(allWorkers);
+  }
+}
+
+// ── 제품 ──────────────────────────────
+async function loadProducts() {
+  const { data } = await db.from('products').select('*').order('sabun');
+  allProducts = data || [];
+  renderProducts(allProducts);
+}
+
+function filterProducts() {
+  const q = document.getElementById('searchProduct').value.trim().toLowerCase();
+  const filtered = q
+    ? allProducts.filter(r =>
+        r.sabun.toLowerCase().includes(q) ||
+        (r.part_name||'').toLowerCase().includes(q) ||
+        (r.part_no||'').toLowerCase().includes(q))
+    : allProducts;
+  renderProducts(filtered, true);
+}
+
+function renderProducts(data, isSearch = false) {
+  const tbody = document.getElementById('productTable');
+  const moreRow = document.getElementById('productMoreRow');
+  const moreBtn = document.getElementById('productMoreBtn');
+
+  if (!data.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">등록된 제품이 없어요.</td></tr>';
+    moreRow.style.display = 'none';
+    return;
+  }
+
+  const showAll = isSearch || showAllProduct;
+  const displayed = showAll ? data : data.slice(0, PAGE_SIZE);
+
+  tbody.innerHTML = displayed.map(r => `
+    <tr>
+      <td style="font-weight:500">${r.sabun}</td>
+      <td style="color:#555">${r.part_no || '-'}</td>
+      <td>${r.part_name || '-'}</td>
+      <td style="color:#aaa;font-size:12px">${fmtDate(r.created_at)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-edit-sm" onclick='openEditProduct(${JSON.stringify(r).replace(/"/g,"&quot;")})'>수정</button>
+        <button class="btn-del" onclick="deleteProduct(${r.id})">삭제</button>
+      </td>
+    </tr>
+  `).join('');
+
+  if (!isSearch && data.length > PAGE_SIZE) {
+    moreRow.style.display = 'block';
+    moreBtn.textContent = showAllProduct
+      ? `▲ 접기`
+      : `▼ 더보기 (${data.length - PAGE_SIZE}건 더)`;
+  } else {
+    moreRow.style.display = 'none';
+  }
+}
+
 async function saveProduct() {
-  const sabun = document.getElementById('p_sabun').value.trim();
-  const partNo = document.getElementById('p_partno').value.trim();
+  const sabun    = document.getElementById('p_sabun').value.trim();
+  const partNo   = document.getElementById('p_partno').value.trim();
   const partName = document.getElementById('p_partname').value.trim();
   if (!sabun) { showToast('사번을 입력해주세요.'); return; }
-  const { error } = await db.from('products').insert({ sabun, part_no: partNo, part_name: partName });
+  const { error } = await db.from('products').upsert({ sabun, part_no: partNo, part_name: partName }, { onConflict: 'sabun' });
   if (error) { showToast('저장 실패: ' + error.message); return; }
   document.getElementById('p_sabun').value = '';
   document.getElementById('p_partno').value = '';
@@ -415,40 +412,89 @@ async function saveProduct() {
   loadProducts();
 }
 
-// 제품 삭제
+function openEditProduct(r) {
+  document.getElementById('ep_id').value      = r.id;
+  document.getElementById('ep_sabun').value   = r.sabun;
+  document.getElementById('ep_partno').value  = r.part_no || '';
+  document.getElementById('ep_partname').value = r.part_name || '';
+  document.getElementById('editProductModal').classList.add('open');
+}
+
+async function saveEditProduct() {
+  const id       = document.getElementById('ep_id').value;
+  const sabun    = document.getElementById('ep_sabun').value.trim();
+  const partNo   = document.getElementById('ep_partno').value.trim();
+  const partName = document.getElementById('ep_partname').value.trim();
+  const { error } = await db.from('products').update({ sabun, part_no: partNo, part_name: partName }).eq('id', id);
+  if (error) { showToast('수정 실패: ' + error.message); return; }
+  showToast('수정됐어요 ✓');
+  closeModal('editProductModal');
+  loadProducts();
+}
+
 async function deleteProduct(id) {
   if (!confirm('삭제하시겠습니까?')) return;
-  const { error } = await db.from('products').delete().eq('id', id);
-  if (error) { showToast('삭제 실패: ' + error.message); return; }
+  await db.from('products').delete().eq('id', id);
   showToast('삭제됐어요.');
   loadProducts();
 }
 
-// 작업자 목록 로드
+// ── 작업자 ──────────────────────────────
 async function loadWorkers() {
-  const { data, error } = await db.from('workers').select('*').order('process').order('name');
+  const { data } = await db.from('workers').select('*').order('process').order('name');
+  allWorkers = data || [];
+  renderWorkers(allWorkers);
+}
+
+function filterWorkers() {
+  const q = document.getElementById('searchWorker').value.trim().toLowerCase();
+  const filtered = q
+    ? allWorkers.filter(r =>
+        r.name.toLowerCase().includes(q) ||
+        r.process.toLowerCase().includes(q))
+    : allWorkers;
+  renderWorkers(filtered, true);
+}
+
+function renderWorkers(data, isSearch = false) {
   const tbody = document.getElementById('workerTable');
-  if (error || !data.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">등록된 작업자가 없습니다.</td></tr>';
+  const moreRow = document.getElementById('workerMoreRow');
+  const moreBtn = document.getElementById('workerMoreBtn');
+
+  if (!data.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">등록된 작업자가 없어요.</td></tr>';
+    moreRow.style.display = 'none';
     return;
   }
-  tbody.innerHTML = data.map(r => `
+
+  const showAll = isSearch || showAllWorker;
+  const displayed = showAll ? data : data.slice(0, PAGE_SIZE);
+
+  tbody.innerHTML = displayed.map(r => `
     <tr>
       <td style="font-weight:500">${r.name}</td>
       <td>${r.process}</td>
       <td><span class="active-badge ${r.active ? 'active-y' : 'active-n'}">${r.active ? '재직중' : '퇴직'}</span></td>
       <td style="color:#aaa;font-size:12px">${fmtDate(r.created_at)}</td>
-      <td style="display:flex;gap:6px">
-        <button class="btn-del" style="color:#888;border-color:#ddd" onclick="toggleWorker(${r.id}, ${r.active})">${r.active ? '비활성화' : '활성화'}</button>
+      <td style="display:flex;gap:4px">
+        <button class="btn-edit-sm" onclick="toggleWorker(${r.id}, ${r.active})">${r.active ? '비활성화' : '활성화'}</button>
         <button class="btn-del" onclick="deleteWorker(${r.id})">삭제</button>
       </td>
     </tr>
   `).join('');
+
+  if (!isSearch && data.length > PAGE_SIZE) {
+    moreRow.style.display = 'block';
+    moreBtn.textContent = showAllWorker
+      ? `▲ 접기`
+      : `▼ 더보기 (${data.length - PAGE_SIZE}건 더)`;
+  } else {
+    moreRow.style.display = 'none';
+  }
 }
 
-// 작업자 저장
 async function saveWorker() {
-  const name = document.getElementById('w_name').value.trim();
+  const name    = document.getElementById('w_name').value.trim();
   const process = document.getElementById('w_process').value;
   if (!name) { showToast('이름을 입력해주세요.'); return; }
   const { error } = await db.from('workers').insert({ name, process });
@@ -459,22 +505,129 @@ async function saveWorker() {
   loadWorkers();
 }
 
-// 작업자 활성/비활성
 async function toggleWorker(id, current) {
-  const { error } = await db.from('workers').update({ active: !current }).eq('id', id);
-  if (error) { showToast('변경 실패'); return; }
+  await db.from('workers').update({ active: !current }).eq('id', id);
   showToast(current ? '비활성화됐어요.' : '활성화됐어요.');
   loadWorkers();
 }
 
-// 작업자 삭제
 async function deleteWorker(id) {
   if (!confirm('삭제하시겠습니까?')) return;
-  const { error } = await db.from('workers').delete().eq('id', id);
-  if (error) { showToast('삭제 실패: ' + error.message); return; }
+  await db.from('workers').delete().eq('id', id);
   showToast('삭제됐어요.');
   loadWorkers();
 }
+
+// ── 엑셀 업로드 ──────────────────────────────
+function onExcelDragOver(e) {
+  e.preventDefault(); e.stopPropagation();
+  document.getElementById('excelZone').classList.add('dragover');
+}
+function onExcelDragLeaveSection(e) {
+  if (!e.currentTarget.contains(e.relatedTarget))
+    document.getElementById('excelZone').classList.remove('dragover');
+}
+function onExcelDrop(e) {
+  e.preventDefault(); e.stopPropagation();
+  document.getElementById('excelZone').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  if (!file.name.match(/\.xlsx?$/i)) { showToast('엑셀 파일(.xlsx)만 가능해요.'); return; }
+  onExcelSelect({ target: { files: [file] } });
+}
+
+function onExcelSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('excelSelected').textContent = '📊 ' + file.name;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const wb = XLSX.read(ev.target.result, { type: 'binary' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const raw = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+    // 헤더 행 자동 탐색
+    let headerRow = -1;
+    let colIdx = { sabun: -1, part_no: -1, part_name: -1, active: -1 };
+    for (let i = 0; i < Math.min(raw.length, 10); i++) {
+      const row = raw[i];
+      if (!row) continue;
+      const s = row.findIndex(v => String(v||'').trim() === '사번');
+      const p = row.findIndex(v => String(v||'').trim() === '품번');
+      const n = row.findIndex(v => String(v||'').trim() === '품목명');
+      if (s >= 0 && p >= 0 && n >= 0) {
+        headerRow = i;
+        colIdx = { sabun: s, part_no: p, part_name: n,
+          active: row.findIndex(v => String(v||'').trim() === '사용') };
+        break;
+      }
+    }
+
+    if (headerRow < 0) { showToast('헤더를 찾을 수 없어요.'); return; }
+
+    excelData = [];
+    for (let i = headerRow + 1; i < raw.length; i++) {
+      const row = raw[i];
+      if (!row || !row[colIdx.sabun]) continue;
+      if (colIdx.active >= 0 && String(row[colIdx.active]||'').trim() !== 'YES') continue;
+      excelData.push({
+        sabun:     String(row[colIdx.sabun]    || '').trim(),
+        part_no:   String(row[colIdx.part_no]  || '').trim(),
+        part_name: String(row[colIdx.part_name]|| '').trim()
+      });
+    }
+
+    // 사번 기준 중복 제거
+    const seen = new Set();
+    excelData = excelData.filter(r => { if (seen.has(r.sabun)) return false; seen.add(r.sabun); return true; });
+
+    document.getElementById('previewCount').innerHTML =
+      `총 <strong>${excelData.length}건</strong> 인식 완료 <span style="color:#aaa;font-size:11px">(사용중 + 중복제거 적용)</span>`;
+    document.getElementById('previewBody').innerHTML =
+      excelData.slice(0,8).map(r =>
+        `<tr><td>${r.sabun}</td><td>${r.part_no}</td><td>${r.part_name}</td></tr>`
+      ).join('') +
+      (excelData.length > 8 ? `<tr><td colspan="3" style="color:#aaa;text-align:center;padding:6px">... 외 ${excelData.length-8}건</td></tr>` : '');
+    document.getElementById('excelPreview').style.display = 'block';
+    document.getElementById('excelUploadBtn').disabled = false;
+  };
+  reader.readAsBinaryString(file);
+}
+
+async function uploadExcel() {
+  if (!excelData.length) return;
+  const btn = document.getElementById('excelUploadBtn');
+  btn.disabled = true; btn.textContent = '업로드 중...';
+  let done = 0, fail = 0;
+  // 청크 단위로 업로드 (100건씩)
+  const chunkSize = 100;
+  for (let i = 0; i < excelData.length; i += chunkSize) {
+    const chunk = excelData.slice(i, i + chunkSize);
+    const { error } = await db.from('products').upsert(chunk, { onConflict: 'sabun' });
+    if (error) fail += chunk.length; else done += chunk.length;
+  }
+  showToast(`${done}건 업로드 완료${fail ? ', ' + fail + '건 실패' : ''} ✓`);
+  btn.disabled = false; btn.textContent = '업로드';
+  toggleUpload('product');
+  document.getElementById('excelInput').value = '';
+  document.getElementById('excelSelected').textContent = '';
+  document.getElementById('excelPreview').style.display = 'none';
+  excelData = [];
+  loadProducts();
+}
+
+function downloadTemplate() {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['사번', '고객품번', '품명'],
+    ['502284', '9556086', 'BUSH-MTG D/LATCH PWR ACTR'],
+  ]);
+  ws['!cols'] = [{wch:12},{wch:20},{wch:30}];
+  XLSX.utils.book_append_sheet(wb, ws, '제품기준정보');
+  XLSX.writeFile(wb, '제품기준정보_양식.xlsx');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
 loadProducts();
 loadWorkers();
