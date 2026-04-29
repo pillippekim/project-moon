@@ -173,11 +173,21 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
   const DAYS = ['일','월','화','수','목','금','토'];
   const WORKERS = ['김태선', '황경미'];
 
-  const PRODUCTS = {
-    '509040': { partNo: '83479-3J000',  partName: 'STOPPER-WDW REG' },
-    '502209': { partNo: '2400935',      partName: "STRIKER ASS'Y-T/GATE DAMPER" },
-    '502308': { partNo: '9536566',      partName: 'SEAL KEY' }
-  };
+  const SUPABASE_URL = 'https://vpaixxlhzkwtgcllimvn.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwYWl4eGxoemt3dGdjbGxpbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNzk4NjMsImV4cCI6MjA5MTk1NTg2M30.V8Bj0cMbM0E2TFhklYYa7TM-vO6Fi70ctACA7uUf4Ig';
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // DB에서 불러온 제품 데이터 저장
+  let PRODUCTS = {};
+
+  async function loadProducts() {
+    const { data } = await db.from('products').select('sabun, part_no, part_name');
+    if (data) {
+      data.forEach(r => {
+        PRODUCTS[r.sabun] = { partNo: r.part_no || '', partName: r.part_name || '' };
+      });
+    }
+  }
 
   let rows = [];
   let uid = 0;
