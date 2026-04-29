@@ -378,10 +378,14 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
     setTimeout(() => t.classList.remove('show'), 3000);
   }
 
-  // 초기화
-  document.getElementById('workDate').value = todayStr();
-  onDateChange();
-  addRow(); addRow(); addRow();
+  // 초기화 - DB에서 제품 기준정보 먼저 로딩 후 행 추가
+  async function init() {
+    document.getElementById('workDate').value = todayStr();
+    onDateChange();
+    await loadProducts();
+    addRow(); addRow(); addRow();
+  }
+  init();
 </script>
 </body>
 </html>
