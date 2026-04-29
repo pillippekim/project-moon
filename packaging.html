@@ -32,7 +32,6 @@ tr:last-child td { border-bottom: none; }
 .badge-wrap { display: flex; align-items: center; gap: 4px; }
 .badge-wrap .td-input { flex: 1; }
 .scan-btn { flex-shrink: 0; background: #eff6ff; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 11px; color: #2563eb; font-weight: 500; white-space: nowrap; font-family: inherit; }
-.name-hint { font-size: 11px; color: #aaa; margin-top: 1px; }
 .del-btn { background: none; border: none; cursor: pointer; color: #ccc; font-size: 18px; padding: 0 4px; line-height: 1; }
 .del-btn:hover { color: #e53e3e; }
 .summary-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1rem; }
@@ -68,14 +67,17 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
 .badge-add:hover { text-decoration: underline; }
 .badge-del { background: none; border: none; cursor: pointer; color: #ccc; font-size: 14px; padding: 0 2px; line-height: 1; }
 .badge-del:hover { color: #e53e3e; }
+.loading-msg { text-align: center; color: #888; font-size: 13px; padding: 1rem; }
 </style>
 </head>
 <body>
+
 <div style="background:white;border-bottom:1px solid #e5e5e5;padding:0 1.25rem;height:48px;display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
   <button onclick="location.href='index.html'" style="font-size:13px;color:#2563eb;background:none;border:none;cursor:pointer;font-family:inherit;padding:0">← 메인으로</button>
   <span style="font-size:14px;font-weight:500;color:#111">포장반 작업일지</span>
   <span style="width:70px"></span>
 </div>
+
 <div class="app">
 
   <div class="card">
@@ -118,7 +120,9 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
           <th style="width:30px"></th>
         </tr>
       </thead>
-      <tbody id="rowBody"></tbody>
+      <tbody id="rowBody">
+        <tr><td colspan="9" class="loading-msg">기준정보 불러오는 중...</td></tr>
+      </tbody>
     </table>
   </div>
 
@@ -149,7 +153,6 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
 
 </div>
 
-<!-- 스캔 모달 -->
 <div class="scan-overlay" id="scanModal">
   <div class="scan-box">
     <div class="scan-title">바코드 입력</div>
@@ -171,27 +174,13 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
   const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const DAYS = ['일','월','화','수','목','금','토'];
-  const WORKERS = ['김태선', '황경미'];
-
-  const SUPABASE_URL = 'https://vpaixxlhzkwtgcllimvn.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwYWl4eGxoemt3dGdjbGxpbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNzk4NjMsImV4cCI6MjA5MTk1NTg2M30.V8Bj0cMbM0E2TFhklYYa7TM-vO6Fi70ctACA7uUf4Ig';
-  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-  // DB에서 불러온 제품 데이터 저장
-  let PRODUCTS = {};
-
-  async function loadProducts() {
-    const { data } = await db.from('products').select('sabun, part_no, part_name');
-    if (data) {
-      data.forEach(r => {
-        PRODUCTS[r.sabun] = { partNo: r.part_no || '', partName: r.part_name || '' };
-      });
-    }
-  }
+  let WORKERS = [];   // DB에서 로딩
+  let PRODUCTS = {};  // DB에서 로딩
 
   let rows = [];
   let uid = 0;
   let scanTarget = null;
+  let scanBadgeIdx = 0;
 
   function todayStr() {
     const d = new Date();
@@ -204,6 +193,25 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
     const parts = val.split('-');
     const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
     document.getElementById('dayDisplay').textContent = DAYS[d.getDay()] + '요일';
+  }
+
+  async function loadMasterData() {
+    // 제품 기준정보
+    const { data: products } = await db.from('products').select('sabun, part_no, part_name');
+    if (products) {
+      products.forEach(r => {
+        PRODUCTS[r.sabun] = { partNo: r.part_no || '', partName: r.part_name || '' };
+      });
+    }
+    // 작업자 기준정보 (포장 공정만, 활성 상태만)
+    const { data: workers } = await db.from('workers')
+      .select('name')
+      .eq('process', '포장')
+      .eq('active', true)
+      .order('name');
+    if (workers) WORKERS = workers.map(w => w.name);
+    // 작업자가 없으면 기본값
+    if (!WORKERS.length) WORKERS = ['김태선', '황경미'];
   }
 
   function addRow() {
@@ -233,7 +241,6 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
     const rowIdx = rows.indexOf(r);
     const tr = tbody.rows[rowIdx];
     if (!tr) return;
-    // 고객 품번 셀(2), 품명 셀(3) 업데이트
     tr.cells[2].textContent = r.partNo   || '-';
     tr.cells[2].style.color = r.partNo   ? '#111' : '#bbb';
     tr.cells[3].textContent = r.partName || '-';
@@ -263,12 +270,19 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
   }
 
   function renderRows() {
-    document.getElementById('rowBody').innerHTML = rows.map((r, i) => `
+    const tbody = document.getElementById('rowBody');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="9" class="loading-msg">+ 행 추가 버튼을 눌러주세요</td></tr>';
+      updateSummary();
+      return;
+    }
+    tbody.innerHTML = rows.map((r, i) => `
       <tr>
         <td style="color:#bbb;font-size:12px">${i+1}</td>
         <td>
           <input class="td-input" type="text" value="${r.sabun}" placeholder="사번입력"
-            oninput="setSabunText(${r.id},this.value)" onblur="applySabun(${r.id},this.value)" onkeydown="if(event.key==='Enter'||event.key==='Tab') applySabun(${r.id},this.value)" />
+            oninput="setSabunText(${r.id},this.value)" onblur="applySabun(${r.id},this.value)"
+            onkeydown="if(event.key==='Enter'||event.key==='Tab') applySabun(${r.id},this.value)" />
         </td>
         <td style="font-size:12px;color:${r.partNo?'#111':'#bbb'}">${r.partNo||'-'}</td>
         <td style="font-size:12px;color:${r.partName?'#111':'#bbb'}">${r.partName||'-'}</td>
@@ -309,8 +323,6 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
     document.getElementById('cntQty').innerHTML = total.toLocaleString()+' <span class="stat-unit">EA</span>';
     document.getElementById('cntWorkers').innerHTML = workers+' <span class="stat-unit">명</span>';
   }
-
-  let scanBadgeIdx = 0;
 
   function openModal(id, badgeIdx) {
     scanTarget = id;
@@ -378,14 +390,13 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
     setTimeout(() => t.classList.remove('show'), 3000);
   }
 
-  // 초기화 - DB에서 제품 기준정보 먼저 로딩 후 행 추가
-  async function init() {
+  // 초기화
+  (async function init() {
     document.getElementById('workDate').value = todayStr();
     onDateChange();
-    await loadProducts();
+    await loadMasterData();
     addRow(); addRow(); addRow();
-  }
-  init();
+  })();
 </script>
 </body>
 </html>
