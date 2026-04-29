@@ -91,13 +91,13 @@ tr:hover td { background: #fafafa; }
     </div>
 
     <!-- 엑셀 업로드 섹션 -->
-    <div class="upload-section" id="uploadSection">
+    <div class="upload-section" id="uploadSection"
+      ondragover="onExcelDragOver(event)"
+      ondragleave="onExcelDragLeaveSection(event)"
+      ondrop="onExcelDrop(event)">
       <div style="font-size:13px;font-weight:500;color:#111;margin-bottom:10px">엑셀 업로드</div>
       <div class="excel-zone" id="excelZone"
-        onclick="document.getElementById('excelInput').click()"
-        ondragover="onExcelDragOver(event)"
-        ondragleave="onExcelDragLeave(event)"
-        ondrop="onExcelDrop(event)">
+        onclick="document.getElementById('excelInput').click()">
         <div style="font-size:24px;margin-bottom:6px">📊</div>
         <div class="excel-zone-text">엑셀 파일을 클릭하거나 드래그해서 올려주세요<br><span style="font-size:11px;color:#aaa">양식: 사번 | 고객품번 | 품명 (헤더 포함)</span></div>
         <div id="excelSelected" style="font-size:13px;color:#2563eb;font-weight:500;margin-top:6px"></div>
@@ -246,17 +246,30 @@ const PRODUCT_DATA = [{"sabun": "502002", "part_no": "9535044", "part_name": "D/
 
   function onExcelDragOver(e) {
     e.preventDefault();
+    e.stopPropagation();
     document.getElementById('excelZone').style.borderColor = '#2563eb';
     document.getElementById('excelZone').style.background = '#eff6ff';
+    document.getElementById('excelZone').style.borderStyle = 'solid';
   }
   function onExcelDragLeave(e) {
     document.getElementById('excelZone').style.borderColor = '';
     document.getElementById('excelZone').style.background = '';
+    document.getElementById('excelZone').style.borderStyle = 'dashed';
+  }
+  function onExcelDragLeaveSection(e) {
+    // 섹션 완전히 벗어날 때만 스타일 초기화
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      document.getElementById('excelZone').style.borderColor = '';
+      document.getElementById('excelZone').style.background = '';
+      document.getElementById('excelZone').style.borderStyle = 'dashed';
+    }
   }
   function onExcelDrop(e) {
     e.preventDefault();
+    e.stopPropagation();
     document.getElementById('excelZone').style.borderColor = '';
     document.getElementById('excelZone').style.background = '';
+    document.getElementById('excelZone').style.borderStyle = 'dashed';
     const file = e.dataTransfer.files[0];
     if (!file) return;
     if (!file.name.match(/\.xlsx?$/i)) { showToast('엑셀 파일(.xlsx)만 가능해요.'); return; }
