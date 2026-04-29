@@ -93,7 +93,11 @@ tr:hover td { background: #fafafa; }
     <!-- 엑셀 업로드 섹션 -->
     <div class="upload-section" id="uploadSection">
       <div style="font-size:13px;font-weight:500;color:#111;margin-bottom:10px">엑셀 업로드</div>
-      <div class="excel-zone" onclick="document.getElementById('excelInput').click()">
+      <div class="excel-zone" id="excelZone"
+        onclick="document.getElementById('excelInput').click()"
+        ondragover="onExcelDragOver(event)"
+        ondragleave="onExcelDragLeave(event)"
+        ondrop="onExcelDrop(event)">
         <div style="font-size:24px;margin-bottom:6px">📊</div>
         <div class="excel-zone-text">엑셀 파일을 클릭하거나 드래그해서 올려주세요<br><span style="font-size:11px;color:#aaa">양식: 사번 | 고객품번 | 품명 (헤더 포함)</span></div>
         <div id="excelSelected" style="font-size:13px;color:#2563eb;font-weight:500;margin-top:6px"></div>
@@ -240,6 +244,25 @@ const PRODUCT_DATA = [{"sabun": "502002", "part_no": "9535044", "part_name": "D/
 
   let excelData = [];
 
+  function onExcelDragOver(e) {
+    e.preventDefault();
+    document.getElementById('excelZone').style.borderColor = '#2563eb';
+    document.getElementById('excelZone').style.background = '#eff6ff';
+  }
+  function onExcelDragLeave(e) {
+    document.getElementById('excelZone').style.borderColor = '';
+    document.getElementById('excelZone').style.background = '';
+  }
+  function onExcelDrop(e) {
+    e.preventDefault();
+    document.getElementById('excelZone').style.borderColor = '';
+    document.getElementById('excelZone').style.background = '';
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    if (!file.name.match(/\.xlsx?$/i)) { showToast('엑셀 파일(.xlsx)만 가능해요.'); return; }
+    onExcelSelect({ target: { files: [file] } });
+  }
+
   function onExcelSelect(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -250,26 +273,49 @@ const PRODUCT_DATA = [{"sabun": "502002", "part_no": "9535044", "part_name": "D/
       const ws = wb.Sheets[wb.SheetNames[0]];
       const raw = XLSX.utils.sheet_to_json(ws, {header:1});
 
-      // 헤더 찾기
-      let startRow = 0;
-      for (let i = 0; i < Math.min(raw.length, 5); i++) {
-        if (raw[i] && raw[i].some(v => v && (String(v).includes('사번') || String(v).includes('품번')))) {
-          startRow = i + 1; break;
+      // 헤더 행 자동 탐색 (사번/품번/품목명 컬럼 위치 동적 파악)
+      let headerRow = -1;
+      let colIdx = { sabun: -1, part_no: -1, part_name: -1, active: -1 };
+
+      for (let i = 0; i < Math.min(raw.length, 10); i++) {
+        const row = raw[i];
+        if (!row) continue;
+        const sabunCol    = row.findIndex(v => String(v||'').trim() === '사번');
+        const partNoCol   = row.findIndex(v => String(v||'').trim() === '품번');
+        const partNameCol = row.findIndex(v => String(v||'').trim() === '품목명');
+        if (sabunCol >= 0 && partNoCol >= 0 && partNameCol >= 0) {
+          headerRow = i;
+          colIdx.sabun    = sabunCol;
+          colIdx.part_no  = partNoCol;
+          colIdx.part_name = partNameCol;
+          // 사용 컬럼도 찾기
+          colIdx.active = row.findIndex(v => String(v||'').trim() === '사용');
+          break;
         }
       }
 
-      excelData = [];
-      for (let i = startRow; i < raw.length; i++) {
-        const row = raw[i];
-        if (!row || !row[0]) continue;
-        excelData.push({
-          sabun: String(row[0] || '').trim(),
-          part_no: String(row[1] || '').trim(),
-          part_name: String(row[2] || '').trim()
-        });
+      if (headerRow < 0) {
+        showToast('헤더를 찾을 수 없어요. 파일 형식을 확인해주세요.');
+        return;
       }
 
-      // 사번 기준 중복 제거
+      // 데이터 추출
+      excelData = [];
+      for (let i = headerRow + 1; i < raw.length; i++) {
+        const row = raw[i];
+        if (!row || !row[colIdx.sabun]) continue;
+
+        // 사용=YES 또는 사용 컬럼 없는 경우만 포함
+        if (colIdx.active >= 0 && String(row[colIdx.active]||'').trim() !== 'YES') continue;
+
+        const sabun    = String(row[colIdx.sabun]    || '').trim();
+        const part_no  = String(row[colIdx.part_no]  || '').trim();
+        const part_name = String(row[colIdx.part_name] || '').trim();
+        if (!sabun) continue;
+        excelData.push({ sabun, part_no, part_name });
+      }
+
+      // 사번 기준 중복 제거 (첫 번째 것 유지)
       const seen = new Set();
       const deduped = [];
       excelData.forEach(r => {
@@ -277,11 +323,19 @@ const PRODUCT_DATA = [{"sabun": "502002", "part_no": "9535044", "part_name": "D/
       });
       excelData = deduped;
 
-      document.getElementById('previewCount').textContent =
-        '총 ' + excelData.length + '건 (중복 제거 완료)';
+      const removed = raw.length - headerRow - 1 - excelData.length;
+      document.getElementById('previewCount').innerHTML =
+        `총 <strong>${excelData.length}건</strong> 인식 완료
+        <span style="color:#aaa;margin-left:8px">
+          (사용중 필터 + 중복 제거 적용)
+        </span>`;
       document.getElementById('previewBody').innerHTML =
-        excelData.slice(0,10).map(r => `<tr><td>${r.sabun}</td><td>${r.part_no}</td><td>${r.part_name}</td></tr>`).join('') +
-        (excelData.length > 10 ? `<tr><td colspan="3" style="color:#aaa;text-align:center">... 외 ${excelData.length-10}건</td></tr>` : '');
+        excelData.slice(0,10).map(r =>
+          `<tr><td>${r.sabun}</td><td>${r.part_no}</td><td>${r.part_name}</td></tr>`
+        ).join('') +
+        (excelData.length > 10
+          ? `<tr><td colspan="3" style="color:#aaa;text-align:center">... 외 ${excelData.length-10}건</td></tr>`
+          : '');
       document.getElementById('excelPreview').style.display = 'block';
       document.getElementById('excelUploadBtn').disabled = false;
     };
