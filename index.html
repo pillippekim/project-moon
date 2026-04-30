@@ -4,176 +4,375 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Project Moon - 작업일보 시스템</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; min-height: 100vh; }
 
 /* 상단 헤더 */
-.top-bar { background: white; border-bottom: 1px solid #e5e5e5; padding: 0 1.5rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+.top-bar { background: white; border-bottom: 1px solid #e5e5e5; padding: 0 1.5rem; height: 60px; display: flex; align-items: center; justify-content: space-between; }
 .logo { font-size: 16px; font-weight: 700; color: #111; letter-spacing: -0.3px; }
 .logo span { color: #2563eb; }
-.top-date { font-size: 13px; color: #888; }
+.user-info { display: flex; align-items: center; gap: 12px; }
+.user-name { font-size: 14px; color: #111; font-weight: 500; }
+.user-role { font-size: 12px; color: #888; }
+.user-avatar { width: 36px; height: 36px; background: linear-gradient(135deg, #243bb2 0%, #1a2a85 100%); border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+.btn-logout { font-size: 12px; padding: 6px 12px; border-radius: 6px; background: transparent; color: #888; border: 1px solid #ddd; cursor: pointer; font-family: inherit; margin-left: 8px; }
+.btn-logout:hover { background: #f5f5f5; color: #111; }
 
-.container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+.container { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem; }
 
 /* 환영 배너 */
-.welcome { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1.5rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; }
-.welcome-text h2 { font-size: 20px; font-weight: 600; color: #111; margin-bottom: 4px; }
-.welcome-text p { font-size: 14px; color: #888; }
-.welcome-icon { font-size: 40px; }
+.welcome { background: white; border-radius: 16px; border: 1px solid #e5e5e5; padding: 1.75rem 2rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.welcome-text h2 { font-size: 22px; font-weight: 600; color: #111; margin-bottom: 6px; }
+.welcome-text p { font-size: 14px; color: #888; line-height: 1.6; }
+.welcome-icon { font-size: 56px; }
 
-/* 섹션 타이틀 */
+/* 작업자용 - 큰 액션 카드 */
+.worker-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 1.5rem; }
+.worker-card { background: white; border-radius: 16px; border: 1px solid #e5e5e5; padding: 2rem; cursor: pointer; transition: all 0.2s; text-decoration: none; color: inherit; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.worker-card:hover { border-color: #243bb2; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(36,59,178,0.1); }
+.worker-card.primary { background: linear-gradient(135deg, #243bb2 0%, #1a2a85 100%); color: white; border: none; }
+.worker-card.primary .wc-name { color: white; }
+.worker-card.primary .wc-desc { color: rgba(255,255,255,0.85); }
+.wc-icon { font-size: 48px; margin-bottom: 16px; }
+.wc-name { font-size: 18px; font-weight: 600; color: #111; margin-bottom: 6px; }
+.wc-desc { font-size: 13px; color: #888; line-height: 1.5; }
+
+/* 관리자용 통계 카드 */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+.stat-card { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1rem 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.stat-icon { font-size: 22px; margin-bottom: 8px; }
+.stat-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+.stat-num { font-size: 22px; font-weight: 600; color: #111; }
+.stat-num.blue { color: #243bb2; }
+.stat-num.green { color: #16a34a; }
+.stat-num.orange { color: #ea580c; }
+.stat-unit { font-size: 12px; color: #aaa; font-weight: 400; }
+
+/* 섹션 */
 .section-title { font-size: 13px; font-weight: 500; color: #888; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-
-/* 메뉴 그리드 */
 .menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.5rem; }
-.menu-card { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1.25rem; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; text-decoration: none; display: block; }
-.menu-card:hover { border-color: #2563eb; box-shadow: 0 2px 8px rgba(37,99,235,0.08); }
-.menu-card.disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+.menu-card { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1.25rem; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; text-decoration: none; display: block; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.menu-card:hover { border-color: #243bb2; box-shadow: 0 2px 8px rgba(36,59,178,0.08); }
 .menu-icon { font-size: 24px; margin-bottom: 10px; }
 .menu-name { font-size: 15px; font-weight: 600; color: #111; margin-bottom: 4px; }
 .menu-desc { font-size: 12px; color: #888; line-height: 1.4; }
-.menu-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; margin-top: 8px; font-weight: 500; }
-.badge-ready { background: #f0fdf4; color: #16a34a; }
-.badge-soon { background: #f9f9f9; color: #aaa; }
 
-/* 관리자 메뉴 */
-.admin-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 1.5rem; }
-.admin-card { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1.25rem; cursor: pointer; transition: border-color 0.15s; text-decoration: none; display: block; }
-.admin-card:hover { border-color: #16a34a; }
-.admin-card.disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+/* 로딩 */
+.loading-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 12px; }
+.loading-spinner { width: 40px; height: 40px; border: 3px solid #e5e5e5; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.8s linear infinite; }
+.loading-text { font-size: 13px; color: #888; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* 하단 상태 */
-.status-bar { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1rem 1.25rem; display: flex; gap: 2rem; align-items: center; }
-.status-item { display: flex; align-items: center; gap: 8px; }
-.status-dot { width: 8px; height: 8px; border-radius: 50%; }
-.status-dot.green { background: #16a34a; }
-.status-dot.gray { background: #ddd; }
-.status-label { font-size: 13px; color: #888; }
+.hidden { display: none !important; }
 </style>
 </head>
 <body>
 
-<div class="top-bar">
-  <div class="logo">Project <span>Moon</span></div>
-  <div class="top-date" id="topDate"></div>
+<!-- 상단 헤더 (로그인 후 표시) -->
+<div class="top-bar hidden" id="topBar">
+  <div style="display:flex;align-items:center;gap:8px">
+    <img src="hkht_logo_horizontal.png" alt="HKHT" style="height: 28px; width: auto;" />
+    <span style="color: #ddd; margin: 0 4px;">|</span>
+    <span style="font-size: 13px; color: #888;">㈜한국하이테크</span>
+  </div>
+  <div class="user-info">
+    <div class="user-avatar" id="userAvatar">?</div>
+    <div>
+      <div class="user-name" id="userName">-</div>
+      <div class="user-role" id="userRole">-</div>
+    </div>
+    <button class="btn-logout" onclick="logout()">로그아웃</button>
+  </div>
 </div>
 
-<div class="container">
+<div class="container hidden" id="mainContainer">
 
+  <!-- 환영 배너 -->
   <div class="welcome">
     <div class="welcome-text">
-      <h2>작업일보 시스템</h2>
-      <p>공정별 작업일보 입력 및 데이터 관리 플랫폼</p>
+      <h2 id="welcomeTitle">안녕하세요!</h2>
+      <p id="welcomeMsg">작업일보 시스템에 오신 것을 환영합니다.</p>
     </div>
-    <div class="welcome-icon">🏭</div>
+    <div class="welcome-icon" id="welcomeIcon">🏭</div>
   </div>
 
-  <!-- 작업일보 입력 -->
-  <div class="section-title">작업일보 입력</div>
-  <div class="menu-grid">
-    <a href="packaging.html" class="menu-card">
-      <div class="menu-icon">📦</div>
-      <div class="menu-name">포장반</div>
-      <div class="menu-desc">포장 작업일보 입력</div>
-      <span class="menu-badge badge-ready">운영중</span>
-    </a>
-    <div class="menu-card disabled">
-      <div class="menu-icon">✂️</div>
-      <div class="menu-name">재단</div>
-      <div class="menu-desc">재단 작업일보 입력</div>
-      <span class="menu-badge badge-soon">준비중</span>
-    </div>
-    <div class="menu-card disabled">
-      <div class="menu-icon">🖌️</div>
-      <div class="menu-name">도포(약칠반)</div>
-      <div class="menu-desc">도포 작업일보 입력</div>
-      <span class="menu-badge badge-soon">준비중</span>
-    </div>
-    <div class="menu-card disabled">
-      <div class="menu-icon">🔍</div>
-      <div class="menu-name">검사</div>
-      <div class="menu-desc">검사 작업일보 입력</div>
-      <span class="menu-badge badge-soon">준비중</span>
-    </div>
-    <div class="menu-card disabled">
-      <div class="menu-icon">⚙️</div>
-      <div class="menu-name">쇼트</div>
-      <div class="menu-desc">쇼트 작업일보 입력</div>
-      <span class="menu-badge badge-soon">준비중</span>
-    </div>
-    <div class="menu-card disabled">
-      <div class="menu-icon">🏗️</div>
-      <div class="menu-name">성형</div>
-      <div class="menu-desc">성형 작업일보 입력</div>
-      <span class="menu-badge badge-soon">준비중</span>
+  <!-- 작업자용 화면 -->
+  <div id="workerView" class="hidden">
+    <div class="worker-actions">
+      <a href="#" class="worker-card primary" id="workerInputCard">
+        <div class="wc-icon">📝</div>
+        <div class="wc-name" id="workerInputName">작업일지 입력</div>
+        <div class="wc-desc">오늘의 작업 내용을 기록하세요</div>
+      </a>
+      <a href="docs_viewer.html" class="worker-card">
+        <div class="wc-icon">🔍</div>
+        <div class="wc-name">문서 조회</div>
+        <div class="wc-desc">검사기준서 및 작업표준서 확인</div>
+      </a>
     </div>
   </div>
 
-  <!-- 관리자 메뉴 -->
-  <div class="section-title">관리자</div>
-  <div class="admin-grid">
-    <a href="admin.html" class="admin-card">
-      <div class="menu-icon">📊</div>
-      <div class="menu-name">데이터 조회 및 추출</div>
-      <div class="menu-desc">공정별 데이터 조회, 필터링, 엑셀 다운로드</div>
-      <span class="menu-badge badge-ready">운영중</span>
-    </a>
-    <a href="master.html" class="admin-card">
-      <div class="menu-icon">🗂️</div>
-      <div class="menu-name">기준정보 관리</div>
-      <div class="menu-desc">사번/품번/품명, 작업자 목록 관리</div>
-      <span class="menu-badge badge-ready">운영중</span>
-    </a>
-    <a href="docs_admin.html" class="admin-card">
-      <div class="menu-icon">📄</div>
-      <div class="menu-name">문서 관리</div>
-      <div class="menu-desc">검사기준서, 작업표준서 등 PDF 업로드 및 이력 관리</div>
-      <span class="menu-badge badge-ready">운영중</span>
-    </a>
-    <a href="docs_viewer.html" class="admin-card">
-      <div class="menu-icon">🔍</div>
-      <div class="menu-name">문서 조회</div>
-      <div class="menu-desc">사번 입력 → 검사기준서, 작업표준서 열람</div>
-      <span class="menu-badge badge-ready">운영중</span>
-    </a>
-    <div class="admin-card disabled">
-      <div class="menu-icon">📈</div>
-      <div class="menu-name">통합 대시보드</div>
-      <div class="menu-desc">전 공정 실시간 현황 및 집계</div>
-      <span class="menu-badge badge-soon">준비중</span>
+  <!-- 관리자용 화면 -->
+  <div id="adminView" class="hidden">
+    <!-- 오늘 통계 -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon">📦</div>
+        <div class="stat-label">오늘 작업일지</div>
+        <div class="stat-num blue" id="todayCount">- <span class="stat-unit">건</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-label">오늘 포장수량</div>
+        <div class="stat-num green" id="todayQty">- <span class="stat-unit">EA</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-label">오늘 작업자</div>
+        <div class="stat-num orange" id="todayWorkers">- <span class="stat-unit">명</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📄</div>
+        <div class="stat-label">등록 문서</div>
+        <div class="stat-num" id="totalDocs">- <span class="stat-unit">건</span></div>
+      </div>
     </div>
-    <div class="admin-card disabled">
-      <div class="menu-icon">🔗</div>
-      <div class="menu-name">ERP 연동</div>
-      <div class="menu-desc">MES/ERP 데이터 연동 관리</div>
-      <span class="menu-badge badge-soon">준비중</span>
+
+    <!-- 작업일지 메뉴 -->
+    <div id="workReportMenu" class="hidden">
+      <div class="section-title">작업일지</div>
+      <div class="menu-grid">
+        <a href="packaging.html" class="menu-card">
+          <div class="menu-icon">📦</div>
+          <div class="menu-name">포장반 작업일지</div>
+          <div class="menu-desc">포장 작업일지 입력 및 수정</div>
+        </a>
+        <a href="admin.html" class="menu-card">
+          <div class="menu-icon">📊</div>
+          <div class="menu-name">데이터 조회 및 추출</div>
+          <div class="menu-desc">기간별 작업일지 조회, 엑셀 다운로드</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- 문서 메뉴 -->
+    <div id="docMenu" class="hidden">
+      <div class="section-title">문서 관리</div>
+      <div class="menu-grid">
+        <a href="docs_admin.html" class="menu-card" id="docAdminCard">
+          <div class="menu-icon">📄</div>
+          <div class="menu-name">문서 관리</div>
+          <div class="menu-desc">검사기준서, 작업표준서 PDF 업로드 및 이력</div>
+        </a>
+        <a href="docs_viewer.html" class="menu-card">
+          <div class="menu-icon">🔍</div>
+          <div class="menu-name">문서 조회</div>
+          <div class="menu-desc">사번 입력 → 검사기준서, 작업표준서 열람</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- 기준정보 메뉴 -->
+    <div id="masterMenu" class="hidden">
+      <div class="section-title">기준정보 관리</div>
+      <div class="menu-grid">
+        <a href="master.html" class="menu-card">
+          <div class="menu-icon">🗂️</div>
+          <div class="menu-name">기준정보 관리</div>
+          <div class="menu-desc">제품 사번, 작업자 명단 관리</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- 슈퍼관리자 메뉴 -->
+    <div id="superMenu" class="hidden">
+      <div class="section-title">시스템 관리</div>
+      <div class="menu-grid">
+        <a href="users.html" class="menu-card">
+          <div class="menu-icon">👥</div>
+          <div class="menu-name">사용자 관리</div>
+          <div class="menu-desc">계정 생성, 권한 부여, 비밀번호 초기화</div>
+        </a>
+      </div>
     </div>
   </div>
 
-  <!-- 상태바 -->
-  <div class="status-bar">
-    <div class="status-item">
-      <div class="status-dot green"></div>
-      <span class="status-label">DB 연결됨 (Supabase · Seoul)</span>
-    </div>
-    <div class="status-item">
-      <div class="status-dot green"></div>
-      <span class="status-label">포장반 운영중</span>
-    </div>
-    <div class="status-item">
-      <div class="status-dot gray"></div>
-      <span class="status-label">나머지 공정 준비중</span>
-    </div>
-  </div>
+</div>
 
+<!-- 로딩 -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">로딩 중...</div>
 </div>
 
 <script>
-  const d = new Date();
-  const days = ['일','월','화','수','목','금','토'];
-  document.getElementById('topDate').textContent =
-    d.getFullYear() + '년 ' + (d.getMonth()+1) + '월 ' + d.getDate() + '일 (' + days[d.getDay()] + ')';
+const SUPABASE_URL = 'https://vpaixxlhzkwtgcllimvn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwYWl4eGxoemt3dGdjbGxpbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNzk4NjMsImV4cCI6MjA5MTk1NTg2M30.V8Bj0cMbM0E2TFhklYYa7TM-vO6Fi70ctACA7uUf4Ig';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// 권한 매트릭스
+const PERMISSIONS = {
+  // 부서별 권한
+  'super':       { workReport: true, docAdmin: true, docViewer: true, master: true, userMgmt: true },
+  '연구개발팀':  { workReport: true, docAdmin: true, docViewer: true, master: false, userMgmt: false },
+  '품질관리팀':  { workReport: true, docAdmin: true, docViewer: true, master: false, userMgmt: false },
+  '생산관리팀':  { workReport: true, docAdmin: true, docViewer: true, master: true, userMgmt: false },
+  '물류관리팀':  { workReport: true, docAdmin: false, docViewer: true, master: false, userMgmt: false },
+  '경영지원팀':  { workReport: true, docAdmin: false, docViewer: true, master: true, userMgmt: false }
+};
+
+// 공정별 작업일지 페이지
+const PROCESS_PAGES = {
+  '포장': 'packaging.html',
+  '재단': 'cutting.html',  // 추후
+  '도포': 'coating.html',
+  '검사': 'inspection.html',
+  '쇼트': 'shot.html',
+  '성형': 'molding.html'
+};
+
+let userInfo = null;
+
+async function init() {
+  // 1. 세션 확인
+  const { data: { session } } = await db.auth.getSession();
+  if (!session) {
+    location.href = 'login.html';
+    return;
+  }
+
+  // 2. 사용자 정보 조회
+  const { data, error } = await db.from('users')
+    .select('*')
+    .eq('auth_user_id', session.user.id)
+    .single();
+
+  if (error || !data) {
+    alert('사용자 정보를 찾을 수 없어요.');
+    await db.auth.signOut();
+    location.href = 'login.html';
+    return;
+  }
+
+  userInfo = data;
+
+  // 3. 헤더 렌더링
+  renderHeader();
+
+  // 4. 역할별 화면 렌더링
+  if (userInfo.user_type === 'worker') {
+    renderWorkerView();
+  } else {
+    renderAdminView();
+  }
+
+  // 5. UI 표시
+  document.getElementById('loadingScreen').classList.add('hidden');
+  document.getElementById('topBar').classList.remove('hidden');
+  document.getElementById('mainContainer').classList.remove('hidden');
+}
+
+function renderHeader() {
+  // 아바타 첫 글자
+  document.getElementById('userAvatar').textContent = userInfo.name.charAt(0);
+  document.getElementById('userName').textContent = userInfo.name;
+
+  // 역할 표시
+  let roleText = '';
+  if (userInfo.user_type === 'super') {
+    roleText = userInfo.position || '슈퍼관리자';
+  } else if (userInfo.user_type === 'admin') {
+    roleText = userInfo.department + (userInfo.position ? ' · ' + userInfo.position : '');
+  } else {
+    roleText = userInfo.process + ' 작업자';
+  }
+  document.getElementById('userRole').textContent = roleText;
+}
+
+function renderWorkerView() {
+  document.getElementById('workerView').classList.remove('hidden');
+
+  // 환영 메시지
+  document.getElementById('welcomeTitle').textContent = `안녕하세요, ${userInfo.name}님!`;
+  document.getElementById('welcomeMsg').textContent = `오늘도 ${userInfo.process} 공정 작업 잘 부탁드려요.`;
+  document.getElementById('welcomeIcon').textContent = '👷';
+
+  // 본인 공정에 맞는 작업일지 링크
+  const page = PROCESS_PAGES[userInfo.process];
+  if (page) {
+    document.getElementById('workerInputCard').href = page;
+  } else {
+    document.getElementById('workerInputCard').onclick = () => {
+      alert(userInfo.process + ' 공정 작업일지는 아직 준비중이에요.');
+      return false;
+    };
+  }
+  document.getElementById('workerInputName').textContent = userInfo.process + '반 작업일지 입력';
+}
+
+async function renderAdminView() {
+  document.getElementById('adminView').classList.remove('hidden');
+
+  // 환영 메시지
+  let title = `안녕하세요, ${userInfo.name}님!`;
+  if (userInfo.user_type === 'super') {
+    title = `${userInfo.position || ''} ${userInfo.name}님 환영합니다.`;
+  }
+  document.getElementById('welcomeTitle').textContent = title;
+  document.getElementById('welcomeMsg').textContent = '오늘의 생산 현황을 확인하고 시스템을 관리하세요.';
+  document.getElementById('welcomeIcon').textContent = userInfo.user_type === 'super' ? '👔' : '💼';
+
+  // 권한별 메뉴 표시
+  const perm = userInfo.user_type === 'super'
+    ? PERMISSIONS['super']
+    : PERMISSIONS[userInfo.department] || {};
+
+  if (perm.workReport) document.getElementById('workReportMenu').classList.remove('hidden');
+  if (perm.docAdmin || perm.docViewer) {
+    document.getElementById('docMenu').classList.remove('hidden');
+    if (!perm.docAdmin) document.getElementById('docAdminCard').classList.add('hidden');
+  }
+  if (perm.master) document.getElementById('masterMenu').classList.remove('hidden');
+  if (perm.userMgmt) document.getElementById('superMenu').classList.remove('hidden');
+
+  // 통계 로드
+  loadStats();
+}
+
+async function loadStats() {
+  const today = new Date();
+  const todayStr = today.getFullYear() + '-' +
+    String(today.getMonth()+1).padStart(2,'0') + '-' +
+    String(today.getDate()).padStart(2,'0');
+
+  // 오늘 작업일지 통계
+  const { data: reports } = await db.from('packaging_reports')
+    .select('quantity, worker_name')
+    .eq('work_date', todayStr);
+
+  const count = reports ? reports.length : 0;
+  const totalQty = reports ? reports.reduce((s,r) => s+(r.quantity||0), 0) : 0;
+  const workers = reports ? new Set(reports.filter(r=>r.worker_name).map(r=>r.worker_name)).size : 0;
+
+  document.getElementById('todayCount').innerHTML = count + ' <span class="stat-unit">건</span>';
+  document.getElementById('todayQty').innerHTML = totalQty.toLocaleString() + ' <span class="stat-unit">EA</span>';
+  document.getElementById('todayWorkers').innerHTML = workers + ' <span class="stat-unit">명</span>';
+
+  // 등록 문서 수
+  const { data: docs } = await db.from('documents').select('id').eq('is_current', true);
+  document.getElementById('totalDocs').innerHTML = (docs ? docs.length : 0) + ' <span class="stat-unit">건</span>';
+}
+
+async function logout() {
+  if (!confirm('로그아웃 하시겠어요?')) return;
+  await db.auth.signOut();
+  sessionStorage.clear();
+  location.href = 'login.html';
+}
+
+init();
 </script>
 </body>
 </html>
