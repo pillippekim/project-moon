@@ -9,7 +9,7 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 1rem; }
-.app { max-width: 920px; margin: 0 auto; }
+.app { max-width: 1100px; margin: 0 auto; }
 .card { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1rem 1.25rem; margin-bottom: 1rem; }
 .header-row { display: flex; justify-content: space-between; align-items: center; }
 .header-title { font-size: 18px; font-weight: 600; color: #111; }
@@ -122,19 +122,18 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
       <thead>
         <tr>
           <th style="width:28px">NO</th>
-          <th style="width:70px">사번</th>
+          <th style="width:65px">사번</th>
           <th style="width:95px">고객 품번</th>
-          <th style="width:115px">품명</th>
+          <th style="width:130px">품명</th>
           <th style="width:80px">작업자</th>
-          <th style="width:135px">성형 LOT No.</th>
-          <th style="width:135px">뱃지 NO. <span style="color:#aaa;font-weight:400;font-size:10px">(선택)</span></th>
-          <th style="width:60px">포장수량</th>
-          <th>비고</th>
+          <th style="width:155px">성형 LOT No.</th>
+          <th style="width:90px">포장수량</th>
+          <th style="min-width:200px">비고</th>
           <th style="width:28px"></th>
         </tr>
       </thead>
       <tbody id="rowBody">
-        <tr><td colspan="10" class="loading-msg">기준정보 불러오는 중...</td></tr>
+        <tr><td colspan="9" class="loading-msg">기준정보 불러오는 중...</td></tr>
       </tbody>
     </table>
   </div>
@@ -246,7 +245,7 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
 
   function addRow() {
     uid++;
-    rows.push({ id: uid, sabun:'', partNo:'', partName:'', worker:'', lots:[''], badges:[''], qty:'', note:'' });
+    rows.push({ id: uid, sabun:'', partNo:'', partName:'', worker:'', lots:[''], badges:[], qty:'', note:'' });
     renderRows();
   }
 
@@ -317,7 +316,7 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
   function renderRows() {
     const tbody = document.getElementById('rowBody');
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="10" class="loading-msg">+ 행 추가 버튼을 눌러주세요</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="loading-msg">+ 행 추가 버튼을 눌러주세요</td></tr>';
       updateSummary();
       return;
     }
@@ -349,19 +348,6 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
               </div>
             `).join('')}
             <button class="badge-add" onclick="addLot(${r.id})">+ LOT 추가</button>
-          </div>
-        </td>
-        <td>
-          <div class="badge-list">
-            ${r.badges.map((b, bi) => `
-              <div class="badge-item">
-                <span class="badge-num">${bi+1}</span>
-                <input class="td-input" type="text" value="${b}" placeholder="직접 입력"
-                  oninput="setBadge(${r.id},${bi},this.value)" />
-                ${bi>0 ? `<button class="badge-del" onclick="removeBadge(${r.id},${bi})">×</button>` : ''}
-              </div>
-            `).join('')}
-            <button class="badge-add" onclick="addBadge(${r.id})">+ 뱃지 추가</button>
           </div>
         </td>
         <td><input class="td-input" type="number" value="${r.qty}" placeholder="0" min="0"
@@ -517,7 +503,7 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
   async function submitForm() {
     const workDate = document.getElementById('workDate').value;
     const remarks = document.getElementById('remarks').value;
-    const valid = rows.filter(r => r.sabun || r.lots.some(l=>l) || r.badges.some(b=>b) || r.qty);
+    const valid = rows.filter(r => r.sabun || r.lots.some(l=>l) || r.qty);
     if (!workDate) { showToast('작성일을 입력해주세요.'); return; }
     if (valid.length === 0) { showToast('작업 내역을 1건 이상 입력해주세요.'); return; }
 
@@ -529,7 +515,7 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
       worker_id: r.sabun,
       worker_name: r.worker,
       lot_nos: r.lots.filter(l => l.trim() !== ''),
-      badge_nos: r.badges.filter(b => b.trim() !== ''),
+      badge_nos: [],
       quantity: parseInt(r.qty)||0,
       note: r.note,
       remarks: remarks
