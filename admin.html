@@ -133,6 +133,7 @@ tr:hover td { background: #fafafa; }
             <th>작업일</th>
             <th>사번</th>
             <th>작업자</th>
+            <th>성형 LOT No.</th>
             <th>뱃지 NO.</th>
             <th>포장수량</th>
             <th>비고</th>
@@ -141,7 +142,7 @@ tr:hover td { background: #fafafa; }
           </tr>
         </thead>
         <tbody id="tableBody">
-          <tr class="empty-row"><td colspan="9">조회 조건을 설정하고 조회 버튼을 눌러주세요.</td></tr>
+          <tr class="empty-row"><td colspan="10">조회 조건을 설정하고 조회 버튼을 눌러주세요.</td></tr>
         </tbody>
       </table>
     </div>
@@ -169,7 +170,8 @@ let allData = [];
 let currentPage = 1;
 
 // 기본 날짜 설정 (이번달 1일 ~ 오늘)
-window.onload = () => {
+window.onload = async () => {
+  await loadProducts();
   const today = new Date();
   const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
   document.getElementById('dateFrom').value = fmt(firstDay);
@@ -194,7 +196,7 @@ async function loadData() {
   const dateTo   = document.getElementById('dateTo').value;
   const worker   = document.getElementById('filterWorker').value;
 
-  document.getElementById('tableBody').innerHTML = '<tr><td colspan="9" class="loading">조회 중...</td></tr>';
+  document.getElementById('tableBody').innerHTML = '<tr><td colspan="10" class="loading">조회 중...</td></tr>';
   document.getElementById('excelBtn').disabled = true;
 
   let query = db.from('packaging_reports')
@@ -209,7 +211,7 @@ async function loadData() {
   const { data, error } = await query;
 
   if (error) {
-    document.getElementById('tableBody').innerHTML = `<tr class="empty-row"><td colspan="9">조회 실패: ${error.message}</td></tr>`;
+    document.getElementById('tableBody').innerHTML = `<tr class="empty-row"><td colspan="10">조회 실패: ${error.message}</td></tr>`;
     return;
   }
 
@@ -226,7 +228,7 @@ function renderTable() {
   const tbody = document.getElementById('tableBody');
 
   if (allData.length === 0) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">조회된 데이터가 없습니다.</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="10">조회된 데이터가 없습니다.</td></tr>';
     document.getElementById('pageInfo').textContent = '';
     document.getElementById('pageBtns').innerHTML = '';
     return;
@@ -238,11 +240,13 @@ function renderTable() {
     const sabunCell = r.worker_id
       ? `${r.worker_id}<br><span style="font-size:11px;color:#888">${prod.partNo || ''}</span>`
       : '-';
+    const lots = (r.lot_nos || []).map(l => `<span class="badge-tag" style="background:#fef9c3;color:#ca8a04">${l}</span>`).join('') || '-';
     return `<tr>
       <td style="color:#bbb;font-size:12px">${start + i + 1}</td>
       <td>${r.work_date || '-'}</td>
       <td>${sabunCell}</td>
       <td>${r.worker_name || '-'}</td>
+      <td>${lots}</td>
       <td>${badges}</td>
       <td style="font-weight:500;color:#2563eb">${(r.quantity || 0).toLocaleString()}</td>
       <td style="color:#888">${r.note || '-'}</td>
@@ -296,6 +300,7 @@ function downloadExcel() {
       '고객 품번': prod.partNo || '',
       '품명':     prod.partName || '',
       '작업자':   r.worker_name || '',
+      '성형 LOT No.': (r.lot_nos || []).join(', '),
       '뱃지 NO.': (r.badge_nos || []).join(', '),
       '포장수량': r.quantity || 0,
       '비고':     r.note || '',
@@ -309,7 +314,7 @@ function downloadExcel() {
   // 컬럼 너비 설정
   ws['!cols'] = [
     {wch:6}, {wch:12}, {wch:10}, {wch:16}, {wch:28},
-    {wch:10}, {wch:16}, {wch:10}, {wch:16}, {wch:20}, {wch:18}
+    {wch:10}, {wch:16}, {wch:16}, {wch:10}, {wch:16}, {wch:20}, {wch:18}
   ];
 
   const wb = XLSX.utils.book_new();
