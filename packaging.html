@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>포장반 작업일지</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@zxing/library@0.21.0/umd/index.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 1rem; }
@@ -68,6 +69,17 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
 .badge-del { background: none; border: none; cursor: pointer; color: #ccc; font-size: 14px; padding: 0 2px; line-height: 1; }
 .badge-del:hover { color: #e53e3e; }
 .loading-msg { text-align: center; color: #888; font-size: 13px; padding: 1rem; }
+.scan-camera-area { display: none; width: 100%; height: 240px; background: #000; border-radius: 8px; margin-bottom: 1rem; position: relative; overflow: hidden; }
+.scan-camera-area.open { display: block; }
+.scan-camera-area video { width: 100%; height: 100%; object-fit: cover; }
+.scan-frame { position: absolute; inset: 20% 10%; border: 2px solid #2563eb; border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4); pointer-events: none; }
+.scan-frame::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: linear-gradient(90deg, transparent, #ef4444, transparent); animation: scanLine 1.6s ease-in-out infinite; }
+@keyframes scanLine { 0%,100% { top: 10%; } 50% { top: 90%; } }
+.scan-status { position: absolute; bottom: 10px; left: 10px; right: 10px; text-align: center; color: white; font-size: 12px; background: rgba(0,0,0,0.6); padding: 6px; border-radius: 6px; }
+.scan-mode-btns { display: flex; gap: 8px; margin-bottom: 12px; }
+.scan-mode-btn { flex: 1; font-size: 12px; padding: 8px; border-radius: 8px; border: 1.5px solid #e5e5e5; background: white; cursor: pointer; font-family: inherit; color: #555; }
+.scan-mode-btn.active { border-color: #2563eb; background: #eff6ff; color: #2563eb; font-weight: 500; }
+.scan-error { font-size: 12px; color: #e53e3e; text-align: center; margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -155,14 +167,31 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
 </div>
 
 <div class="scan-overlay" id="scanModal">
-  <div class="scan-box">
+  <div class="scan-box" style="width:340px">
     <div class="scan-title" id="scanTitle">바코드 입력</div>
     <div class="scan-sub" id="scanSub">바코드를 스캔하거나 직접 입력하세요.</div>
-    <input class="scan-input" id="scanInput" type="text" placeholder=""
+
+    <!-- 모드 선택 -->
+    <div class="scan-mode-btns">
+      <button class="scan-mode-btn active" id="modeCamera" onclick="switchScanMode('camera')">📷 카메라 스캔</button>
+      <button class="scan-mode-btn" id="modeManual" onclick="switchScanMode('manual')">⌨️ 직접 입력</button>
+    </div>
+
+    <!-- 카메라 영역 -->
+    <div class="scan-camera-area" id="scanCameraArea">
+      <video id="scanVideo" playsinline autoplay muted></video>
+      <div class="scan-frame"></div>
+      <div class="scan-status" id="scanStatus">바코드를 사각형 안에 맞춰주세요</div>
+    </div>
+    <div class="scan-error" id="scanError" style="display:none"></div>
+
+    <!-- 직접 입력 -->
+    <input class="scan-input" id="scanInput" type="text" placeholder="" style="display:none"
       onkeydown="if(event.key==='Enter') confirmScan()" />
+
     <div class="scan-btns">
       <button class="scan-cancel" onclick="closeModal()">취소</button>
-      <button class="scan-ok" onclick="confirmScan()">입력 완료</button>
+      <button class="scan-ok" id="scanOkBtn" onclick="confirmScan()" style="display:none">입력 완료</button>
     </div>
   </div>
 </div>
@@ -354,6 +383,9 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
   }
 
   let scanType = 'badge'; // 'badge' or 'lot'
+  let scanMode = 'camera'; // 'camera' or 'manual'
+  let codeReader = null;
+  let activeStream = null;
 
   function openModal(id, idx, type) {
     scanTarget = id;
@@ -365,12 +397,111 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
       ? '이동전표 하단 바코드를 스캔하세요.'
       : '뱃지 번호를 직접 입력하세요.';
     document.getElementById('scanInput').placeholder = type === 'lot' ? '예: C260424020' : '예: M260420020';
+    document.getElementById('scanError').style.display = 'none';
     document.getElementById('scanModal').classList.add('open');
-    setTimeout(() => document.getElementById('scanInput').focus(), 100);
+
+    // LOT 모드일 때만 카메라 자동 시작
+    if (type === 'lot') {
+      switchScanMode('camera');
+    } else {
+      // 뱃지 NO.는 카메라 옵션 숨기고 바로 직접 입력 모드
+      document.getElementById('modeCamera').style.display = 'none';
+      switchScanMode('manual');
+    }
+  }
+
+  function switchScanMode(mode) {
+    scanMode = mode;
+
+    // 버튼 활성화 표시
+    document.getElementById('modeCamera').classList.toggle('active', mode === 'camera');
+    document.getElementById('modeManual').classList.toggle('active', mode === 'manual');
+
+    // 영역 표시/숨김
+    const cameraArea = document.getElementById('scanCameraArea');
+    const inputArea = document.getElementById('scanInput');
+    const okBtn = document.getElementById('scanOkBtn');
+
+    if (mode === 'camera') {
+      cameraArea.classList.add('open');
+      inputArea.style.display = 'none';
+      okBtn.style.display = 'none';
+      startCamera();
+    } else {
+      cameraArea.classList.remove('open');
+      inputArea.style.display = 'block';
+      okBtn.style.display = 'block';
+      stopCamera();
+      setTimeout(() => inputArea.focus(), 100);
+    }
+  }
+
+  async function startCamera() {
+    if (!window.ZXing) {
+      showCameraError('바코드 라이브러리 로딩 실패');
+      return;
+    }
+    try {
+      stopCamera();
+      codeReader = new ZXing.BrowserMultiFormatReader();
+      const video = document.getElementById('scanVideo');
+      document.getElementById('scanStatus').textContent = '바코드를 사각형 안에 맞춰주세요';
+
+      // 후면 카메라 우선 사용
+      const constraints = {
+        video: { facingMode: { ideal: 'environment' } }
+      };
+
+      codeReader.decodeFromConstraints(constraints, video, (result, err) => {
+        if (result) {
+          const text = result.getText();
+          document.getElementById('scanStatus').textContent = '✓ 인식 완료: ' + text;
+          // 자동 입력 후 모달 닫기
+          setTimeout(() => {
+            if (scanType === 'lot') setLot(scanTarget, scanBadgeIdx, text);
+            else setBadge(scanTarget, scanBadgeIdx, text);
+            closeModal();
+            renderRows();
+            showToast('바코드 인식 ✓ ' + text);
+          }, 300);
+        }
+      });
+    } catch (e) {
+      showCameraError(getCameraErrorMsg(e));
+    }
+  }
+
+  function stopCamera() {
+    if (codeReader) {
+      try { codeReader.reset(); } catch(e){}
+      codeReader = null;
+    }
+    if (activeStream) {
+      activeStream.getTracks().forEach(t => t.stop());
+      activeStream = null;
+    }
+  }
+
+  function showCameraError(msg) {
+    const errEl = document.getElementById('scanError');
+    errEl.textContent = '⚠️ ' + msg;
+    errEl.style.display = 'block';
+    document.getElementById('scanCameraArea').classList.remove('open');
+    // 카메라 사용 불가 시 자동으로 직접 입력 모드로
+    setTimeout(() => switchScanMode('manual'), 1500);
+  }
+
+  function getCameraErrorMsg(e) {
+    if (e.name === 'NotAllowedError') return '카메라 권한이 거부되었어요. 브라우저 설정에서 허용해주세요.';
+    if (e.name === 'NotFoundError') return '카메라를 찾을 수 없어요.';
+    if (e.name === 'NotReadableError') return '카메라가 다른 앱에서 사용 중이에요.';
+    return '카메라를 시작할 수 없어요: ' + (e.message || e.name);
   }
 
   function closeModal() {
     document.getElementById('scanModal').classList.remove('open');
+    document.getElementById('modeCamera').style.display = ''; // 다시 보이게
+    stopCamera();
     scanTarget = null;
   }
 
