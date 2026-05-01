@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>포장반 작업일보 - 관리자</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth_guard.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -61,6 +62,20 @@ tr:hover td { background: #fafafa; }
 </style>
 </head>
 <body>
+<!-- 권한 체크 로딩 화면 -->
+<div id="authCheckOverlay" style="position:fixed;inset:0;background:#f5f5f5;z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+  <div style="width:36px;height:36px;border:3px solid #e5e5e5;border-top-color:#243bb2;border-radius:50%;animation:authSpin 0.8s linear infinite"></div>
+  <div style="font-size:13px;color:#888;font-family:-apple-system,sans-serif">권한 확인 중...</div>
+  <style>@keyframes authSpin { to { transform: rotate(360deg); } }</style>
+</div>
+<script>
+(async function() {
+  const user = await checkPageAccess('admin.html');
+  if (!user) return; // 권한 없으면 함수 내부에서 화면 교체됨
+  document.getElementById('authCheckOverlay').style.display = 'none';
+})();
+</script>
+
 <div style="background:white;border-bottom:1px solid #e5e5e5;padding:0 1.25rem;height:48px;display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
   <button onclick="location.href='index.html'" style="font-size:13px;color:#2563eb;background:none;border:none;cursor:pointer;font-family:inherit;padding:0">← 메인으로</button>
   <span style="font-size:14px;font-weight:500;color:#111">데이터 조회 및 추출</span>

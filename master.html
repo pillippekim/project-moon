@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>기준정보 관리 - Project Moon</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth_guard.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -107,6 +108,20 @@ tr:hover td { background: #fafafa; }
 </style>
 </head>
 <body>
+<!-- 권한 체크 로딩 화면 -->
+<div id="authCheckOverlay" style="position:fixed;inset:0;background:#f5f5f5;z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+  <div style="width:36px;height:36px;border:3px solid #e5e5e5;border-top-color:#243bb2;border-radius:50%;animation:authSpin 0.8s linear infinite"></div>
+  <div style="font-size:13px;color:#888;font-family:-apple-system,sans-serif">권한 확인 중...</div>
+  <style>@keyframes authSpin { to { transform: rotate(360deg); } }</style>
+</div>
+<script>
+(async function() {
+  const user = await checkPageAccess('master.html');
+  if (!user) return; // 권한 없으면 함수 내부에서 화면 교체됨
+  document.getElementById('authCheckOverlay').style.display = 'none';
+})();
+</script>
+
 <div class="app">
   <div class="top-nav">
     <button class="back-btn" onclick="location.href='index.html'">← 메인으로</button>
