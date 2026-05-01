@@ -256,6 +256,12 @@ async function init() {
     return;
   }
 
+  // 첫 로그인이면 비밀번호 변경 화면으로
+  if (!data.password_changed) {
+    location.href = 'change_password.html';
+    return;
+  }
+
   userInfo = data;
 
   // 3. 헤더 렌더링

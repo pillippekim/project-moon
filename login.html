@@ -149,6 +149,13 @@ async function login() {
   // 사용자 정보를 sessionStorage에 캐시
   sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
 
+  // 첫 로그인이면 비밀번호 변경 화면으로 이동
+  if (!userInfo.password_changed) {
+    loginText.textContent = '✓ 로그인 성공';
+    setTimeout(() => location.href = 'change_password.html', 400);
+    return;
+  }
+
   // 메인으로 이동
   loginText.textContent = '✓ 로그인 성공';
   setTimeout(() => location.href = 'index.html', 400);
