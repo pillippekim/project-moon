@@ -73,7 +73,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
 /* 테이블 */
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th { font-size: 12px; font-weight: 500; color: #888; padding: 9px 12px; background: #f9f9f9; border-bottom: 1px solid #eee; text-align: left; white-space: nowrap; }
+th { font-size: 12px; font-weight: 500; color: #888; padding: 9px 12px; background: #f9f9f9; border-bottom: 1px solid #eee; text-align: left; white-space: nowrap; ; position: sticky; top: 0; z-index: 10; }
 td { padding: 9px 12px; border-bottom: 1px solid #f0f0f0; color: #111; vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: #fafafa; }
@@ -128,6 +128,12 @@ tr:hover td { background: #fafafa; }
 .no-permission-title { font-size: 18px; font-weight: 600; color: #111; margin-bottom: 6px; }
 .no-permission-msg { font-size: 13px; color: #888; }
 .hidden { display: none !important; }
+
+/* 테이블 헤더 고정 */
+.table-scroll-wrap { max-height: 600px; overflow-y: auto; overflow-x: auto; border-radius: 8px; border: 1px solid #f0f0f0; }
+.table-scroll-wrap table { margin: 0; }
+.table-scroll-wrap thead th { position: sticky; top: 0; z-index: 10; background: #f9f9f9; box-shadow: inset 0 -1px 0 #eee; }
+
 </style>
 </head>
 <body>
@@ -198,7 +204,7 @@ tr:hover td { background: #fafafa; }
             <option value="inactive">비활성</option>
           </select>
         </div>
-        <div style="overflow-x:auto">
+        <div class="table-scroll-wrap">
           <table>
             <thead>
               <tr>
