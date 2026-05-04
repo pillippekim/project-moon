@@ -216,6 +216,7 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
 
   let WORKERS = [];
   let PRODUCTS = {};
+  let MY_NAME = '';
 
   let rows = [];
   let uid = 0;
@@ -250,12 +251,19 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
       .eq('active', true)
       .order('name');
     if (workers) WORKERS = workers.map(w => w.name);
+
+    // 로그인한 사용자 정보 가져오기 (작업자 자동 세팅용)
+    const { data: { session } } = await db.auth.getSession();
+    if (session) {
+      const { data: u } = await db.from('users').select('name').eq('auth_user_id', session.user.id).single();
+      if (u) MY_NAME = u.name;
+    }
   }
 
   function addRow() {
     uid++;
     rows.push({
-      id: uid, sabun:'', partNo:'', partName:'', worker:'',
+      id: uid, sabun:'', partNo:'', partName:'', worker: MY_NAME,
       lots:[''], inspect:'', pass:'', fail:'', defectType:'', defectMemo:''
     });
     renderRows();

@@ -152,7 +152,7 @@ tr:hover td { background: #fafafa; }
 
   <!-- 업로드 토글 -->
   <div class="upload-toggle">
-    <span class="upload-toggle-title">📌 파일명 규칙: <strong>[담당자]_[문서유형]_[사번].pdf</strong> &nbsp;예) 김정혁_검사기준서_502284.pdf</span>
+    <span class="upload-toggle-title">📌 파일명 규칙: <strong>[문서유형]_[사번].pdf</strong> &nbsp;예) 검사기준서_502284.pdf</span>
     <button class="btn-toggle-upload" onclick="toggleUpload()">+ 문서 업로드</button>
   </div>
 
@@ -160,9 +160,10 @@ tr:hover td { background: #fafafa; }
   <div class="upload-area" id="uploadArea">
     <div class="rule-box">
       📋 <strong>파일명 규칙에 맞게 저장하면 자동으로 정보가 입력돼요!</strong><br>
-      형식: <strong>[담당자]_[문서유형]_[사번].pdf</strong><br>
+      형식: <strong>[문서유형]_[사번].pdf</strong><br>
       문서유형: 검사기준서 · 외관검사기준서 · 작업표준서 · 검사협정서 · 관리계획서<br>
-      예시: 김정혁_검사기준서_502284.pdf · 김정혁_작업표준서_502284.pdf
+      예시: 검사기준서_502284.pdf · 작업표준서_502284.pdf<br>
+      <span style="color:#666;font-size:11px">※ 담당자는 로그인한 사용자로 자동 입력됩니다</span>
     </div>
 
     <div class="file-zone" id="fileZone"
@@ -305,6 +306,7 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const TYPES = ['검사기준서','외관검사기준서','작업표준서','검사협정서','관리계획서'];
 let allDocs = [];
+let MY_NAME = '';
 let activeTab = '';
 let showOld = false;
 let parsedFiles = [];
@@ -322,16 +324,15 @@ function toggleUpload() {
   document.getElementById('uploadArea').classList.toggle('open');
 }
 
-// 파일명 파싱: 담당자_문서유형_사번.pdf
+// 파일명 파싱: 문서유형_사번.pdf
 function parseFileName(name) {
   const base = name.replace(/\.pdf$/i, '');
   const parts = base.split('_');
-  if (parts.length < 3) return null;
-  const sabun    = parts[parts.length - 1];
-  const docType  = parts[parts.length - 2];
-  const uploader = parts.slice(0, parts.length - 2).join('_');
+  if (parts.length < 2) return null;
+  const sabun   = parts[parts.length - 1];
+  const docType = parts[parts.length - 2];
   if (!TYPES.includes(docType)) return null;
-  return { sabun, docType, uploader, docName: base };
+  return { sabun, docType, docName: base };
 }
 
 // 다음 버전 계산
@@ -368,7 +369,7 @@ function handleFiles(files) {
       file,
       sabun:    parsed ? parsed.sabun    : '',
       docType:  parsed ? parsed.docType  : '검사기준서',
-      uploader: parsed ? parsed.uploader : '',
+      uploader: MY_NAME, // 로그인한 사용자로 자동 세팅
       docName:  parsed ? parsed.docName  : file.name.replace(/\.pdf$/i,''),
       mode:     'new', // 'new' or 'overwrite'
       ok:       !!parsed
@@ -391,7 +392,7 @@ function renderParsedList() {
           <button class="btn-remove-file" onclick="removeFile(${i})">×</button>
         </div>
       </div>
-      <div class="parsed-fields">
+      <div class="parsed-fields" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
         <div class="pf-group">
           <span class="pf-label">사번</span>
           <input class="pf-input" value="${p.sabun}" oninput="updateParsed(${i},'sabun',this.value)" placeholder="502284" />
@@ -403,8 +404,8 @@ function renderParsedList() {
           </select>
         </div>
         <div class="pf-group">
-          <span class="pf-label">담당자</span>
-          <input class="pf-input" value="${p.uploader}" oninput="updateParsed(${i},'uploader',this.value)" placeholder="홍길동" />
+          <span class="pf-label">담당자 (자동)</span>
+          <input class="pf-input" value="${p.uploader}" disabled style="background:#f9f9f9;color:#888" />
         </div>
         <div class="pf-group">
           <span class="pf-label">업로드 방식</span>
@@ -542,6 +543,14 @@ async function loadDocs() {
   renderTable();
 }
 
+async function loadMyName() {
+  const { data: { session } } = await db.auth.getSession();
+  if (session) {
+    const { data: u } = await db.from('users').select('name').eq('auth_user_id', session.user.id).single();
+    if (u) MY_NAME = u.name;
+  }
+}
+
 // 수정 모달
 function openEditModal(r) {
   document.getElementById('edit_id').value       = r.id;
@@ -607,6 +616,7 @@ async function deleteDoc(id, filePath) {
   loadDocs();
 }
 
+loadMyName();
 loadDocs();
 </script>
 </body>

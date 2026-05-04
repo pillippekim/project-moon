@@ -220,6 +220,7 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
   const DAYS = ['일','월','화','수','목','금','토'];
   let WORKERS = [];   // DB에서 로딩
   let PRODUCTS = {};  // DB에서 로딩
+  let MY_NAME = '';   // 로그인한 사용자 이름
 
   let rows = [];
   let uid = 0;
@@ -260,7 +261,7 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
 
   function addRow() {
     uid++;
-    rows.push({ id: uid, sabun:'', partNo:'', partName:'', worker:'', lots:[''], badges:[], qty:'', note:'' });
+    rows.push({ id: uid, sabun:'', partNo:'', partName:'', worker: MY_NAME, lots:[''], badges:[], qty:'', note:'' });
     renderRows();
   }
 
