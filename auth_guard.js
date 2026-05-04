@@ -7,6 +7,7 @@ const SUPABASE_KEY_AG = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 // 페이지별 권한 매트릭스
 const PAGE_PERMISSIONS = {
   'packaging.html':   { admin: ['all'], worker: ['포장'] },
+  'inspection.html':  { admin: ['all'], worker: ['검사'] },
   'admin.html':       { admin: ['all'], worker: [] },
   'master.html':      { admin: ['생산관리팀','경영지원팀'], worker: [] },
   'docs_admin.html':  { admin: ['연구개발팀','품질관리팀','생산관리팀'], worker: [] },

@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>검사 작업일지 - HKHT</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth_guard.js"></script>
+<script src="https://unpkg.com/@zxing/library@0.21.0/umd/index.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 1rem; }
+.app { max-width: 1100px; margin: 0 auto; }
+.card { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+.header-row { display: flex; justify-content: space-between; align-items: center; }
+.header-title { font-size: 18px; font-weight: 600; color: #111; }
+.header-sub { font-size: 13px; color: #888; margin-top: 2px; }
+.status-badge { font-size: 12px; padding: 4px 10px; border-radius: 8px; background: #eff6ff; color: #243bb2; font-weight: 500; }
+.meta-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem; }
+.field-group { background: white; border: 1px solid #e5e5e5; border-radius: 8px; padding: 0.75rem 1rem; }
+.field-label { font-size: 12px; color: #888; margin-bottom: 6px; }
+.field-input { width: 100%; font-size: 15px; font-weight: 500; background: transparent; border: none; outline: none; color: #111; font-family: inherit; }
+.field-text { font-size: 15px; font-weight: 500; color: #111; min-height: 22px; }
+.table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+.table-title { font-size: 14px; font-weight: 500; color: #111; }
+.add-btn { font-size: 13px; padding: 5px 14px; border-radius: 8px; border: 1px solid #ddd; background: transparent; color: #333; cursor: pointer; font-family: inherit; }
+.add-btn:hover { background: #f5f5f5; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+th { font-size: 12px; font-weight: 500; color: #888; padding: 8px 10px; background: #f9f9f9; border-bottom: 1px solid #eee; text-align: left; }
+td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; font-size: 13px; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+.td-input { width: 100%; font-size: 13px; background: transparent; border: none; outline: none; color: #111; font-family: inherit; padding: 2px 0; }
+.td-input:focus { background: #f5f5f5; border-radius: 4px; padding: 2px 4px; }
+.td-select { width: 100%; font-size: 13px; background: transparent; border: none; outline: none; color: #111; font-family: inherit; cursor: pointer; padding: 2px 0; }
+.scan-btn { flex-shrink: 0; background: #eff6ff; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 11px; color: #243bb2; font-weight: 500; white-space: nowrap; font-family: inherit; }
+.del-btn { background: none; border: none; cursor: pointer; color: #ccc; font-size: 18px; padding: 0 4px; line-height: 1; }
+.del-btn:hover { color: #e53e3e; }
+.fail-input { color: #e53e3e !important; font-weight: 500; }
+.summary-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1rem; }
+.stat-card { background: #f9f9f9; border-radius: 8px; padding: 0.85rem 1rem; }
+.stat-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+.stat-num { font-size: 22px; font-weight: 600; color: #111; }
+.stat-num.blue { color: #243bb2; }
+.stat-num.green { color: #16a34a; }
+.stat-num.red { color: #e53e3e; }
+.stat-unit { font-size: 13px; color: #aaa; font-weight: 400; }
+.remarks-label { font-size: 13px; font-weight: 500; color: #888; margin-bottom: 8px; }
+.optional { font-size: 11px; color: #aaa; margin-left: 5px; border: 1px dashed #ddd; border-radius: 4px; padding: 1px 5px; font-weight: 400; }
+textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid #eee; border-radius: 8px; padding: 8px 12px; color: #111; resize: none; outline: none; font-family: inherit; }
+.footer-row { display: flex; gap: 10px; justify-content: flex-end; margin-bottom: 2rem; }
+.btn-reset { font-size: 14px; padding: 10px 20px; border-radius: 8px; background: transparent; color: #888; border: 1px solid #ddd; cursor: pointer; font-family: inherit; }
+.btn-submit { font-size: 14px; padding: 10px 28px; border-radius: 8px; background: #243bb2; color: white; border: none; cursor: pointer; font-weight: 500; font-family: inherit; }
+.btn-submit:disabled { background: #aaa; cursor: not-allowed; }
+.lot-list { display: flex; flex-direction: column; gap: 4px; }
+.lot-item { display: flex; align-items: center; gap: 4px; }
+.lot-item .td-input { flex: 1; }
+.lot-num { font-size: 10px; color: #bbb; min-width: 16px; }
+.lot-add { font-size: 11px; color: #243bb2; background: none; border: none; cursor: pointer; padding: 2px 0; font-family: inherit; text-align: left; margin-top: 2px; }
+.lot-add:hover { text-decoration: underline; }
+.lot-del { background: none; border: none; cursor: pointer; color: #ccc; font-size: 14px; padding: 0 2px; line-height: 1; }
+.lot-del:hover { color: #e53e3e; }
+.scan-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
+.scan-overlay.open { display: flex; }
+.scan-box { background: white; border-radius: 12px; padding: 1.5rem; width: 340px; }
+.scan-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; color: #111; }
+.scan-sub { font-size: 13px; color: #888; margin-bottom: 1rem; line-height: 1.5; }
+.scan-mode-btns { display: flex; gap: 8px; margin-bottom: 12px; }
+.scan-mode-btn { flex: 1; font-size: 12px; padding: 8px; border-radius: 8px; border: 1.5px solid #e5e5e5; background: white; cursor: pointer; font-family: inherit; color: #555; }
+.scan-mode-btn.active { border-color: #243bb2; background: #eff6ff; color: #243bb2; font-weight: 500; }
+.scan-camera-area { display: none; width: 100%; height: 240px; background: #000; border-radius: 8px; margin-bottom: 1rem; position: relative; overflow: hidden; }
+.scan-camera-area.open { display: block; }
+.scan-camera-area video { width: 100%; height: 100%; object-fit: cover; }
+.scan-frame { position: absolute; inset: 20% 10%; border: 2px solid #243bb2; border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4); pointer-events: none; }
+.scan-frame::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: linear-gradient(90deg, transparent, #ef4444, transparent); animation: scanLine 1.6s ease-in-out infinite; }
+@keyframes scanLine { 0%,100% { top: 10%; } 50% { top: 90%; } }
+.scan-status { position: absolute; bottom: 10px; left: 10px; right: 10px; text-align: center; color: white; font-size: 12px; background: rgba(0,0,0,0.6); padding: 6px; border-radius: 6px; }
+.scan-error { font-size: 12px; color: #e53e3e; text-align: center; margin-bottom: 8px; display: none; }
+.scan-input { width: 100%; font-size: 14px; border: 1px solid #ddd; border-radius: 8px; padding: 9px 12px; outline: none; font-family: inherit; color: #111; display: none; }
+.scan-btns { display: flex; gap: 8px; margin-top: 1rem; }
+.scan-ok { flex: 1; font-size: 13px; padding: 9px; border-radius: 8px; background: #243bb2; color: white; border: none; cursor: pointer; font-weight: 500; font-family: inherit; display: none; }
+.scan-cancel { font-size: 13px; padding: 9px 16px; border-radius: 8px; background: transparent; color: #888; border: 1px solid #ddd; cursor: pointer; font-family: inherit; }
+.toast { display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #111; color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; z-index: 999; white-space: nowrap; }
+.toast.show { display: block; }
+.loading-msg { text-align: center; color: #888; font-size: 13px; padding: 1rem; }
+</style>
+</head>
+<body>
+
+<div style="background:white;border-bottom:1px solid #e5e5e5;padding:0 1.25rem;height:48px;display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+  <button onclick="location.href='index.html'" style="font-size:13px;color:#243bb2;background:none;border:none;cursor:pointer;font-family:inherit;padding:0">← 메인으로</button>
+  <span style="font-size:14px;font-weight:500;color:#111">검사 작업일지</span>
+  <span style="width:70px"></span>
+</div>
+
+<div class="app">
+
+  <div class="card">
+    <div class="header-row">
+      <div>
+        <div class="header-title">검사 작업일지</div>
+        <div class="header-sub">검사공정 / 실시간 입력</div>
+      </div>
+      <span class="status-badge">작성중</span>
+    </div>
+  </div>
+
+  <div class="meta-row">
+    <div class="field-group">
+      <div class="field-label">작성일</div>
+      <input class="field-input" type="date" id="workDate" onchange="onDateChange()" />
+    </div>
+    <div class="field-group">
+      <div class="field-label">요일</div>
+      <div class="field-text" id="dayDisplay">-</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-header">
+      <span class="table-title">검사 내역</span>
+      <button class="add-btn" onclick="addRow()">+ 행 추가</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:28px">NO</th>
+            <th style="width:65px">사번</th>
+            <th style="width:90px">고객 품번</th>
+            <th style="width:120px">품명</th>
+            <th style="width:80px">작업자</th>
+            <th style="width:155px">성형 LOT No.</th>
+            <th style="width:65px">검사수량</th>
+            <th style="width:65px">합격수량</th>
+            <th style="width:65px">불합격</th>
+            <th style="width:100px">불량유형</th>
+            <th style="min-width:140px">불량 메모/비고</th>
+            <th style="width:28px"></th>
+          </tr>
+        </thead>
+        <tbody id="rowBody">
+          <tr><td colspan="12" class="loading-msg">기준정보 불러오는 중...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="summary-row">
+    <div class="stat-card">
+      <div class="stat-label">입력 행 수</div>
+      <div class="stat-num" id="cntRows">0 <span class="stat-unit">행</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">총 검사수량</div>
+      <div class="stat-num blue" id="cntInspect">0 <span class="stat-unit">EA</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">총 합격수량</div>
+      <div class="stat-num green" id="cntPass">0 <span class="stat-unit">EA</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">총 불합격</div>
+      <div class="stat-num red" id="cntFail">0 <span class="stat-unit">EA</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="remarks-label">특이사항 <span class="optional">선택</span></div>
+    <textarea id="remarks" rows="3" placeholder="특이사항을 입력하세요"></textarea>
+  </div>
+
+  <div class="footer-row">
+    <button class="btn-reset" onclick="resetForm()">초기화</button>
+    <button class="btn-submit" id="submitBtn" onclick="submitForm()">제출하기</button>
+  </div>
+
+</div>
+
+<!-- 스캔 모달 -->
+<div class="scan-overlay" id="scanModal">
+  <div class="scan-box">
+    <div class="scan-title">성형 LOT No. 스캔</div>
+    <div class="scan-sub">이동전표 하단 바코드를 스캔하세요.</div>
+
+    <div class="scan-mode-btns">
+      <button class="scan-mode-btn active" id="modeCamera" onclick="switchScanMode('camera')">📷 카메라 스캔</button>
+      <button class="scan-mode-btn" id="modeManual" onclick="switchScanMode('manual')">⌨️ 직접 입력</button>
+    </div>
+
+    <div class="scan-camera-area" id="scanCameraArea">
+      <video id="scanVideo" playsinline autoplay muted></video>
+      <div class="scan-frame"></div>
+      <div class="scan-status" id="scanStatus">바코드를 사각형 안에 맞춰주세요</div>
+    </div>
+    <div class="scan-error" id="scanError"></div>
+
+    <input class="scan-input" id="scanInput" type="text" placeholder="예: C260424020"
+      onkeydown="if(event.key==='Enter') confirmScan()" />
+
+    <div class="scan-btns">
+      <button class="scan-cancel" onclick="closeModal()">취소</button>
+      <button class="scan-ok" id="scanOkBtn" onclick="confirmScan()">입력 완료</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const SUPABASE_URL = 'https://vpaixxlhzkwtgcllimvn.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwYWl4eGxoemt3dGdjbGxpbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNzk4NjMsImV4cCI6MjA5MTk1NTg2M30.V8Bj0cMbM0E2TFhklYYa7TM-vO6Fi70ctACA7uUf4Ig';
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const DAYS = ['일','월','화','수','목','금','토'];
+  const DEFECT_TYPES = ['기포','미성형','형상불량','이물질','찢어짐','깨짐','찍힘','뜯김','사상','미가류','접착불량','Burr','홀막힘','찐드기','기타'];
+
+  let WORKERS = [];
+  let PRODUCTS = {};
+
+  let rows = [];
+  let uid = 0;
+  let scanTarget = null;
+  let scanLotIdx = 0;
+  let scanMode = 'camera';
+  let codeReader = null;
+
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+
+  function onDateChange() {
+    const val = document.getElementById('workDate').value;
+    if (!val) { document.getElementById('dayDisplay').textContent = '-'; return; }
+    const parts = val.split('-');
+    const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    document.getElementById('dayDisplay').textContent = DAYS[d.getDay()] + '요일';
+  }
+
+  async function loadMasterData() {
+    const { data: products } = await db.from('products').select('sabun, part_no, part_name');
+    if (products) {
+      products.forEach(r => {
+        PRODUCTS[r.sabun] = { partNo: r.part_no || '', partName: r.part_name || '' };
+      });
+    }
+    const { data: workers } = await db.from('workers')
+      .select('name')
+      .eq('process', '검사')
+      .eq('active', true)
+      .order('name');
+    if (workers) WORKERS = workers.map(w => w.name);
+  }
+
+  function addRow() {
+    uid++;
+    rows.push({
+      id: uid, sabun:'', partNo:'', partName:'', worker:'',
+      lots:[''], inspect:'', pass:'', fail:'', defectType:'', defectMemo:''
+    });
+    renderRows();
+  }
+
+  function removeRow(id) {
+    rows = rows.filter(r => r.id !== id);
+    renderRows();
+  }
+
+  function setSabunText(id, val) {
+    const r = rows.find(r => r.id === id);
+    if (r) r.sabun = val;
+  }
+
+  function applySabun(id, val) {
+    const r = rows.find(r => r.id === id);
+    if (!r) return;
+    r.sabun = val;
+    const prod = PRODUCTS[val];
+    r.partNo = prod ? prod.partNo : '';
+    r.partName = prod ? prod.partName : '';
+    renderRows();
+  }
+
+  function setField(id, field, val) {
+    const r = rows.find(r => r.id === id);
+    if (!r) return;
+    r[field] = val;
+
+    // 검사수량 또는 합격수량 변경 시 불합격 자동 계산
+    if (field === 'inspect' || field === 'pass') {
+      const ins = parseInt(r.inspect) || 0;
+      const pas = parseInt(r.pass) || 0;
+      r.fail = ins - pas >= 0 ? String(ins - pas) : '0';
+    }
+    renderRows();
+  }
+
+  function setLot(id, idx, val) {
+    const r = rows.find(r => r.id === id);
+    if (r) r.lots[idx] = val;
+  }
+
+  function addLot(id) {
+    const r = rows.find(r => r.id === id);
+    if (r) { r.lots.push(''); renderRows(); }
+  }
+
+  function removeLot(id, idx) {
+    const r = rows.find(r => r.id === id);
+    if (r && r.lots.length > 1) { r.lots.splice(idx, 1); renderRows(); }
+  }
+
+  function renderRows() {
+    const tbody = document.getElementById('rowBody');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="12" class="loading-msg">+ 행 추가 버튼을 눌러주세요</td></tr>';
+      updateSummary();
+      return;
+    }
+    tbody.innerHTML = rows.map((r, i) => `
+      <tr>
+        <td style="color:#bbb;font-size:12px">${i+1}</td>
+        <td>
+          <input class="td-input" type="text" value="${r.sabun}" placeholder="사번"
+            oninput="setSabunText(${r.id},this.value)" onblur="applySabun(${r.id},this.value)"
+            onkeydown="if(event.key==='Enter'||event.key==='Tab') applySabun(${r.id},this.value)" />
+        </td>
+        <td style="font-size:12px;color:${r.partNo?'#111':'#bbb'}">${r.partNo||'-'}</td>
+        <td style="font-size:12px;color:${r.partName?'#111':'#bbb'}">${r.partName||'-'}</td>
+        <td>
+          <select class="td-select" onchange="setField(${r.id},'worker',this.value)">
+            <option value="" ${!r.worker?'selected':''}>선택</option>
+            ${WORKERS.map(w => `<option value="${w}" ${r.worker===w?'selected':''}>${w}</option>`).join('')}
+          </select>
+        </td>
+        <td>
+          <div class="lot-list">
+            ${r.lots.map((l, li) => `
+              <div class="lot-item">
+                <span class="lot-num">${li+1}</span>
+                <input class="td-input" type="text" value="${l}" placeholder="스캔 또는 입력"
+                  oninput="setLot(${r.id},${li},this.value)" />
+                <button class="scan-btn" onclick="openModal(${r.id},${li})">스캔</button>
+                ${li>0 ? `<button class="lot-del" onclick="removeLot(${r.id},${li})">×</button>` : ''}
+              </div>
+            `).join('')}
+            <button class="lot-add" onclick="addLot(${r.id})">+ LOT 추가</button>
+          </div>
+        </td>
+        <td>
+          <input class="td-input" type="number" value="${r.inspect}" placeholder="0" min="0"
+            oninput="setField(${r.id},'inspect',this.value)" />
+        </td>
+        <td>
+          <input class="td-input" type="number" value="${r.pass}" placeholder="0" min="0"
+            oninput="setField(${r.id},'pass',this.value)" />
+        </td>
+        <td>
+          <input class="td-input fail-input" type="number" value="${r.fail}" placeholder="0"
+            readonly />
+        </td>
+        <td>
+          <select class="td-select" onchange="setField(${r.id},'defectType',this.value)">
+            <option value="" ${!r.defectType?'selected':''}>없음</option>
+            ${DEFECT_TYPES.map(t => `<option value="${t}" ${r.defectType===t?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </td>
+        <td>
+          <input class="td-input" type="text" value="${r.defectMemo}" placeholder="-"
+            oninput="setField(${r.id},'defectMemo',this.value)" />
+        </td>
+        <td><button class="del-btn" onclick="removeRow(${r.id})">×</button></td>
+      </tr>
+    `).join('');
+    updateSummary();
+  }
+
+  function updateSummary() {
+    const totalInspect = rows.reduce((s,r) => s+(parseInt(r.inspect)||0), 0);
+    const totalPass    = rows.reduce((s,r) => s+(parseInt(r.pass)||0), 0);
+    const totalFail    = rows.reduce((s,r) => s+(parseInt(r.fail)||0), 0);
+    document.getElementById('cntRows').innerHTML    = rows.length+' <span class="stat-unit">행</span>';
+    document.getElementById('cntInspect').innerHTML = totalInspect.toLocaleString()+' <span class="stat-unit">EA</span>';
+    document.getElementById('cntPass').innerHTML    = totalPass.toLocaleString()+' <span class="stat-unit">EA</span>';
+    document.getElementById('cntFail').innerHTML    = totalFail.toLocaleString()+' <span class="stat-unit">EA</span>';
+  }
+
+  function openModal(id, idx) {
+    scanTarget = id;
+    scanLotIdx = idx || 0;
+    document.getElementById('scanInput').value = '';
+    document.getElementById('scanError').style.display = 'none';
+    document.getElementById('scanModal').classList.add('open');
+    switchScanMode('camera');
+  }
+
+  function switchScanMode(mode) {
+    scanMode = mode;
+    document.getElementById('modeCamera').classList.toggle('active', mode === 'camera');
+    document.getElementById('modeManual').classList.toggle('active', mode === 'manual');
+    const cameraArea = document.getElementById('scanCameraArea');
+    const inputArea = document.getElementById('scanInput');
+    const okBtn = document.getElementById('scanOkBtn');
+
+    if (mode === 'camera') {
+      cameraArea.classList.add('open');
+      inputArea.style.display = 'none';
+      okBtn.style.display = 'none';
+      startCamera();
+    } else {
+      cameraArea.classList.remove('open');
+      inputArea.style.display = 'block';
+      okBtn.style.display = 'block';
+      stopCamera();
+      setTimeout(() => inputArea.focus(), 100);
+    }
+  }
+
+  async function startCamera() {
+    if (!window.ZXing) { showCameraError('바코드 라이브러리 로딩 실패'); return; }
+    try {
+      stopCamera();
+      codeReader = new ZXing.BrowserMultiFormatReader();
+      const video = document.getElementById('scanVideo');
+      document.getElementById('scanStatus').textContent = '바코드를 사각형 안에 맞춰주세요';
+      const constraints = { video: { facingMode: { ideal: 'environment' } } };
+      codeReader.decodeFromConstraints(constraints, video, (result, err) => {
+        if (result) {
+          const text = result.getText();
+          document.getElementById('scanStatus').textContent = '✓ 인식 완료: ' + text;
+          setTimeout(() => {
+            setLot(scanTarget, scanLotIdx, text);
+            closeModal();
+            renderRows();
+            showToast('바코드 인식 ✓ ' + text);
+          }, 300);
+        }
+      });
+    } catch (e) {
+      showCameraError(getCameraErrorMsg(e));
+    }
+  }
+
+  function stopCamera() {
+    if (codeReader) {
+      try { codeReader.reset(); } catch(e){}
+      codeReader = null;
+    }
+  }
+
+  function showCameraError(msg) {
+    const errEl = document.getElementById('scanError');
+    errEl.textContent = '⚠️ ' + msg;
+    errEl.style.display = 'block';
+    document.getElementById('scanCameraArea').classList.remove('open');
+    setTimeout(() => switchScanMode('manual'), 1500);
+  }
+
+  function getCameraErrorMsg(e) {
+    if (e.name === 'NotAllowedError') return '카메라 권한이 거부되었어요.';
+    if (e.name === 'NotFoundError') return '카메라를 찾을 수 없어요.';
+    if (e.name === 'NotReadableError') return '카메라가 다른 앱에서 사용 중이에요.';
+    return '카메라를 시작할 수 없어요.';
+  }
+
+  function closeModal() {
+    document.getElementById('scanModal').classList.remove('open');
+    stopCamera();
+    scanTarget = null;
+  }
+
+  function confirmScan() {
+    const val = document.getElementById('scanInput').value.trim();
+    if (!val) return;
+    setLot(scanTarget, scanLotIdx, val);
+    closeModal();
+    renderRows();
+  }
+
+  async function submitForm() {
+    const workDate = document.getElementById('workDate').value;
+    const remarks  = document.getElementById('remarks').value;
+    const valid = rows.filter(r => r.sabun || r.lots.some(l=>l) || r.inspect);
+    if (!workDate) { showToast('작성일을 입력해주세요.'); return; }
+    if (valid.length === 0) { showToast('검사 내역을 1건 이상 입력해주세요.'); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.textContent = '저장 중...';
+
+    const records = valid.map(r => ({
+      work_date: workDate,
+      worker_id: r.sabun,
+      worker_name: r.worker,
+      lot_nos: r.lots.filter(l => l.trim() !== ''),
+      inspect_qty: parseInt(r.inspect)||0,
+      pass_qty: parseInt(r.pass)||0,
+      fail_qty: parseInt(r.fail)||0,
+      defect_type: r.defectType,
+      defect_memo: r.defectMemo,
+      remarks: remarks
+    }));
+
+    const { error } = await db.from('inspection_reports').insert(records);
+    if (error) {
+      showToast('저장 실패: ' + error.message);
+      btn.disabled = false; btn.textContent = '제출하기';
+    } else {
+      showToast('저장 완료! ✓');
+      setTimeout(resetForm, 1500);
+    }
+  }
+
+  function resetForm() {
+    rows = []; uid = 0;
+    document.getElementById('remarks').value = '';
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = false; btn.textContent = '제출하기';
+    addRow(); addRow(); addRow();
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  (async function init() {
+    document.getElementById('workDate').value = todayStr();
+    onDateChange();
+    await loadMasterData();
+    addRow(); addRow(); addRow();
+  })();
+</script>
+</body>
+</html>
