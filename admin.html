@@ -3,344 +3,495 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>포장반 작업일보 - 관리자</title>
+<title>데이터 조회 및 추출 - HKHT</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth_guard.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 1rem; }
-.app { max-width: 1000px; margin: 0 auto; }
+.app { max-width: 1280px; margin: 0 auto; }
+.top-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; padding: 0 0.25rem; }
+.back-btn { font-size: 13px; color: #243bb2; background: none; border: none; cursor: pointer; font-family: inherit; padding: 0; }
+.back-btn:hover { text-decoration: underline; }
+.nav-sep { color: #ddd; }
+.nav-cur { font-size: 13px; color: #888; }
 .card { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1rem 1.25rem; margin-bottom: 1rem; }
-.header-row { display: flex; justify-content: space-between; align-items: center; }
-.header-title { font-size: 18px; font-weight: 600; color: #111; }
-.header-sub { font-size: 13px; color: #888; margin-top: 2px; }
-.admin-badge { font-size: 12px; padding: 4px 10px; border-radius: 8px; background: #f0fdf4; color: #16a34a; font-weight: 500; }
 
-/* 필터 */
-.filter-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto auto; gap: 10px; align-items: end; }
-.filter-group { display: flex; flex-direction: column; gap: 5px; }
-.filter-label { font-size: 12px; color: #888; }
-.filter-input { font-size: 13px; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 10px; outline: none; font-family: inherit; color: #111; background: white; }
-.filter-input:focus { border-color: #2563eb; }
-.btn-search { font-size: 13px; padding: 8px 20px; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; white-space: nowrap; height: 36px; }
-.btn-search:hover { opacity: 0.9; }
-.btn-excel { font-size: 13px; padding: 8px 20px; border-radius: 8px; background: #16a34a; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; white-space: nowrap; height: 36px; }
-.btn-excel:hover { opacity: 0.9; }
-.btn-excel:disabled { background: #aaa; cursor: not-allowed; }
+/* 공정 탭 */
+.process-tabs { display: flex; gap: 0; margin-bottom: 1rem; background: white; border-radius: 12px; border: 1px solid #e5e5e5; overflow: hidden; }
+.process-tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-size: 14px; font-weight: 500; color: #888; border: none; background: transparent; font-family: inherit; transition: all 0.15s; border-bottom: 2.5px solid transparent; }
+.process-tab:hover { color: #243bb2; background: #f9f9f9; }
+.process-tab.active { color: #243bb2; border-bottom-color: #243bb2; background: #eff6ff; }
 
-/* 요약 카드 */
-.summary-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1rem; }
-.stat-card { background: #f9f9f9; border-radius: 8px; padding: 0.85rem 1rem; }
-.stat-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+/* 필터 바 */
+.filter-bar { display: flex; gap: 10px; margin-bottom: 1rem; align-items: end; flex-wrap: wrap; }
+.filter-group { display: flex; flex-direction: column; gap: 4px; }
+.filter-label { font-size: 11px; color: #888; }
+.filter-input { font-size: 13px; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 12px; outline: none; font-family: inherit; color: #111; min-width: 140px; }
+.filter-input:focus { border-color: #243bb2; }
+.btn-search { font-size: 13px; padding: 9px 18px; border-radius: 8px; background: #243bb2; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; }
+.btn-excel { font-size: 13px; padding: 9px 16px; border-radius: 8px; background: #16a34a; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; }
+.btn-toggle-view { font-size: 12px; padding: 7px 14px; border-radius: 8px; background: white; color: #555; border: 1px solid #ddd; cursor: pointer; font-family: inherit; }
+.btn-toggle-view.active { background: #eff6ff; color: #243bb2; border-color: #243bb2; }
+
+/* 통계 */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1rem; }
+.stat-card { background: white; border-radius: 10px; border: 1px solid #e5e5e5; padding: 0.85rem 1rem; }
+.stat-icon { font-size: 20px; margin-bottom: 6px; }
+.stat-label { font-size: 11px; color: #888; margin-bottom: 4px; }
 .stat-num { font-size: 22px; font-weight: 600; color: #111; }
-.stat-num.blue { color: #2563eb; }
+.stat-num.blue { color: #243bb2; }
 .stat-num.green { color: #16a34a; }
-.stat-unit { font-size: 13px; color: #aaa; font-weight: 400; }
+.stat-num.orange { color: #ea580c; }
+.stat-num.red { color: #e53e3e; }
+.stat-unit { font-size: 12px; color: #aaa; font-weight: 400; }
 
 /* 테이블 */
-.table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th { font-size: 12px; font-weight: 500; color: #888; padding: 9px 12px; background: #f9f9f9; border-bottom: 1px solid #eee; text-align: left; white-space: nowrap; ; position: sticky; top: 0; z-index: 10; }
-td { padding: 9px 12px; border-bottom: 1px solid #f0f0f0; color: #111; vertical-align: middle; }
+.table-wrap { overflow-x: auto; max-height: 70vh; overflow-y: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
+th { font-size: 12px; font-weight: 500; color: #888; padding: 9px 12px; background: #f9f9f9; border-bottom: 1px solid #eee; text-align: left; white-space: nowrap; position: sticky; top: 0; z-index: 10; }
+td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; color: #111; vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: #fafafa; }
-.empty-row td { text-align: center; color: #aaa; padding: 2rem; }
-.loading { text-align: center; color: #aaa; padding: 2rem; font-size: 13px; }
+.empty-row td { text-align: center; color: #aaa; padding: 2rem; font-size: 14px; }
+.lot-tag { display: inline-block; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #fef9c3; color: #ca8a04; margin: 1px; font-weight: 500; }
+.process-tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+.process-포장 { background: #eff6ff; color: #243bb2; }
+.process-검사 { background: #f0fdf4; color: #16a34a; }
+.process-재단 { background: #fff7ed; color: #ea580c; }
+.process-도포 { background: #fdf4ff; color: #9333ea; }
+.process-쇼트 { background: #fef2f2; color: #dc2626; }
+.process-성형 { background: #f0f9ff; color: #0284c7; }
+.defect-cell { color: #e53e3e; font-weight: 500; }
+.pass-cell { color: #16a34a; font-weight: 500; }
 
-/* 배지 태그 */
-.badge-tag { display: inline-block; font-size: 11px; background: #eff6ff; color: #2563eb; border-radius: 4px; padding: 2px 6px; margin: 1px; }
+/* 섹션 (전체 탭에서 사용) */
+.process-section { margin-bottom: 1.5rem; }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.section-title { font-size: 14px; font-weight: 600; color: #111; }
+.section-count { font-size: 12px; color: #888; background: #f3f4f6; padding: 3px 10px; border-radius: 10px; }
+.section-card { background: white; border-radius: 10px; border: 1px solid #e5e5e5; padding: 1rem 1.25rem; }
+.btn-section-detail { font-size: 12px; color: #243bb2; background: none; border: none; cursor: pointer; font-family: inherit; }
+.btn-section-detail:hover { text-decoration: underline; }
 
-/* 페이지네이션 */
-.page-row { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }
-.page-info { font-size: 13px; color: #888; }
-.page-btns { display: flex; gap: 6px; }
-.page-btn { font-size: 13px; padding: 5px 12px; border-radius: 6px; border: 1px solid #e5e5e5; background: white; cursor: pointer; font-family: inherit; color: #111; }
-.page-btn:hover { background: #f5f5f5; }
-.page-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
-.page-btn:disabled { color: #ccc; cursor: not-allowed; }
+.toast { display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #111; color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; z-index: 999; }
+.toast.show { display: block; }
 
-/* 테이블 헤더 고정 */
-.table-scroll-wrap { max-height: 600px; overflow-y: auto; overflow-x: auto; border-radius: 8px; border: 1px solid #f0f0f0; }
-.table-scroll-wrap table { margin: 0; }
-.table-scroll-wrap thead th { position: sticky; top: 0; z-index: 10; background: #f9f9f9; box-shadow: inset 0 -1px 0 #eee; }
-
+.hidden { display: none !important; }
 </style>
 </head>
 <body>
-<!-- 권한 체크 로딩 화면 -->
-<div id="authCheckOverlay" style="position:fixed;inset:0;background:#f5f5f5;z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
-  <div style="width:36px;height:36px;border:3px solid #e5e5e5;border-top-color:#243bb2;border-radius:50%;animation:authSpin 0.8s linear infinite"></div>
-  <div style="font-size:13px;color:#888;font-family:-apple-system,sans-serif">권한 확인 중...</div>
-  <style>@keyframes authSpin { to { transform: rotate(360deg); } }</style>
-</div>
-<script>
-(async function() {
-  const user = await checkPageAccess('admin.html');
-  if (!user) return; // 권한 없으면 함수 내부에서 화면 교체됨
-  document.getElementById('authCheckOverlay').style.display = 'none';
-})();
-</script>
-
-<div style="background:white;border-bottom:1px solid #e5e5e5;padding:0 1.25rem;height:48px;display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
-  <button onclick="location.href='index.html'" style="font-size:13px;color:#2563eb;background:none;border:none;cursor:pointer;font-family:inherit;padding:0">← 메인으로</button>
-  <span style="font-size:14px;font-weight:500;color:#111">데이터 조회 및 추출</span>
-  <span style="width:70px"></span>
-</div>
 <div class="app">
+  <div class="top-nav">
+    <button class="back-btn" onclick="location.href='index.html'">← 메인으로</button>
+    <span class="nav-sep">/</span>
+    <span class="nav-cur">데이터 조회 및 추출</span>
+  </div>
 
-  <!-- 헤더 -->
-  <div class="card">
-    <div class="header-row">
-      <div>
-        <div class="header-title">포장반 작업일보 관리자</div>
-        <div class="header-sub">데이터 조회 및 엑셀 추출</div>
-      </div>
-      <span class="admin-badge">관리자 모드</span>
-    </div>
+  <!-- 공정 탭 -->
+  <div class="process-tabs">
+    <button class="process-tab active" data-process="all" onclick="switchProcess('all')">📊 전체</button>
+    <button class="process-tab" data-process="포장" onclick="switchProcess('포장')">📦 포장</button>
+    <button class="process-tab" data-process="검사" onclick="switchProcess('검사')">🔬 검사</button>
+    <button class="process-tab" data-process="재단" onclick="switchProcess('재단')" disabled style="opacity:0.5">✂️ 재단</button>
+    <button class="process-tab" data-process="도포" onclick="switchProcess('도포')" disabled style="opacity:0.5">🎨 도포</button>
+    <button class="process-tab" data-process="쇼트" onclick="switchProcess('쇼트')" disabled style="opacity:0.5">💥 쇼트</button>
+    <button class="process-tab" data-process="성형" onclick="switchProcess('성형')" disabled style="opacity:0.5">🔧 성형</button>
   </div>
 
   <!-- 필터 -->
   <div class="card">
-    <div class="filter-row">
+    <div class="filter-bar">
       <div class="filter-group">
-        <span class="filter-label">시작일</span>
-        <input class="filter-input" type="date" id="dateFrom" />
+        <label class="filter-label">시작일</label>
+        <input class="filter-input" type="date" id="startDate" />
       </div>
       <div class="filter-group">
-        <span class="filter-label">종료일</span>
-        <input class="filter-input" type="date" id="dateTo" />
+        <label class="filter-label">종료일</label>
+        <input class="filter-input" type="date" id="endDate" />
       </div>
       <div class="filter-group">
-        <span class="filter-label">작업자</span>
-        <select class="filter-input" id="filterWorker">
-          <option value="">전체</option>
-          <option value="김태선">김태선</option>
-          <option value="황경미">황경미</option>
-        </select>
+        <label class="filter-label">사번</label>
+        <input class="filter-input" type="text" id="filterSabun" placeholder="사번 검색" />
       </div>
-      <button class="btn-search" onclick="loadData()">조회</button>
-      <button class="btn-excel" id="excelBtn" onclick="downloadExcel()" disabled>엑셀 다운로드</button>
+      <div class="filter-group">
+        <label class="filter-label">작업자</label>
+        <input class="filter-input" type="text" id="filterWorker" placeholder="작업자 이름" />
+      </div>
+      <button class="btn-search" onclick="loadData()">🔍 조회</button>
+      <button class="btn-excel" onclick="downloadExcel()">📥 엑셀 다운로드</button>
+
+      <!-- 전체 탭에서만 보이는 토글 -->
+      <button class="btn-toggle-view hidden" id="toggleViewBtn" onclick="toggleUnifiedView()">
+        👁️ 통합 보기
+      </button>
     </div>
   </div>
 
-  <!-- 요약 -->
-  <div class="summary-row">
-    <div class="stat-card">
-      <div class="stat-label">조회 건수</div>
-      <div class="stat-num" id="sumCount">- <span class="stat-unit">건</span></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">총 포장수량</div>
-      <div class="stat-num blue" id="sumQty">- <span class="stat-unit">EA</span></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">작업일수</div>
-      <div class="stat-num green" id="sumDays">- <span class="stat-unit">일</span></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">작업자 수</div>
-      <div class="stat-num" id="sumWorkers">- <span class="stat-unit">명</span></div>
-    </div>
-  </div>
+  <!-- 통계 -->
+  <div class="stats-row" id="statsRow"></div>
 
-  <!-- 테이블 -->
-  <div class="card">
-    <div class="table-wrap table-scroll-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>NO</th>
-            <th>작업일</th>
-            <th>사번</th>
-            <th>작업자</th>
-            <th>성형 LOT No.</th>
-            <th>포장수량</th>
-            <th>비고</th>
-            <th>특이사항</th>
-            <th>제출일시</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody">
-          <tr class="empty-row"><td colspan="9">조회 조건을 설정하고 조회 버튼을 눌러주세요.</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="page-row">
-      <span class="page-info" id="pageInfo"></span>
-      <div class="page-btns" id="pageBtns"></div>
-    </div>
-  </div>
-
+  <!-- 결과 -->
+  <div id="resultArea"></div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 const SUPABASE_URL = 'https://vpaixxlhzkwtgcllimvn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwYWl4eGxoemt3dGdjbGxpbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNzk4NjMsImV4cCI6MjA5MTk1NTg2M30.V8Bj0cMbM0E2TFhklYYa7TM-vO6Fi70ctACA7uUf4Ig';
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const PRODUCTS = {
-  '509040': { partNo: '83479-3J000',  partName: 'STOPPER-WDW REG' },
-  '502209': { partNo: '2400935',      partName: "STRIKER ASS'Y-T/GATE DAMPER" },
-  '502308': { partNo: '9536566',      partName: 'SEAL KEY' }
-};
+let currentProcess = 'all';
+let unifiedView = false;
+let cachedData = { 포장: [], 검사: [] };
+let PRODUCTS = {};
 
-const PAGE_SIZE = 20;
-let allData = [];
-let currentPage = 1;
-
-// 기본 날짜 설정 (이번달 1일 ~ 오늘)
-window.onload = async () => {
-  await loadProducts();
-  const today = new Date();
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-  document.getElementById('dateFrom').value = fmt(firstDay);
-  document.getElementById('dateTo').value = fmt(today);
-  loadData();
-};
-
-function fmt(d) {
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function firstDayOfMonth() {
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';
+}
+function fmtDate(s) { return s ? s.slice(0,10) : '-'; }
+function fmtDatetime(s) {
+  if (!s) return '-';
+  const d = new Date(s);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+
+    String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-function fmtDatetime(str) {
-  if (!str) return '-';
-  const d = new Date(str);
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' +
-    String(d.getDate()).padStart(2,'0') + ' ' +
-    String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+async function loadProducts() {
+  const { data } = await db.from('products').select('sabun, part_no, part_name');
+  if (data) {
+    data.forEach(r => { PRODUCTS[r.sabun] = { partNo: r.part_no || '', partName: r.part_name || '' }; });
+  }
+}
+
+function switchProcess(p) {
+  currentProcess = p;
+  document.querySelectorAll('.process-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`[data-process="${p}"]`).classList.add('active');
+  // 전체 탭에서만 통합 보기 토글 노출
+  document.getElementById('toggleViewBtn').classList.toggle('hidden', p !== 'all');
+  if (p !== 'all') unifiedView = false;
+  loadData();
+}
+
+function toggleUnifiedView() {
+  unifiedView = !unifiedView;
+  document.getElementById('toggleViewBtn').classList.toggle('active', unifiedView);
+  document.getElementById('toggleViewBtn').textContent = unifiedView ? '📋 공정별 보기' : '👁️ 통합 보기';
+  render();
 }
 
 async function loadData() {
-  const dateFrom = document.getElementById('dateFrom').value;
-  const dateTo   = document.getElementById('dateTo').value;
-  const worker   = document.getElementById('filterWorker').value;
+  const start = document.getElementById('startDate').value;
+  const end   = document.getElementById('endDate').value;
+  if (!start || !end) { showToast('기간을 선택해주세요.'); return; }
 
-  document.getElementById('tableBody').innerHTML = '<tr><td colspan="9" class="loading">조회 중...</td></tr>';
-  document.getElementById('excelBtn').disabled = true;
+  const fSabun  = document.getElementById('filterSabun').value.trim();
+  const fWorker = document.getElementById('filterWorker').value.trim();
 
-  let query = db.from('packaging_reports')
-    .select('*')
-    .order('work_date', { ascending: false })
-    .order('created_at', { ascending: false });
+  // 포장 데이터 로드 (필요 시)
+  if (currentProcess === 'all' || currentProcess === '포장') {
+    let q = db.from('packaging_reports').select('*').gte('work_date', start).lte('work_date', end);
+    if (fSabun)  q = q.ilike('worker_id', `%${fSabun}%`);
+    if (fWorker) q = q.ilike('worker_name', `%${fWorker}%`);
+    const { data } = await q.order('work_date', { ascending: false });
+    cachedData.포장 = data || [];
+  }
 
-  if (dateFrom) query = query.gte('work_date', dateFrom);
-  if (dateTo)   query = query.lte('work_date', dateTo);
-  if (worker)   query = query.eq('worker_name', worker);
+  // 검사 데이터 로드 (필요 시)
+  if (currentProcess === 'all' || currentProcess === '검사') {
+    let q = db.from('inspection_reports').select('*').gte('work_date', start).lte('work_date', end);
+    if (fSabun)  q = q.ilike('worker_id', `%${fSabun}%`);
+    if (fWorker) q = q.ilike('worker_name', `%${fWorker}%`);
+    const { data } = await q.order('work_date', { ascending: false });
+    cachedData.검사 = data || [];
+  }
 
-  const { data, error } = await query;
+  render();
+}
 
-  if (error) {
-    document.getElementById('tableBody').innerHTML = `<tr class="empty-row"><td colspan="9">조회 실패: ${error.message}</td></tr>`;
+function render() {
+  renderStats();
+  if (currentProcess === 'all') {
+    if (unifiedView) renderUnifiedTable();
+    else renderAllSections();
+  } else if (currentProcess === '포장') {
+    renderPackagingTable(cachedData.포장);
+  } else if (currentProcess === '검사') {
+    renderInspectionTable(cachedData.검사);
+  }
+}
+
+function renderStats() {
+  const statsEl = document.getElementById('statsRow');
+  const pkg = cachedData.포장 || [];
+  const ins = cachedData.검사 || [];
+
+  if (currentProcess === 'all') {
+    const totalCount = pkg.length + ins.length;
+    const totalQty = pkg.reduce((s,r)=>s+(r.quantity||0),0);
+    const totalInspect = ins.reduce((s,r)=>s+(r.inspect_qty||0),0);
+    const totalFail = ins.reduce((s,r)=>s+(r.fail_qty||0),0);
+    statsEl.innerHTML = `
+      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">전체 작업일지</div><div class="stat-num blue">${totalCount} <span class="stat-unit">건</span></div></div>
+      <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-label">포장수량</div><div class="stat-num green">${totalQty.toLocaleString()} <span class="stat-unit">EA</span></div></div>
+      <div class="stat-card"><div class="stat-icon">🔬</div><div class="stat-label">검사수량</div><div class="stat-num orange">${totalInspect.toLocaleString()} <span class="stat-unit">EA</span></div></div>
+      <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-label">불합격</div><div class="stat-num red">${totalFail.toLocaleString()} <span class="stat-unit">EA</span></div></div>
+    `;
+  } else if (currentProcess === '포장') {
+    const totalQty = pkg.reduce((s,r)=>s+(r.quantity||0),0);
+    const workers = new Set(pkg.map(r=>r.worker_name).filter(Boolean)).size;
+    statsEl.innerHTML = `
+      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">작업일지 건수</div><div class="stat-num blue">${pkg.length} <span class="stat-unit">건</span></div></div>
+      <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-label">총 포장수량</div><div class="stat-num green">${totalQty.toLocaleString()} <span class="stat-unit">EA</span></div></div>
+      <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-label">작업자 수</div><div class="stat-num orange">${workers} <span class="stat-unit">명</span></div></div>
+      <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-label">조회 기간</div><div class="stat-num" style="font-size:14px">${document.getElementById('startDate').value} ~<br>${document.getElementById('endDate').value}</div></div>
+    `;
+  } else if (currentProcess === '검사') {
+    const totalInspect = ins.reduce((s,r)=>s+(r.inspect_qty||0),0);
+    const totalPass = ins.reduce((s,r)=>s+(r.pass_qty||0),0);
+    const totalFail = ins.reduce((s,r)=>s+(r.fail_qty||0),0);
+    const passRate = totalInspect > 0 ? ((totalPass/totalInspect)*100).toFixed(1) : '0.0';
+    statsEl.innerHTML = `
+      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">검사 건수</div><div class="stat-num blue">${ins.length} <span class="stat-unit">건</span></div></div>
+      <div class="stat-card"><div class="stat-icon">🔬</div><div class="stat-label">총 검사수량</div><div class="stat-num orange">${totalInspect.toLocaleString()} <span class="stat-unit">EA</span></div></div>
+      <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-label">합격 / 불합격</div><div class="stat-num green">${totalPass.toLocaleString()}<span class="stat-unit"> / </span><span style="color:#e53e3e">${totalFail.toLocaleString()}</span></div></div>
+      <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-label">합격률</div><div class="stat-num green">${passRate} <span class="stat-unit">%</span></div></div>
+    `;
+  }
+}
+
+function renderAllSections() {
+  const pkg = cachedData.포장 || [];
+  const ins = cachedData.검사 || [];
+  const html = `
+    <div class="process-section">
+      <div class="section-header">
+        <span class="section-title">📦 포장 작업일지</span>
+        <span class="section-count">${pkg.length}건</span>
+      </div>
+      <div class="section-card">
+        ${pkg.length === 0 ? '<div style="color:#aaa;text-align:center;padding:1rem;font-size:13px">데이터 없음</div>'
+          : pkg.slice(0, 5).map(r => `<div style="font-size:12px;color:#555;padding:6px 0;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between"><span>${r.work_date} · ${r.worker_id} · ${r.worker_name||'-'}</span><span style="color:#243bb2;font-weight:500">${(r.quantity||0).toLocaleString()} EA</span></div>`).join('')
+          + (pkg.length > 5 ? `<div style="text-align:center;padding-top:8px"><button class="btn-section-detail" onclick="switchProcess('포장')">전체 ${pkg.length}건 보기 →</button></div>` : '')}
+      </div>
+    </div>
+    <div class="process-section">
+      <div class="section-header">
+        <span class="section-title">🔬 검사 작업일지</span>
+        <span class="section-count">${ins.length}건</span>
+      </div>
+      <div class="section-card">
+        ${ins.length === 0 ? '<div style="color:#aaa;text-align:center;padding:1rem;font-size:13px">데이터 없음</div>'
+          : ins.slice(0, 5).map(r => {
+              const fail = r.fail_qty || 0;
+              return `<div style="font-size:12px;color:#555;padding:6px 0;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between"><span>${r.work_date} · ${r.worker_id} · ${r.worker_name||'-'}</span><span><span style="color:#16a34a">합격 ${(r.pass_qty||0).toLocaleString()}</span> / <span style="color:#e53e3e">불합 ${fail.toLocaleString()}</span></span></div>`;
+            }).join('')
+          + (ins.length > 5 ? `<div style="text-align:center;padding-top:8px"><button class="btn-section-detail" onclick="switchProcess('검사')">전체 ${ins.length}건 보기 →</button></div>` : '')}
+      </div>
+    </div>
+  `;
+  document.getElementById('resultArea').innerHTML = html;
+}
+
+function renderUnifiedTable() {
+  const pkg = (cachedData.포장 || []).map(r => ({...r, _proc: '포장', _qty: r.quantity}));
+  const ins = (cachedData.검사 || []).map(r => ({...r, _proc: '검사', _qty: r.inspect_qty}));
+  const all = [...pkg, ...ins].sort((a,b) => (b.work_date||'').localeCompare(a.work_date||''));
+  if (!all.length) {
+    document.getElementById('resultArea').innerHTML = '<div class="card"><div class="empty-row" style="padding:2rem;text-align:center;color:#aaa">데이터가 없어요.</div></div>';
     return;
   }
-
-  allData = data || [];
-  currentPage = 1;
-  renderTable();
-  renderSummary();
-  document.getElementById('excelBtn').disabled = allData.length === 0;
+  document.getElementById('resultArea').innerHTML = `
+    <div class="card" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>NO</th><th>작업일</th><th>공정</th><th>사번</th><th>품명</th><th>작업자</th><th style="text-align:right">수량</th><th>비고</th></tr>
+          </thead>
+          <tbody>
+            ${all.map((r, i) => {
+              const prod = PRODUCTS[r.worker_id] || {};
+              return `<tr>
+                <td style="color:#bbb;font-size:12px">${i+1}</td>
+                <td>${r.work_date}</td>
+                <td><span class="process-tag process-${r._proc}">${r._proc}</span></td>
+                <td style="font-weight:500">${r.worker_id||'-'}</td>
+                <td style="font-size:12px;color:#555">${prod.partName||'-'}</td>
+                <td>${r.worker_name||'-'}</td>
+                <td style="text-align:right;font-weight:500;color:#243bb2">${(r._qty||0).toLocaleString()}</td>
+                <td style="font-size:12px;color:#888">${r.note || r.remarks || '-'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
 }
 
-function renderTable() {
-  const start = (currentPage - 1) * PAGE_SIZE;
-  const pageData = allData.slice(start, start + PAGE_SIZE);
-  const tbody = document.getElementById('tableBody');
-
-  if (allData.length === 0) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">조회된 데이터가 없습니다.</td></tr>';
-    document.getElementById('pageInfo').textContent = '';
-    document.getElementById('pageBtns').innerHTML = '';
+function renderPackagingTable(data) {
+  if (!data.length) {
+    document.getElementById('resultArea').innerHTML = '<div class="card"><div class="empty-row" style="padding:2rem;text-align:center;color:#aaa">조회된 데이터가 없어요.</div></div>';
     return;
   }
+  document.getElementById('resultArea').innerHTML = `
+    <div class="card" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>NO</th><th>작업일</th><th>사번</th><th>고객품번</th><th>품명</th><th>작업자</th><th>성형 LOT No.</th><th style="text-align:right">포장수량</th><th>비고</th><th>특이사항</th><th>제출일시</th></tr>
+          </thead>
+          <tbody>
+            ${data.map((r, i) => {
+              const prod = PRODUCTS[r.worker_id] || {};
+              const lots = (r.lot_nos||[]).map(l => `<span class="lot-tag">${l}</span>`).join('') || '-';
+              return `<tr>
+                <td style="color:#bbb;font-size:12px">${i+1}</td>
+                <td>${r.work_date}</td>
+                <td style="font-weight:500">${r.worker_id||'-'}</td>
+                <td style="font-size:12px;color:#555">${prod.partNo||'-'}</td>
+                <td style="font-size:12px;color:#555">${prod.partName||'-'}</td>
+                <td>${r.worker_name||'-'}</td>
+                <td>${lots}</td>
+                <td style="text-align:right;font-weight:500;color:#243bb2">${(r.quantity||0).toLocaleString()}</td>
+                <td style="font-size:12px;color:#888">${r.note||'-'}</td>
+                <td style="font-size:12px;color:#888">${r.remarks||'-'}</td>
+                <td style="font-size:11px;color:#aaa">${fmtDatetime(r.submitted_at)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
 
-  tbody.innerHTML = pageData.map((r, i) => {
-    const badges = (r.badge_nos || []).map(b => `<span class="badge-tag">${b}</span>`).join('') || '-';
-    const prod = PRODUCTS[r.worker_id] || {};
-    const sabunCell = r.worker_id
-      ? `${r.worker_id}<br><span style="font-size:11px;color:#888">${prod.partNo || ''}</span>`
-      : '-';
-    const lots = (r.lot_nos || []).map(l => `<span class="badge-tag" style="background:#fef9c3;color:#ca8a04">${l}</span>`).join('') || '-';
-    return `<tr>
-      <td style="color:#bbb;font-size:12px">${start + i + 1}</td>
-      <td>${r.work_date || '-'}</td>
-      <td>${sabunCell}</td>
-      <td>${r.worker_name || '-'}</td>
-      <td>${lots}</td>
-      <td style="font-weight:500;color:#2563eb">${(r.quantity || 0).toLocaleString()}</td>
-      <td style="color:#888">${r.note || '-'}</td>
-      <td style="color:#888">${r.remarks || '-'}</td>
-      <td style="color:#aaa;font-size:12px">${fmtDatetime(r.submitted_at)}</td>
-    </tr>`;
-  }).join('');
-
-  // 페이지네이션
-  const totalPages = Math.ceil(allData.length / PAGE_SIZE);
-  document.getElementById('pageInfo').textContent = `전체 ${allData.length}건 / ${currentPage} 페이지`;
-
-  let btns = '';
-  btns += `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>이전</button>`;
-  for (let p = 1; p <= totalPages; p++) {
-    btns += `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+function renderInspectionTable(data) {
+  if (!data.length) {
+    document.getElementById('resultArea').innerHTML = '<div class="card"><div class="empty-row" style="padding:2rem;text-align:center;color:#aaa">조회된 데이터가 없어요.</div></div>';
+    return;
   }
-  btns += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>다음</button>`;
-  document.getElementById('pageBtns').innerHTML = btns;
+  document.getElementById('resultArea').innerHTML = `
+    <div class="card" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>NO</th><th>작업일</th><th>사번</th><th>고객품번</th><th>품명</th><th>작업자</th><th>성형 LOT No.</th><th style="text-align:right">검사</th><th style="text-align:right">합격</th><th style="text-align:right">불합격</th><th>불량유형</th><th>메모</th><th>특이사항</th><th>제출일시</th></tr>
+          </thead>
+          <tbody>
+            ${data.map((r, i) => {
+              const prod = PRODUCTS[r.worker_id] || {};
+              const lots = (r.lot_nos||[]).map(l => `<span class="lot-tag">${l}</span>`).join('') || '-';
+              return `<tr>
+                <td style="color:#bbb;font-size:12px">${i+1}</td>
+                <td>${r.work_date}</td>
+                <td style="font-weight:500">${r.worker_id||'-'}</td>
+                <td style="font-size:12px;color:#555">${prod.partNo||'-'}</td>
+                <td style="font-size:12px;color:#555">${prod.partName||'-'}</td>
+                <td>${r.worker_name||'-'}</td>
+                <td>${lots}</td>
+                <td style="text-align:right;font-weight:500;color:#243bb2">${(r.inspect_qty||0).toLocaleString()}</td>
+                <td class="pass-cell" style="text-align:right">${(r.pass_qty||0).toLocaleString()}</td>
+                <td class="defect-cell" style="text-align:right">${(r.fail_qty||0).toLocaleString()}</td>
+                <td style="font-size:12px">${r.defect_type||'-'}</td>
+                <td style="font-size:12px;color:#888">${r.defect_memo||'-'}</td>
+                <td style="font-size:12px;color:#888">${r.remarks||'-'}</td>
+                <td style="font-size:11px;color:#aaa">${fmtDatetime(r.submitted_at)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
 }
 
-function goPage(p) {
-  const totalPages = Math.ceil(allData.length / PAGE_SIZE);
-  if (p < 1 || p > totalPages) return;
-  currentPage = p;
-  renderTable();
-}
-
-function renderSummary() {
-  const totalQty  = allData.reduce((s, r) => s + (r.quantity || 0), 0);
-  const days      = new Set(allData.map(r => r.work_date)).size;
-  const workers   = new Set(allData.filter(r => r.worker_name).map(r => r.worker_name)).size;
-  document.getElementById('sumCount').innerHTML   = allData.length.toLocaleString() + ' <span class="stat-unit">건</span>';
-  document.getElementById('sumQty').innerHTML     = totalQty.toLocaleString() + ' <span class="stat-unit">EA</span>';
-  document.getElementById('sumDays').innerHTML    = days + ' <span class="stat-unit">일</span>';
-  document.getElementById('sumWorkers').innerHTML = workers + ' <span class="stat-unit">명</span>';
-}
-
+// ── 엑셀 다운로드 ──────────────────────────────
 function downloadExcel() {
-  if (allData.length === 0) return;
-
-  const dateFrom = document.getElementById('dateFrom').value || '';
-  const dateTo   = document.getElementById('dateTo').value   || '';
-
-  const excelData = allData.map((r, i) => {
-    const prod = PRODUCTS[r.worker_id] || {};
-    return {
-      'NO':       i + 1,
-      '작업일':   r.work_date || '',
-      '사번':     r.worker_id || '',
-      '고객 품번': prod.partNo || '',
-      '품명':     prod.partName || '',
-      '작업자':   r.worker_name || '',
-      '성형 LOT No.': (r.lot_nos || []).join(', '),
-      '포장수량': r.quantity || 0,
-      '비고':     r.note || '',
-      '특이사항': r.remarks || '',
-      '제출일시': fmtDatetime(r.submitted_at)
-    };
-  });
-
-  const ws = XLSX.utils.json_to_sheet(excelData);
-
-  // 컬럼 너비 설정
-  ws['!cols'] = [
-    {wch:6}, {wch:12}, {wch:10}, {wch:16}, {wch:28},
-    {wch:10}, {wch:18}, {wch:10}, {wch:18}, {wch:20}, {wch:18}
-  ];
-
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '포장반 작업일보');
+  let added = 0;
 
-  const fileName = `포장반_작업일보_${dateFrom}_${dateTo}.xlsx`;
-  XLSX.writeFile(wb, fileName);
+  // 포장 데이터
+  if ((currentProcess === 'all' || currentProcess === '포장') && cachedData.포장.length > 0) {
+    const rows = cachedData.포장.map((r, i) => {
+      const prod = PRODUCTS[r.worker_id] || {};
+      return {
+        'NO': i + 1,
+        '작업일': r.work_date || '',
+        '사번': r.worker_id || '',
+        '고객 품번': prod.partNo || '',
+        '품명': prod.partName || '',
+        '작업자': r.worker_name || '',
+        '성형 LOT No.': (r.lot_nos || []).join(', '),
+        '포장수량': r.quantity || 0,
+        '비고': r.note || '',
+        '특이사항': r.remarks || '',
+        '제출일시': fmtDatetime(r.submitted_at)
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{wch:5},{wch:11},{wch:10},{wch:15},{wch:25},{wch:10},{wch:18},{wch:10},{wch:18},{wch:18},{wch:18}];
+    XLSX.utils.book_append_sheet(wb, ws, '포장 작업일지');
+    added++;
+  }
+
+  // 검사 데이터
+  if ((currentProcess === 'all' || currentProcess === '검사') && cachedData.검사.length > 0) {
+    const rows = cachedData.검사.map((r, i) => {
+      const prod = PRODUCTS[r.worker_id] || {};
+      return {
+        'NO': i + 1,
+        '작업일': r.work_date || '',
+        '사번': r.worker_id || '',
+        '고객 품번': prod.partNo || '',
+        '품명': prod.partName || '',
+        '작업자': r.worker_name || '',
+        '성형 LOT No.': (r.lot_nos || []).join(', '),
+        '검사수량': r.inspect_qty || 0,
+        '합격수량': r.pass_qty || 0,
+        '불합격수량': r.fail_qty || 0,
+        '불량유형': r.defect_type || '',
+        '불량 메모': r.defect_memo || '',
+        '특이사항': r.remarks || '',
+        '제출일시': fmtDatetime(r.submitted_at)
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{wch:5},{wch:11},{wch:10},{wch:15},{wch:25},{wch:10},{wch:18},{wch:9},{wch:9},{wch:9},{wch:12},{wch:18},{wch:18},{wch:18}];
+    XLSX.utils.book_append_sheet(wb, ws, '검사 작업일지');
+    added++;
+  }
+
+  if (added === 0) { showToast('다운로드할 데이터가 없어요.'); return; }
+
+  const start = document.getElementById('startDate').value;
+  const end   = document.getElementById('endDate').value;
+  const procName = currentProcess === 'all' ? '전체' : currentProcess;
+  XLSX.writeFile(wb, `${procName}_작업일지_${start}_${end}.xlsx`);
+  showToast('엑셀 다운로드 완료 ✓');
 }
+
+// 초기화
+window.onload = async () => {
+  document.getElementById('startDate').value = firstDayOfMonth();
+  document.getElementById('endDate').value = todayStr();
+  await loadProducts();
+  loadData();
+};
 </script>
 </body>
 </html>
