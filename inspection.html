@@ -217,6 +217,7 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
   let WORKERS = [];
   let PRODUCTS = {};
   let MY_NAME = '';
+  let MY_EMP_CODE = '';
 
   let rows = [];
   let uid = 0;
@@ -255,8 +256,11 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
     // 로그인한 사용자 정보 가져오기 (작업자 자동 세팅용)
     const { data: { session } } = await db.auth.getSession();
     if (session) {
-      const { data: u } = await db.from('users').select('name').eq('auth_user_id', session.user.id).single();
-      if (u) MY_NAME = u.name;
+      const { data: u } = await db.from('users').select('emp_code, name').eq('auth_user_id', session.user.id).single();
+      if (u) {
+        MY_NAME = u.name;
+        MY_EMP_CODE = u.emp_code;
+      }
     }
   }
 
@@ -505,7 +509,9 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
       fail_qty: parseInt(r.fail)||0,
       defect_type: r.defectType,
       defect_memo: r.defectMemo,
-      remarks: remarks
+      remarks: remarks,
+      created_by_emp_code: MY_EMP_CODE,
+      created_by_name: MY_NAME
     }));
 
     const { error } = await db.from('inspection_reports').insert(records);

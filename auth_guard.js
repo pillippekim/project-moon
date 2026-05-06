@@ -13,6 +13,7 @@ const PAGE_PERMISSIONS = {
   'docs_admin.html':  { admin: ['연구개발팀','품질관리팀','생산관리팀'], worker: [] },
   'docs_viewer.html': { admin: ['all'], worker: ['all'] },
   'users.html':       { admin: [], worker: [] }, // 슈퍼관리자만
+  'audit.html':       { admin: [], worker: [] }, // 슈퍼관리자만
 };
 
 // 권한 확인 함수

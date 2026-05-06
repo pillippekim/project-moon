@@ -79,6 +79,42 @@ tr:hover td { background: #fafafa; }
 .toast.show { display: block; }
 
 .hidden { display: none !important; }
+
+/* 행 액션 버튼 */
+.row-actions { display: flex; gap: 4px; }
+.btn-row { font-size: 11px; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-family: inherit; border: none; white-space: nowrap; }
+.btn-row-edit { background: #eff6ff; color: #243bb2; }
+.btn-row-edit:hover { background: #dbeafe; }
+.btn-row-edit:disabled { background: #f5f5f5; color: #ccc; cursor: not-allowed; }
+.btn-row-del { background: transparent; color: #e53e3e; border: 1px solid #fca5a5; }
+.btn-row-del:hover { background: #fff0f0; }
+.btn-row-del:disabled { color: #ccc; border-color: #eee; cursor: not-allowed; }
+
+/* 모달 */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
+.modal-overlay.open { display: flex; }
+.modal-box { background: white; border-radius: 12px; padding: 1.5rem; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+.modal-title { font-size: 16px; font-weight: 600; color: #111; margin-bottom: 4px; }
+.modal-sub { font-size: 12px; color: #888; margin-bottom: 1rem; }
+.modal-grid { display: grid; gap: 12px; margin-bottom: 1rem; }
+.modal-grid-2 { grid-template-columns: 1fr 1fr; }
+.modal-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.modal-field { display: flex; flex-direction: column; gap: 4px; }
+.modal-label { font-size: 12px; color: #888; }
+.modal-input { font-size: 13px; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 10px; outline: none; font-family: inherit; color: #111; }
+.modal-input:focus { border-color: #243bb2; }
+.modal-input.readonly { background: #f9f9f9; color: #888; }
+.modal-textarea { font-size: 13px; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 10px; outline: none; font-family: inherit; color: #111; resize: none; }
+.modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1rem; }
+.btn-modal-cancel { font-size: 13px; padding: 9px 18px; border-radius: 8px; background: transparent; color: #888; border: 1px solid #ddd; cursor: pointer; font-family: inherit; }
+.btn-modal-save { font-size: 13px; padding: 9px 18px; border-radius: 8px; background: #243bb2; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; }
+.btn-modal-del { font-size: 13px; padding: 9px 18px; border-radius: 8px; background: #e53e3e; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; }
+
+/* 삭제됨 표시 */
+.deleted-row { opacity: 0.5; background: #fef2f2 !important; }
+.deleted-badge { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #fef2f2; color: #dc2626; font-weight: 500; margin-left: 4px; }
+.show-deleted-toggle { font-size: 12px; padding: 6px 12px; border-radius: 6px; background: white; color: #555; border: 1px solid #ddd; cursor: pointer; font-family: inherit; }
+.show-deleted-toggle.active { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
 </style>
 </head>
 <body>
@@ -126,6 +162,11 @@ tr:hover td { background: #fafafa; }
       <button class="btn-toggle-view hidden" id="toggleViewBtn" onclick="toggleUnifiedView()">
         👁️ 통합 보기
       </button>
+
+      <!-- 슈퍼관리자만 보이는 삭제 포함 토글 -->
+      <button class="show-deleted-toggle hidden" id="showDeletedBtn" onclick="toggleShowDeleted()">
+        🗑️ 삭제 포함
+      </button>
     </div>
   </div>
 
@@ -134,6 +175,153 @@ tr:hover td { background: #fafafa; }
 
   <!-- 결과 -->
   <div id="resultArea"></div>
+</div>
+
+<!-- 포장 수정 모달 -->
+<div class="modal-overlay" id="editPackagingModal">
+  <div class="modal-box">
+    <div class="modal-title">📦 포장 작업일지 수정</div>
+    <div class="modal-sub" id="editPackagingMeta">-</div>
+    <input type="hidden" id="ep_id" />
+    <div class="modal-grid modal-grid-2">
+      <div class="modal-field">
+        <span class="modal-label">작업일</span>
+        <input class="modal-input" type="date" id="ep_work_date" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">사번</span>
+        <input class="modal-input" id="ep_worker_id" />
+      </div>
+    </div>
+    <div class="modal-grid modal-grid-2">
+      <div class="modal-field">
+        <span class="modal-label">작업자</span>
+        <input class="modal-input" id="ep_worker_name" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">포장수량</span>
+        <input class="modal-input" type="number" id="ep_quantity" />
+      </div>
+    </div>
+    <div class="modal-grid">
+      <div class="modal-field">
+        <span class="modal-label">성형 LOT No. (쉼표로 구분)</span>
+        <input class="modal-input" id="ep_lot_nos" placeholder="C260424020, C260425010" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">비고</span>
+        <input class="modal-input" id="ep_note" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">특이사항</span>
+        <textarea class="modal-textarea" id="ep_remarks" rows="2"></textarea>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-modal-cancel" onclick="closeModal('editPackagingModal')">취소</button>
+      <button class="btn-modal-save" onclick="saveEditPackaging()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 검사 수정 모달 -->
+<div class="modal-overlay" id="editInspectionModal">
+  <div class="modal-box">
+    <div class="modal-title">🔬 검사 작업일지 수정</div>
+    <div class="modal-sub" id="editInspectionMeta">-</div>
+    <input type="hidden" id="ei_id" />
+    <div class="modal-grid modal-grid-2">
+      <div class="modal-field">
+        <span class="modal-label">작업일</span>
+        <input class="modal-input" type="date" id="ei_work_date" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">사번</span>
+        <input class="modal-input" id="ei_worker_id" />
+      </div>
+    </div>
+    <div class="modal-grid modal-grid-3">
+      <div class="modal-field">
+        <span class="modal-label">검사수량</span>
+        <input class="modal-input" type="number" id="ei_inspect_qty" oninput="recalcFail()" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">합격수량</span>
+        <input class="modal-input" type="number" id="ei_pass_qty" oninput="recalcFail()" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">불합격 (자동)</span>
+        <input class="modal-input readonly" type="number" id="ei_fail_qty" readonly />
+      </div>
+    </div>
+    <div class="modal-grid modal-grid-2">
+      <div class="modal-field">
+        <span class="modal-label">작업자</span>
+        <input class="modal-input" id="ei_worker_name" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">불량유형</span>
+        <select class="modal-input" id="ei_defect_type">
+          <option value="">없음</option>
+          <option value="기포">기포</option>
+          <option value="미성형">미성형</option>
+          <option value="형상불량">형상불량</option>
+          <option value="이물질">이물질</option>
+          <option value="찢어짐">찢어짐</option>
+          <option value="깨짐">깨짐</option>
+          <option value="찍힘">찍힘</option>
+          <option value="뜯김">뜯김</option>
+          <option value="사상">사상</option>
+          <option value="미가류">미가류</option>
+          <option value="접착불량">접착불량</option>
+          <option value="Burr">Burr</option>
+          <option value="홀막힘">홀막힘</option>
+          <option value="찐드기">찐드기</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-grid">
+      <div class="modal-field">
+        <span class="modal-label">성형 LOT No. (쉼표로 구분)</span>
+        <input class="modal-input" id="ei_lot_nos" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">불량 메모</span>
+        <input class="modal-input" id="ei_defect_memo" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">특이사항</span>
+        <textarea class="modal-textarea" id="ei_remarks" rows="2"></textarea>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-modal-cancel" onclick="closeModal('editInspectionModal')">취소</button>
+      <button class="btn-modal-save" onclick="saveEditInspection()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 삭제 확인 모달 -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-title">🗑️ 작업일지 삭제</div>
+    <div class="modal-sub" id="deleteMeta">-</div>
+    <div style="background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:12px;margin-bottom:1rem;font-size:12px;color:#991b1b">
+      ⚠️ 삭제 시 화면에서 숨겨지지만 데이터는 유지돼요.<br>
+      슈퍼관리자만 복구할 수 있어요.
+    </div>
+    <input type="hidden" id="del_table" />
+    <input type="hidden" id="del_id" />
+    <div class="modal-field" style="margin-bottom:1rem">
+      <span class="modal-label">삭제 사유 (필수)</span>
+      <textarea class="modal-textarea" id="del_reason" rows="3" placeholder="예: 중복 입력, 잘못된 사번 등"></textarea>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-modal-cancel" onclick="closeModal('deleteModal')">취소</button>
+      <button class="btn-modal-del" onclick="confirmDelete()">삭제하기</button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -147,6 +335,14 @@ let currentProcess = 'all';
 let unifiedView = false;
 let cachedData = { 포장: [], 검사: [] };
 let PRODUCTS = {};
+let myInfo = null;
+let showDeleted = false;
+
+// 부서별 권한 매트릭스 (수정/삭제 가능 부서)
+const FULL_ACCESS_DEPTS = ['생산관리팀','연구개발팀','품질관리팀','경영지원팀','물류관리팀'];
+
+// 24시간 (밀리초)
+const HOURS_24 = 24 * 60 * 60 * 1000;
 
 function todayStr() {
   const d = new Date();
@@ -177,6 +373,220 @@ async function loadProducts() {
   }
 }
 
+async function loadMyInfo() {
+  const { data: { session } } = await db.auth.getSession();
+  if (!session) return;
+  const { data } = await db.from('users').select('*').eq('auth_user_id', session.user.id).single();
+  myInfo = data;
+  // 슈퍼관리자만 "삭제 포함" 토글 표시
+  if (myInfo && myInfo.user_type === 'super') {
+    document.getElementById('showDeletedBtn').classList.remove('hidden');
+  }
+}
+
+// 수정/삭제 권한 판별
+function canEditDelete(record) {
+  if (!myInfo) return false;
+
+  // 슈퍼관리자: 무제한
+  if (myInfo.user_type === 'super') return true;
+
+  // 관리자: 부서 권한 + 무제한
+  if (myInfo.user_type === 'admin' && FULL_ACCESS_DEPTS.includes(myInfo.department)) {
+    return true;
+  }
+
+  // 작업자/일반 관리자: 본인 입력 + 24시간 이내
+  if (record.created_by_emp_code === myInfo.emp_code) {
+    const created = new Date(record.created_at || record.submitted_at).getTime();
+    const now = Date.now();
+    return (now - created) < HOURS_24;
+  }
+  return false;
+}
+
+// 권한 없을 때 사유 텍스트
+function getCannotEditReason(record) {
+  if (!myInfo) return '';
+  if (record.created_by_emp_code !== myInfo.emp_code) {
+    return '본인 입력 데이터만 수정 가능';
+  }
+  return '24시간 경과로 수정 불가';
+}
+
+// 변경 이력 기록
+async function logAudit(action, table, recordId, before, after, reason) {
+  if (!myInfo) return;
+  await db.from('audit_logs').insert({
+    table_name: table,
+    record_id: recordId,
+    action,
+    changed_by_emp_code: myInfo.emp_code,
+    changed_by_name: myInfo.name,
+    changed_by_dept: myInfo.department || (myInfo.user_type === 'super' ? '슈퍼관리자' : myInfo.process || ''),
+    before_data: before,
+    after_data: after,
+    reason: reason || null
+  });
+}
+
+function toggleShowDeleted() {
+  showDeleted = !showDeleted;
+  document.getElementById('showDeletedBtn').classList.toggle('active', showDeleted);
+  loadData();
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+function recalcFail() {
+  const ins = parseInt(document.getElementById('ei_inspect_qty').value) || 0;
+  const pas = parseInt(document.getElementById('ei_pass_qty').value) || 0;
+  document.getElementById('ei_fail_qty').value = Math.max(0, ins - pas);
+}
+
+// ── 포장 수정 ──────────────────────────────
+let editingPackagingBefore = null;
+function openEditPackaging(r) {
+  editingPackagingBefore = JSON.parse(JSON.stringify(r));
+  document.getElementById('ep_id').value = r.id;
+  document.getElementById('ep_work_date').value = r.work_date;
+  document.getElementById('ep_worker_id').value = r.worker_id || '';
+  document.getElementById('ep_worker_name').value = r.worker_name || '';
+  document.getElementById('ep_quantity').value = r.quantity || 0;
+  document.getElementById('ep_lot_nos').value = (r.lot_nos || []).join(', ');
+  document.getElementById('ep_note').value = r.note || '';
+  document.getElementById('ep_remarks').value = r.remarks || '';
+  document.getElementById('editPackagingMeta').textContent = `입력자: ${r.created_by_name || '-'} (${r.created_by_emp_code || '-'}) · 작성일: ${r.work_date}`;
+  document.getElementById('editPackagingModal').classList.add('open');
+}
+
+async function saveEditPackaging() {
+  const id = parseInt(document.getElementById('ep_id').value);
+  const before = editingPackagingBefore;
+
+  const lots = document.getElementById('ep_lot_nos').value.split(',').map(s => s.trim()).filter(Boolean);
+  const after = {
+    work_date: document.getElementById('ep_work_date').value,
+    worker_id: document.getElementById('ep_worker_id').value.trim(),
+    worker_name: document.getElementById('ep_worker_name').value.trim(),
+    quantity: parseInt(document.getElementById('ep_quantity').value) || 0,
+    lot_nos: lots,
+    note: document.getElementById('ep_note').value,
+    remarks: document.getElementById('ep_remarks').value,
+    modified_at: new Date().toISOString(),
+    modified_by: myInfo.emp_code + ' (' + myInfo.name + ')'
+  };
+
+  const { error } = await db.from('packaging_reports').update(after).eq('id', id);
+  if (error) { showToast('저장 실패: ' + error.message); return; }
+
+  await logAudit('update', 'packaging_reports', id, before, after, null);
+
+  showToast('수정 완료 ✓');
+  closeModal('editPackagingModal');
+  loadData();
+}
+
+// ── 검사 수정 ──────────────────────────────
+let editingInspectionBefore = null;
+function openEditInspection(r) {
+  editingInspectionBefore = JSON.parse(JSON.stringify(r));
+  document.getElementById('ei_id').value = r.id;
+  document.getElementById('ei_work_date').value = r.work_date;
+  document.getElementById('ei_worker_id').value = r.worker_id || '';
+  document.getElementById('ei_worker_name').value = r.worker_name || '';
+  document.getElementById('ei_inspect_qty').value = r.inspect_qty || 0;
+  document.getElementById('ei_pass_qty').value = r.pass_qty || 0;
+  document.getElementById('ei_fail_qty').value = r.fail_qty || 0;
+  document.getElementById('ei_defect_type').value = r.defect_type || '';
+  document.getElementById('ei_defect_memo').value = r.defect_memo || '';
+  document.getElementById('ei_lot_nos').value = (r.lot_nos || []).join(', ');
+  document.getElementById('ei_remarks').value = r.remarks || '';
+  document.getElementById('editInspectionMeta').textContent = `입력자: ${r.created_by_name || '-'} (${r.created_by_emp_code || '-'}) · 작성일: ${r.work_date}`;
+  document.getElementById('editInspectionModal').classList.add('open');
+}
+
+async function saveEditInspection() {
+  const id = parseInt(document.getElementById('ei_id').value);
+  const before = editingInspectionBefore;
+  const lots = document.getElementById('ei_lot_nos').value.split(',').map(s => s.trim()).filter(Boolean);
+  const inspectQty = parseInt(document.getElementById('ei_inspect_qty').value) || 0;
+  const passQty = parseInt(document.getElementById('ei_pass_qty').value) || 0;
+  const failQty = Math.max(0, inspectQty - passQty);
+  const after = {
+    work_date: document.getElementById('ei_work_date').value,
+    worker_id: document.getElementById('ei_worker_id').value.trim(),
+    worker_name: document.getElementById('ei_worker_name').value.trim(),
+    inspect_qty: inspectQty,
+    pass_qty: passQty,
+    fail_qty: failQty,
+    defect_type: document.getElementById('ei_defect_type').value,
+    defect_memo: document.getElementById('ei_defect_memo').value,
+    lot_nos: lots,
+    remarks: document.getElementById('ei_remarks').value,
+    modified_at: new Date().toISOString(),
+    modified_by: myInfo.emp_code + ' (' + myInfo.name + ')'
+  };
+
+  const { error } = await db.from('inspection_reports').update(after).eq('id', id);
+  if (error) { showToast('저장 실패: ' + error.message); return; }
+
+  await logAudit('update', 'inspection_reports', id, before, after, null);
+
+  showToast('수정 완료 ✓');
+  closeModal('editInspectionModal');
+  loadData();
+}
+
+// ── 삭제 (소프트) ──────────────────────────────
+let deletingRecord = null;
+function openDelete(table, record) {
+  deletingRecord = { table, record };
+  document.getElementById('del_table').value = table;
+  document.getElementById('del_id').value = record.id;
+  document.getElementById('del_reason').value = '';
+  const meta = `작업일: ${record.work_date} · 사번: ${record.worker_id || '-'} · 작업자: ${record.worker_name || '-'}`;
+  document.getElementById('deleteMeta').textContent = meta;
+  document.getElementById('deleteModal').classList.add('open');
+}
+
+async function confirmDelete() {
+  const reason = document.getElementById('del_reason').value.trim();
+  if (!reason) { showToast('삭제 사유를 입력해주세요.'); return; }
+
+  const { table, record } = deletingRecord;
+  const updateData = {
+    deleted_at: new Date().toISOString(),
+    deleted_by: myInfo.emp_code + ' (' + myInfo.name + ')',
+    deleted_reason: reason
+  };
+
+  const { error } = await db.from(table).update(updateData).eq('id', record.id);
+  if (error) { showToast('삭제 실패: ' + error.message); return; }
+
+  await logAudit('delete', table, record.id, record, updateData, reason);
+
+  showToast('삭제 완료');
+  closeModal('deleteModal');
+  loadData();
+}
+
+// 슈퍼관리자: 삭제된 데이터 복구
+async function restoreRecord(table, recordId) {
+  if (!confirm('이 데이터를 복구하시겠어요?')) return;
+  const { error } = await db.from(table).update({
+    deleted_at: null,
+    deleted_by: null,
+    deleted_reason: null
+  }).eq('id', recordId);
+  if (error) { showToast('복구 실패: ' + error.message); return; }
+  await logAudit('restore', table, recordId, null, null, null);
+  showToast('복구 완료 ✓');
+  loadData();
+}
+
 function switchProcess(p) {
   currentProcess = p;
   document.querySelectorAll('.process-tab').forEach(t => t.classList.remove('active'));
@@ -205,6 +615,7 @@ async function loadData() {
   // 포장 데이터 로드 (필요 시)
   if (currentProcess === 'all' || currentProcess === '포장') {
     let q = db.from('packaging_reports').select('*').gte('work_date', start).lte('work_date', end);
+    if (!showDeleted) q = q.is('deleted_at', null);
     if (fSabun)  q = q.ilike('worker_id', `%${fSabun}%`);
     if (fWorker) q = q.ilike('worker_name', `%${fWorker}%`);
     const { data } = await q.order('work_date', { ascending: false });
@@ -214,6 +625,7 @@ async function loadData() {
   // 검사 데이터 로드 (필요 시)
   if (currentProcess === 'all' || currentProcess === '검사') {
     let q = db.from('inspection_reports').select('*').gte('work_date', start).lte('work_date', end);
+    if (!showDeleted) q = q.is('deleted_at', null);
     if (fSabun)  q = q.ilike('worker_id', `%${fSabun}%`);
     if (fWorker) q = q.ilike('worker_name', `%${fWorker}%`);
     const { data } = await q.order('work_date', { ascending: false });
@@ -353,15 +765,24 @@ function renderPackagingTable(data) {
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>NO</th><th>작업일</th><th>사번</th><th>고객품번</th><th>품명</th><th>작업자</th><th>성형 LOT No.</th><th style="text-align:right">포장수량</th><th>비고</th><th>특이사항</th><th>제출일시</th></tr>
+            <tr><th>NO</th><th>작업일</th><th>사번</th><th>고객품번</th><th>품명</th><th>작업자</th><th>성형 LOT No.</th><th style="text-align:right">포장수량</th><th>비고</th><th>특이사항</th><th>입력자</th><th>제출일시</th><th>작업</th></tr>
           </thead>
           <tbody>
             ${data.map((r, i) => {
               const prod = PRODUCTS[r.worker_id] || {};
               const lots = (r.lot_nos||[]).map(l => `<span class="lot-tag">${l}</span>`).join('') || '-';
-              return `<tr>
+              const isDeleted = !!r.deleted_at;
+              const canEdit = canEditDelete(r) && !isDeleted;
+              const reason = canEdit ? '' : (isDeleted ? '삭제됨' : getCannotEditReason(r));
+              const actionsHtml = isDeleted
+                ? (myInfo && myInfo.user_type === 'super' ? `<button class="btn-row btn-row-edit" onclick="restoreRecord('packaging_reports', ${r.id})">복구</button>` : '<span style="color:#aaa;font-size:11px">삭제됨</span>')
+                : `<div class="row-actions">
+                    <button class="btn-row btn-row-edit" ${canEdit ? `onclick='openEditPackaging(${JSON.stringify(r).replace(/'/g, "&#39;")})'` : 'disabled'} title="${reason}">수정</button>
+                    <button class="btn-row btn-row-del" ${canEdit ? `onclick='openDelete("packaging_reports", ${JSON.stringify(r).replace(/'/g, "&#39;")})'` : 'disabled'} title="${reason}">삭제</button>
+                  </div>`;
+              return `<tr class="${isDeleted ? 'deleted-row' : ''}">
                 <td style="color:#bbb;font-size:12px">${i+1}</td>
-                <td>${r.work_date}</td>
+                <td>${r.work_date}${isDeleted ? '<span class="deleted-badge">삭제됨</span>' : ''}</td>
                 <td style="font-weight:500">${r.worker_id||'-'}</td>
                 <td style="font-size:12px;color:#555">${prod.partNo||'-'}</td>
                 <td style="font-size:12px;color:#555">${prod.partName||'-'}</td>
@@ -370,7 +791,9 @@ function renderPackagingTable(data) {
                 <td style="text-align:right;font-weight:500;color:#243bb2">${(r.quantity||0).toLocaleString()}</td>
                 <td style="font-size:12px;color:#888">${r.note||'-'}</td>
                 <td style="font-size:12px;color:#888">${r.remarks||'-'}</td>
+                <td style="font-size:11px;color:#888">${r.created_by_name||'-'}</td>
                 <td style="font-size:11px;color:#aaa">${fmtDatetime(r.submitted_at)}</td>
+                <td>${actionsHtml}</td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -390,15 +813,24 @@ function renderInspectionTable(data) {
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>NO</th><th>작업일</th><th>사번</th><th>고객품번</th><th>품명</th><th>작업자</th><th>성형 LOT No.</th><th style="text-align:right">검사</th><th style="text-align:right">합격</th><th style="text-align:right">불합격</th><th>불량유형</th><th>메모</th><th>특이사항</th><th>제출일시</th></tr>
+            <tr><th>NO</th><th>작업일</th><th>사번</th><th>고객품번</th><th>품명</th><th>작업자</th><th>성형 LOT No.</th><th style="text-align:right">검사</th><th style="text-align:right">합격</th><th style="text-align:right">불합격</th><th>불량유형</th><th>메모</th><th>특이사항</th><th>입력자</th><th>제출일시</th><th>작업</th></tr>
           </thead>
           <tbody>
             ${data.map((r, i) => {
               const prod = PRODUCTS[r.worker_id] || {};
               const lots = (r.lot_nos||[]).map(l => `<span class="lot-tag">${l}</span>`).join('') || '-';
-              return `<tr>
+              const isDeleted = !!r.deleted_at;
+              const canEdit = canEditDelete(r) && !isDeleted;
+              const reason = canEdit ? '' : (isDeleted ? '삭제됨' : getCannotEditReason(r));
+              const actionsHtml = isDeleted
+                ? (myInfo && myInfo.user_type === 'super' ? `<button class="btn-row btn-row-edit" onclick="restoreRecord('inspection_reports', ${r.id})">복구</button>` : '<span style="color:#aaa;font-size:11px">삭제됨</span>')
+                : `<div class="row-actions">
+                    <button class="btn-row btn-row-edit" ${canEdit ? `onclick='openEditInspection(${JSON.stringify(r).replace(/'/g, "&#39;")})'` : 'disabled'} title="${reason}">수정</button>
+                    <button class="btn-row btn-row-del" ${canEdit ? `onclick='openDelete("inspection_reports", ${JSON.stringify(r).replace(/'/g, "&#39;")})'` : 'disabled'} title="${reason}">삭제</button>
+                  </div>`;
+              return `<tr class="${isDeleted ? 'deleted-row' : ''}">
                 <td style="color:#bbb;font-size:12px">${i+1}</td>
-                <td>${r.work_date}</td>
+                <td>${r.work_date}${isDeleted ? '<span class="deleted-badge">삭제됨</span>' : ''}</td>
                 <td style="font-weight:500">${r.worker_id||'-'}</td>
                 <td style="font-size:12px;color:#555">${prod.partNo||'-'}</td>
                 <td style="font-size:12px;color:#555">${prod.partName||'-'}</td>
@@ -410,7 +842,9 @@ function renderInspectionTable(data) {
                 <td style="font-size:12px">${r.defect_type||'-'}</td>
                 <td style="font-size:12px;color:#888">${r.defect_memo||'-'}</td>
                 <td style="font-size:12px;color:#888">${r.remarks||'-'}</td>
+                <td style="font-size:11px;color:#888">${r.created_by_name||'-'}</td>
                 <td style="font-size:11px;color:#aaa">${fmtDatetime(r.submitted_at)}</td>
+                <td>${actionsHtml}</td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -489,6 +923,7 @@ function downloadExcel() {
 window.onload = async () => {
   document.getElementById('startDate').value = firstDayOfMonth();
   document.getElementById('endDate').value = todayStr();
+  await loadMyInfo();
   await loadProducts();
   loadData();
 };

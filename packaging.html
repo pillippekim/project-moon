@@ -221,6 +221,7 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
   let WORKERS = [];   // DB에서 로딩
   let PRODUCTS = {};  // DB에서 로딩
   let MY_NAME = '';   // 로그인한 사용자 이름
+  let MY_EMP_CODE = ''; // 로그인한 사용자 입사코드
 
   let rows = [];
   let uid = 0;
@@ -534,7 +535,9 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
       badge_nos: [],
       quantity: parseInt(r.qty)||0,
       note: r.note,
-      remarks: remarks
+      remarks: remarks,
+      created_by_emp_code: MY_EMP_CODE,
+      created_by_name: MY_NAME
     }));
 
     const { error } = await db.from('packaging_reports').insert(records);
