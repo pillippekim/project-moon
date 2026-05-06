@@ -258,6 +258,20 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
     if (workers) WORKERS = workers.map(w => w.name);
     // 작업자가 없으면 기본값
     if (!WORKERS.length) WORKERS = ['김태선', '황경미'];
+
+    // 로그인한 사용자 정보 가져오기 (작업자 자동 세팅용)
+    const { data: { session } } = await db.auth.getSession();
+    if (session) {
+      const { data: u } = await db.from('users').select('emp_code, name').eq('auth_user_id', session.user.id).single();
+      if (u) {
+        MY_NAME = u.name;
+        MY_EMP_CODE = u.emp_code;
+        // 본인이 작업자 명단에 없으면 추가 (드롭다운에 표시되도록)
+        if (MY_NAME && !WORKERS.includes(MY_NAME)) {
+          WORKERS.unshift(MY_NAME);
+        }
+      }
+    }
   }
 
   function addRow() {

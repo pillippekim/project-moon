@@ -669,6 +669,9 @@ async function saveEditUser() {
 
   if (!name) { showToast('이름을 입력해주세요.'); return; }
 
+  // 변경 전 정보 (workers 테이블 동기화용)
+  const beforeUser = allUsers.find(u => u.id == id);
+
   const updateData = {
     name,
     user_type: editUserType
@@ -676,11 +679,11 @@ async function saveEditUser() {
 
   if (editUserType === 'worker') {
     updateData.process = document.getElementById('edit_process').value;
-    updateData.department = null; // 관리자에서 작업자로 변경 시 부서 제거
+    updateData.department = null;
     updateData.position = document.getElementById('edit_position_w').value.trim() || null;
   } else {
     updateData.department = document.getElementById('edit_department').value;
-    updateData.process = null; // 작업자에서 관리자로 변경 시 공정 제거
+    updateData.process = null;
     updateData.position = document.getElementById('edit_position_a').value.trim() || null;
   }
 
@@ -689,13 +692,39 @@ async function saveEditUser() {
 
   const { error } = await db.from('users').update(updateData).eq('id', id);
 
-  btn.disabled = false; btn.textContent = '저장';
-
   if (error) {
+    btn.disabled = false; btn.textContent = '저장';
     showToast('저장 실패: ' + error.message);
     return;
   }
 
+  // ── workers 테이블 동기화 ──────────
+  try {
+    // 1. 기존이 작업자였으면 → workers에서 삭제
+    if (beforeUser && beforeUser.user_type === 'worker' && beforeUser.process) {
+      await db.from('workers')
+        .delete()
+        .eq('name', beforeUser.name)
+        .eq('process', beforeUser.process);
+    }
+    // 2. 새 정보가 작업자면 → workers에 추가 (없을 때만)
+    if (editUserType === 'worker' && updateData.process) {
+      const { data: existing } = await db.from('workers')
+        .select('id')
+        .eq('name', name)
+        .eq('process', updateData.process)
+        .maybeSingle();
+      if (!existing) {
+        await db.from('workers').insert({
+          name, process: updateData.process, active: true
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('workers 동기화 실패:', e);
+  }
+
+  btn.disabled = false; btn.textContent = '저장';
   showToast(`${name}님의 정보가 수정됐어요 ✓`);
   closeEditModal();
   loadUsers();
@@ -714,6 +743,16 @@ async function resetPassword(authId, empCode, name) {
 // ── 활성/비활성 ──────────────────────────────
 async function toggleActive(id, current) {
   await db.from('users').update({ active: !current }).eq('id', id);
+  
+  // workers 테이블도 동기화 (작업자인 경우)
+  const u = allUsers.find(x => x.id == id);
+  if (u && u.user_type === 'worker' && u.name && u.process) {
+    await db.from('workers')
+      .update({ active: !current })
+      .eq('name', u.name)
+      .eq('process', u.process);
+  }
+  
   showToast(current ? '비활성화됐어요.' : '활성화됐어요.');
   loadUsers();
 }
