@@ -74,6 +74,8 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
 .scan-frame::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: linear-gradient(90deg, transparent, #ef4444, transparent); animation: scanLine 1.6s ease-in-out infinite; }
 @keyframes scanLine { 0%,100% { top: 10%; } 50% { top: 90%; } }
 .scan-status { position: absolute; bottom: 10px; left: 10px; right: 10px; text-align: center; color: white; font-size: 12px; background: rgba(0,0,0,0.6); padding: 6px; border-radius: 6px; }
+.camera-flip-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); border: none; border-radius: 8px; color: white; font-size: 20px; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; }
+.camera-flip-btn:hover { background: rgba(0,0,0,0.7); }
 .scan-error { font-size: 12px; color: #e53e3e; text-align: center; margin-bottom: 8px; display: none; }
 .scan-input { width: 100%; font-size: 14px; border: 1px solid #ddd; border-radius: 8px; padding: 9px 12px; outline: none; font-family: inherit; color: #111; display: none; }
 .scan-btns { display: flex; gap: 8px; margin-top: 1rem; }
@@ -191,6 +193,7 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
       <video id="scanVideo" playsinline autoplay muted></video>
       <div class="scan-frame"></div>
       <div class="scan-status" id="scanStatus">바코드를 사각형 안에 맞춰주세요</div>
+      <button class="camera-flip-btn" onclick="flipCamera()" title="카메라 전환">🔄</button>
     </div>
     <div class="scan-error" id="scanError"></div>
 
@@ -439,7 +442,7 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
       codeReader = new ZXing.BrowserMultiFormatReader();
       const video = document.getElementById('scanVideo');
       document.getElementById('scanStatus').textContent = '바코드를 사각형 안에 맞춰주세요';
-      const constraints = { video: { facingMode: { ideal: 'environment' } } };
+      const constraints = { video: { facingMode: { ideal: currentFacingMode } } };
       codeReader.decodeFromConstraints(constraints, video, (result, err) => {
         if (result) {
           const text = result.getText();

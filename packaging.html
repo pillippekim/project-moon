@@ -77,6 +77,8 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
 .scan-frame::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: linear-gradient(90deg, transparent, #ef4444, transparent); animation: scanLine 1.6s ease-in-out infinite; }
 @keyframes scanLine { 0%,100% { top: 10%; } 50% { top: 90%; } }
 .scan-status { position: absolute; bottom: 10px; left: 10px; right: 10px; text-align: center; color: white; font-size: 12px; background: rgba(0,0,0,0.6); padding: 6px; border-radius: 6px; }
+.camera-flip-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); border: none; border-radius: 8px; color: white; font-size: 20px; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; }
+.camera-flip-btn:hover { background: rgba(0,0,0,0.7); }
 .scan-mode-btns { display: flex; gap: 8px; margin-bottom: 12px; }
 .scan-mode-btn { flex: 1; font-size: 12px; padding: 8px; border-radius: 8px; border: 1.5px solid #e5e5e5; background: white; cursor: pointer; font-family: inherit; color: #555; }
 .scan-mode-btn.active { border-color: #2563eb; background: #eff6ff; color: #2563eb; font-weight: 500; }
@@ -196,6 +198,7 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
       <video id="scanVideo" playsinline autoplay muted></video>
       <div class="scan-frame"></div>
       <div class="scan-status" id="scanStatus">바코드를 사각형 안에 맞춰주세요</div>
+      <button class="camera-flip-btn" onclick="flipCamera()" title="카메라 전환">🔄</button>
     </div>
     <div class="scan-error" id="scanError" style="display:none"></div>
 
@@ -402,6 +405,7 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
   let scanType = 'badge'; // 'badge' or 'lot'
   let scanMode = 'camera'; // 'camera' or 'manual'
   let codeReader = null;
+  let currentFacingMode = 'user'; // 기본값: 전면 카메라 (거치대 사용 환경)
   let activeStream = null;
 
   function openModal(id, idx, type) {
@@ -513,6 +517,15 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
     if (e.name === 'NotFoundError') return '카메라를 찾을 수 없어요.';
     if (e.name === 'NotReadableError') return '카메라가 다른 앱에서 사용 중이에요.';
     return '카메라를 시작할 수 없어요: ' + (e.message || e.name);
+  }
+
+  function flipCamera() {
+    // 전면 ↔ 후면 카메라 전환
+    currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+    const label = currentFacingMode === 'user' ? '전면' : '후면';
+    document.getElementById('scanStatus').textContent = `${label} 카메라로 전환 중...`;
+    stopCamera();
+    setTimeout(() => startCamera(), 300);
   }
 
   function closeModal() {
