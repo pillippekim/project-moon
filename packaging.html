@@ -405,7 +405,8 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
   let scanType = 'badge'; // 'badge' or 'lot'
   let scanMode = 'camera'; // 'camera' or 'manual'
   let codeReader = null;
-  let currentFacingMode = 'user'; // 기본값: 전면 카메라 (거치대 사용 환경)
+  let cameraDevices = []; // 카메라 장치 목록
+  let currentCameraIdx = 0; // 현재 선택된 카메라 인덱스
   let activeStream = null;
 
   function openModal(id, idx, type) {
@@ -465,19 +466,34 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
     try {
       stopCamera();
       codeReader = new ZXing.BrowserMultiFormatReader();
+
+      // 카메라 장치 목록 가져오기
+      const devices = await codeReader.listVideoInputDevices();
+      if (!devices || devices.length === 0) {
+        showCameraError('카메라를 찾을 수 없어요.');
+        return;
+      }
+
+      cameraDevices = devices;
+
+      // 카메라가 여러 개면 전환 버튼 표시
+      const flipBtn = document.querySelector('.camera-flip-btn');
+      if (flipBtn) {
+        flipBtn.style.display = devices.length > 1 ? 'flex' : 'none';
+      }
+
+      // 인덱스 범위 보정
+      if (currentCameraIdx >= devices.length) currentCameraIdx = 0;
+
+      const selectedDevice = devices[currentCameraIdx];
+      const deviceLabel = selectedDevice.label || `카메라 ${currentCameraIdx + 1}`;
+      document.getElementById('scanStatus').textContent = `📷 ${deviceLabel} 사용 중`;
+
       const video = document.getElementById('scanVideo');
-      document.getElementById('scanStatus').textContent = '바코드를 사각형 안에 맞춰주세요';
-
-      // 후면 카메라 우선 사용
-      const constraints = {
-        video: { facingMode: { ideal: 'environment' } }
-      };
-
-      codeReader.decodeFromConstraints(constraints, video, (result, err) => {
+      codeReader.decodeFromVideoDevice(selectedDevice.deviceId, video, (result, err) => {
         if (result) {
           const text = result.getText();
           document.getElementById('scanStatus').textContent = '✓ 인식 완료: ' + text;
-          // 자동 입력 후 모달 닫기
           setTimeout(() => {
             if (scanType === 'lot') setLot(scanTarget, scanBadgeIdx, text);
             else setBadge(scanTarget, scanBadgeIdx, text);
@@ -487,6 +503,7 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
           }, 300);
         }
       });
+
     } catch (e) {
       showCameraError(getCameraErrorMsg(e));
     }
@@ -520,12 +537,16 @@ textarea { width: 100%; font-size: 14px; background: #f9f9f9; border: 1px solid 
   }
 
   function flipCamera() {
-    // 전면 ↔ 후면 카메라 전환
-    currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
-    const label = currentFacingMode === 'user' ? '전면' : '후면';
-    document.getElementById('scanStatus').textContent = `${label} 카메라로 전환 중...`;
+    if (cameraDevices.length <= 1) {
+      showToast('전환할 카메라가 없어요.');
+      return;
+    }
+    // 다음 카메라로 순환
+    currentCameraIdx = (currentCameraIdx + 1) % cameraDevices.length;
+    const label = cameraDevices[currentCameraIdx].label || `카메라 ${currentCameraIdx + 1}`;
+    document.getElementById('scanStatus').textContent = `🔄 ${label}로 전환 중...`;
     stopCamera();
-    setTimeout(() => startCamera(), 300);
+    setTimeout(() => startCamera(), 500);
   }
 
   function closeModal() {
