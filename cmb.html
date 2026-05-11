@@ -1053,11 +1053,15 @@ async function submitReport() {
   }
   
   showToast(`✓ ${reportRows.length}건 제출 완료!`);
-  setTimeout(() => resetForm(), 1500);
+  setTimeout(() => resetForm(false), 1500);  // 자동 초기화: 확인 팝업 없음
 }
 
-function resetForm() {
-  if (!confirm('입력한 내용을 모두 초기화할까요?')) return;
+function resetForm(askConfirm = true) {
+  // 사용자가 "초기화" 버튼을 직접 눌렀을 때만 확인 팝업
+  if (askConfirm) {
+    if (!confirm('입력한 내용을 모두 초기화할까요?')) return;
+  }
+  
   document.getElementById('mainRows').innerHTML = '';
   rowCounter = 0;
   document.getElementById('remarks').value = '';
