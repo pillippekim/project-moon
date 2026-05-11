@@ -106,13 +106,30 @@
   .alert-banner {
     background: linear-gradient(135deg, #fff3cd, #ffeaa7);
     color: #856404;
-    padding: 12px 20px;
+    padding: 16px 24px;
     border-radius: 10px;
     font-size: 14px;
     margin-bottom: 20px;
-    text-align: center;
-    font-weight: 600;
+    text-align: left;
     border-left: 4px solid #f0b400;
+  }
+  
+  .alert-banner .alert-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #6b4d00;
+    margin-bottom: 8px;
+  }
+  
+  .alert-banner .mixing-order {
+    font-size: 13px;
+    color: #806100;
+    line-height: 1.8;
+    font-weight: 500;
+  }
+  
+  .alert-banner .mixing-order strong {
+    color: #5a4400;
   }
   
   /* ── 섹션 카드 ── */
@@ -543,7 +560,13 @@
 
   <!-- 안내 배너 -->
   <div class="alert-banner">
-    ⚠️ 잠깐!! 제품의 생명은 …… 여기서부터 입니다. 확인! 확인!!!
+    <div class="alert-title">
+      ⚠️ 잠깐! 우리 회사 제품의 생명은 우리 공정에서부터 시작입니다. 확인! 확인! 확인!
+    </div>
+    <div class="mixing-order">
+      <strong>📌 MIXING 순서:</strong>
+      1. 소련 → 2. 1차 혼련 → 3. 2차 혼련 → 4. Roller → 5. Strip size (두께mm / 넓이mm / 길이mm)
+    </div>
   </div>
 
   <!-- 작업 정보 입력 -->
@@ -628,11 +651,6 @@
           <!-- 4개 시간대 자동 생성 -->
         </tbody>
       </table>
-      
-      <div class="mixing-guide">
-        <strong>📌 MIXING 순서:</strong>
-        1. 소련 → 2. 1차 혼련 → 3. 2차 혼련 → 4. Roller → 5. Strip size (두께mm / 넓이mm / 길이mm)
-      </div>
     </div>
   </div>
 
@@ -727,12 +745,36 @@ async function loadWorkers() {
   });
 }
 
-// 제품 (사번-재질 매핑)
+// 제품 (사번-재질 매핑) - 페이지네이션으로 전체 로드
 async function loadProducts() {
-  const { data, error } = await db.from('products')
-    .select('sabun, part_no, part_name, material_name');
-  if (error) { console.error(error); return; }
-  productsCache = data || [];
+  productsCache = [];
+  let from = 0;
+  const pageSize = 1000;
+  
+  while (true) {
+    const { data, error } = await db.from('products')
+      .select('sabun, part_no, part_name, material_name')
+      .range(from, from + pageSize - 1);
+    
+    if (error) { 
+      console.error('❌ 제품 로딩 실패:', error); 
+      showToast('제품 데이터 로딩 실패!', 'error');
+      return; 
+    }
+    
+    if (!data || data.length === 0) break;
+    
+    productsCache = productsCache.concat(data);
+    
+    if (data.length < pageSize) break; // 마지막 페이지
+    from += pageSize;
+  }
+  
+  console.log('✅ 제품 로딩 완료:', productsCache.length, '건');
+  
+  // 디버그용: 매핑된 제품 개수 확인
+  const withMaterial = productsCache.filter(p => p.material_name).length;
+  console.log(`   - 재질 매핑된 제품: ${withMaterial}건`);
 }
 
 // 재질 마스터
@@ -833,9 +875,27 @@ function onSabunChange(rowId) {
   
   if (!sabun) return;
   
-  const product = productsCache.find(p => p.sabun === sabun);
+  // 사번을 문자열로 강제 변환하여 비교 (DB의 text 타입에 맞춤)
+  const product = productsCache.find(p => String(p.sabun).trim() === sabun);
+  
+  console.log('🔍 사번 검색:', sabun, '결과:', product);
+  
   if (product && product.material_name) {
     material.value = product.material_name;
+    // 시각적 피드백 (잠깐 초록색 깜빡임)
+    material.style.background = '#d4edda';
+    setTimeout(() => { material.style.background = ''; }, 600);
+    console.log('✅ 재질 자동 채움:', product.material_name);
+  } else if (product && !product.material_name) {
+    console.log('⚠️ 사번은 있으나 재질 매핑 없음 (Balance Out 또는 조립품)');
+    // 재질이 NULL인 경우 - 작업자가 직접 선택해야 함
+    material.value = '';
+    showToast(`사번 ${sabun}: 매핑된 재질 없음 (직접 선택)`, 'error');
+  } else {
+    console.log('❌ 사번 매칭 실패 - productsCache 길이:', productsCache.length);
+    if (productsCache.length === 0) {
+      showToast('제품 데이터 로딩 실패! 새로고침 해주세요.', 'error');
+    }
   }
 }
 
