@@ -73,7 +73,7 @@
     box-shadow: 0 2px 8px rgba(36, 59, 178, 0.08);
     margin-bottom: 20px;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 20px;
     align-items: center;
   }
@@ -576,14 +576,10 @@
       <input type="date" id="workDate">
     </div>
     <div class="info-block">
-      <label>작업자 (사번)</label>
+      <label>작업자</label>
       <select id="workerSelect">
         <option value="">선택하세요...</option>
       </select>
-    </div>
-    <div class="info-block">
-      <label>작업자명</label>
-      <input type="text" id="workerName" readonly placeholder="자동 입력">
     </div>
   </div>
 
@@ -598,7 +594,7 @@
           <tr>
             <th class="col-no">NO</th>
             <th class="col-batch">BATCH No.</th>
-            <th class="col-sabun">사번<br>(적용제품)</th>
+            <th class="col-sabun">사번<br>(제품코드)</th>
             <th class="col-material">재질명</th>
             <th class="col-weight">중량 (Kg)</th>
             <th class="col-remix">재믹싱</th>
@@ -703,7 +699,7 @@ async function init() {
   
   // 사용자 정보 표시
   document.getElementById('userInfo').textContent = 
-    myInfo ? `${myInfo.name} (${myInfo.emp_code})` : '';
+    myInfo ? `${myInfo.name} (입사코드: ${myInfo.emp_code})` : '';
   
   // 오늘 날짜 기본값
   const today = new Date().toISOString().split('T')[0];
@@ -722,26 +718,34 @@ async function init() {
   initCheckTable();
 }
 
-// 작업자 목록 (혼련 공정만)
+// 작업자 목록 (혼련(CMB) 공정만) + 본인 자동 추가
 async function loadWorkers() {
   const { data, error } = await db.from('workers')
-    .select('*')
-    .or('process.eq.혼련(CMB),process.eq.CMB,process.eq.혼련')
+    .select('name')
+    .eq('process', '혼련(CMB)')
     .eq('active', true)
     .order('name');
   
-  if (error) { console.error(error); return; }
-  workersCache = data || [];
+  if (error) { console.error('❌ 작업자 로딩 실패:', error); }
   
+  // 작업자 이름 배열로 변환
+  workersCache = (data || []).map(w => w.name);
+  
+  // 로그인한 사용자가 있다면 명단에 없으면 추가
+  if (myInfo && myInfo.name) {
+    if (!workersCache.includes(myInfo.name)) {
+      workersCache.unshift(myInfo.name);  // 맨 앞에 추가
+    }
+  }
+  
+  console.log('✅ 작업자 로딩 완료:', workersCache);
+  
+  // 드롭다운 생성
   const sel = document.getElementById('workerSelect');
   sel.innerHTML = '<option value="">선택하세요...</option>';
-  workersCache.forEach(w => {
-    sel.innerHTML += `<option value="${w.id}">${w.name}</option>`;
-  });
-  
-  sel.addEventListener('change', () => {
-    const w = workersCache.find(x => x.id == sel.value);
-    document.getElementById('workerName').value = w ? w.name : '';
+  workersCache.forEach(name => {
+    const selected = (myInfo && myInfo.name === name) ? 'selected' : '';
+    sel.innerHTML += `<option value="${name}" ${selected}>${name}</option>`;
   });
 }
 
@@ -826,7 +830,7 @@ function addRow() {
   tr.innerHTML = `
     <td><strong>${document.querySelectorAll('#mainRows tr').length + 1}</strong></td>
     <td><input type="text" class="batch-no" value="${batchNo}" /></td>
-    <td><input type="text" class="sabun" placeholder="예: 502335" oninput="onSabunChange('${rowId}')" /></td>
+    <td><input type="text" class="sabun" placeholder="제품코드 (예: 502335)" oninput="onSabunChange('${rowId}')" /></td>
     <td>
       <select class="material">
         <option value="">선택하세요...</option>
@@ -974,12 +978,11 @@ function collectCheckData() {
 async function submitReport() {
   const workDate = document.getElementById('workDate').value;
   const workerSelect = document.getElementById('workerSelect');
-  const workerId = workerSelect.value;
-  const workerName = document.getElementById('workerName').value;
+  const workerName = workerSelect.value;
   
   // 검증
   if (!workDate) { showToast('작업 일자를 선택하세요.', 'error'); return; }
-  if (!workerId) { showToast('작업자를 선택하세요.', 'error'); return; }
+  if (!workerName) { showToast('작업자를 선택하세요.', 'error'); return; }
   
   const rows = document.querySelectorAll('#mainRows tr');
   if (rows.length === 0) { showToast('최소 1건의 작업 내역이 필요해요.', 'error'); return; }
@@ -1002,8 +1005,8 @@ async function submitReport() {
     
     reportRows.push({
       work_date: workDate,
-      worker_id: sabun || null,
-      worker_name: workerName,
+      worker_id: sabun || null,       // 제품 사번 (예: 502335)
+      worker_name: workerName,         // 작업자 이름
       material_name: material,
       weight: weight,
       lot_no: batchNo,
