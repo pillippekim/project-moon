@@ -270,16 +270,31 @@
   }
   
   /* 재믹싱 비활성화 시각 효과 */
-  .remix-disabled input,
+  .remix-disabled {
+    background: #fff4e6;  /* 옅은 주황 배경 */
+  }
+  
+  .remix-disabled input:not(.remix),
   .remix-disabled select {
     background: #f0f0f0 !important;
     color: #999 !important;
     pointer-events: none;
   }
   
+  /* 재믹싱 체크박스 자체는 항상 활성화 (해제 가능하도록) */
+  .remix-disabled .remix {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+  }
+  
   .remix-disabled .toggle-ox {
     opacity: 0.4;
     pointer-events: none;
+  }
+  
+  /* 재믹싱 체크박스 자체는 항상 클릭 가능 */
+  .remix {
+    cursor: pointer !important;
   }
   
   /* 행 추가/삭제 버튼 */
