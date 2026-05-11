@@ -59,6 +59,7 @@ tr:hover td { background: #fafafa; }
 .process-tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
 .process-포장 { background: #eff6ff; color: #243bb2; }
 .process-검사 { background: #f0fdf4; color: #16a34a; }
+.process-혼련\(CMB\) { background: #fef3c7; color: #b45309; }
 .process-재단 { background: #fff7ed; color: #ea580c; }
 .process-도포 { background: #fdf4ff; color: #9333ea; }
 .process-쇼트 { background: #fef2f2; color: #dc2626; }
@@ -130,6 +131,7 @@ tr:hover td { background: #fafafa; }
     <button class="process-tab active" data-process="all" onclick="switchProcess('all')">📊 전체</button>
     <button class="process-tab" data-process="포장" onclick="switchProcess('포장')">📦 포장</button>
     <button class="process-tab" data-process="검사" onclick="switchProcess('검사')">🔬 검사</button>
+    <button class="process-tab" data-process="혼련(CMB)" onclick="switchProcess('혼련(CMB)')">🧪 혼련(CMB)</button>
     <button class="process-tab" data-process="재단" onclick="switchProcess('재단')" disabled style="opacity:0.5">✂️ 재단</button>
     <button class="process-tab" data-process="도포" onclick="switchProcess('도포')" disabled style="opacity:0.5">🎨 도포</button>
     <button class="process-tab" data-process="쇼트" onclick="switchProcess('쇼트')" disabled style="opacity:0.5">💥 쇼트</button>
@@ -302,6 +304,73 @@ tr:hover td { background: #fafafa; }
   </div>
 </div>
 
+<!-- 혼련(CMB) 수정 모달 -->
+<div class="modal-overlay" id="editCmbModal">
+  <div class="modal-box" style="max-width:720px">
+    <div class="modal-title">🧪 혼련(CMB) 작업일지 수정</div>
+    <div class="modal-sub" id="editCmbMeta">-</div>
+    <input type="hidden" id="ec_id" />
+    <div class="modal-grid modal-grid-2">
+      <div class="modal-field">
+        <span class="modal-label">작업일</span>
+        <input class="modal-input" type="date" id="ec_work_date" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">작업자</span>
+        <input class="modal-input" id="ec_worker_name" />
+      </div>
+    </div>
+    <div class="modal-grid modal-grid-3">
+      <div class="modal-field">
+        <span class="modal-label">BATCH No.</span>
+        <input class="modal-input" id="ec_lot_no" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">사번 (제품코드)</span>
+        <input class="modal-input" id="ec_worker_id" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">재질명</span>
+        <input class="modal-input" id="ec_material_name" />
+      </div>
+    </div>
+    <div class="modal-grid modal-grid-3">
+      <div class="modal-field">
+        <span class="modal-label">중량 (Kg)</span>
+        <input class="modal-input" type="number" step="0.001" id="ec_weight" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">재믹싱</span>
+        <select class="modal-input" id="ec_is_remix">
+          <option value="false">아니오</option>
+          <option value="true">예 (재믹싱)</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">평량 정상투입</span>
+        <select class="modal-input" id="ec_weighing_check">
+          <option value="true">O (정상)</option>
+          <option value="false">X (비정상)</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-grid">
+      <div class="modal-field">
+        <span class="modal-label">비고</span>
+        <input class="modal-input" id="ec_note" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">특이사항</span>
+        <textarea class="modal-textarea" id="ec_remarks" rows="2"></textarea>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-modal-cancel" onclick="closeModal('editCmbModal')">취소</button>
+      <button class="btn-modal-save" onclick="saveEditCmb()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- 삭제 확인 모달 -->
 <div class="modal-overlay" id="deleteModal">
   <div class="modal-box" style="max-width:440px">
@@ -333,7 +402,7 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentProcess = 'all';
 let unifiedView = false;
-let cachedData = { 포장: [], 검사: [] };
+let cachedData = { 포장: [], 검사: [], 'CMB': [] };
 let PRODUCTS = {};
 let myInfo = null;
 let showDeleted = false;
@@ -632,6 +701,16 @@ async function loadData() {
     cachedData.검사 = data || [];
   }
 
+  // 혼련(CMB) 데이터 로드 (필요 시)
+  if (currentProcess === 'all' || currentProcess === '혼련(CMB)') {
+    let q = db.from('cmb_reports').select('*').gte('work_date', start).lte('work_date', end);
+    if (!showDeleted) q = q.is('deleted_at', null);
+    if (fSabun)  q = q.ilike('worker_id', `%${fSabun}%`);
+    if (fWorker) q = q.ilike('worker_name', `%${fWorker}%`);
+    const { data } = await q.order('work_date', { ascending: false });
+    cachedData.CMB = data || [];
+  }
+
   render();
 }
 
@@ -644,6 +723,8 @@ function render() {
     renderPackagingTable(cachedData.포장);
   } else if (currentProcess === '검사') {
     renderInspectionTable(cachedData.검사);
+  } else if (currentProcess === '혼련(CMB)') {
+    renderCmbTable(cachedData.CMB);
   }
 }
 
@@ -651,17 +732,18 @@ function renderStats() {
   const statsEl = document.getElementById('statsRow');
   const pkg = cachedData.포장 || [];
   const ins = cachedData.검사 || [];
+  const cmb = cachedData.CMB || [];
 
   if (currentProcess === 'all') {
-    const totalCount = pkg.length + ins.length;
+    const totalCount = pkg.length + ins.length + cmb.length;
     const totalQty = pkg.reduce((s,r)=>s+(r.quantity||0),0);
     const totalInspect = ins.reduce((s,r)=>s+(r.inspect_qty||0),0);
-    const totalFail = ins.reduce((s,r)=>s+(r.fail_qty||0),0);
+    const totalCmbWeight = cmb.filter(r => !r.is_remix).reduce((s,r)=>s+(parseFloat(r.weight)||0),0);
     statsEl.innerHTML = `
       <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">전체 작업일지</div><div class="stat-num blue">${totalCount} <span class="stat-unit">건</span></div></div>
       <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-label">포장수량</div><div class="stat-num green">${totalQty.toLocaleString()} <span class="stat-unit">EA</span></div></div>
       <div class="stat-card"><div class="stat-icon">🔬</div><div class="stat-label">검사수량</div><div class="stat-num orange">${totalInspect.toLocaleString()} <span class="stat-unit">EA</span></div></div>
-      <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-label">불합격</div><div class="stat-num red">${totalFail.toLocaleString()} <span class="stat-unit">EA</span></div></div>
+      <div class="stat-card"><div class="stat-icon">🧪</div><div class="stat-label">혼련 사용량</div><div class="stat-num" style="color:#b45309">${totalCmbWeight.toFixed(3)} <span class="stat-unit">Kg</span></div></div>
     `;
   } else if (currentProcess === '포장') {
     const totalQty = pkg.reduce((s,r)=>s+(r.quantity||0),0);
@@ -683,12 +765,24 @@ function renderStats() {
       <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-label">합격 / 불합격</div><div class="stat-num green">${totalPass.toLocaleString()}<span class="stat-unit"> / </span><span style="color:#e53e3e">${totalFail.toLocaleString()}</span></div></div>
       <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-label">합격률</div><div class="stat-num green">${passRate} <span class="stat-unit">%</span></div></div>
     `;
+  } else if (currentProcess === '혼련(CMB)') {
+    const totalWeight = cmb.filter(r => !r.is_remix).reduce((s,r)=>s+(parseFloat(r.weight)||0),0);
+    const remixCount = cmb.filter(r => r.is_remix).length;
+    const workers = new Set(cmb.map(r=>r.worker_name).filter(Boolean)).size;
+    const weighingNG = cmb.filter(r => r.weighing_check === false).length;
+    statsEl.innerHTML = `
+      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">혼련 건수</div><div class="stat-num blue">${cmb.length} <span class="stat-unit">건</span></div></div>
+      <div class="stat-card"><div class="stat-icon">🧪</div><div class="stat-label">총 사용량 (재믹싱 제외)</div><div class="stat-num" style="color:#b45309">${totalWeight.toFixed(3)} <span class="stat-unit">Kg</span></div></div>
+      <div class="stat-card"><div class="stat-icon">🔄</div><div class="stat-label">재믹싱 건수</div><div class="stat-num orange">${remixCount} <span class="stat-unit">건</span></div></div>
+      <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-label">평량 비정상</div><div class="stat-num red">${weighingNG} <span class="stat-unit">건</span></div></div>
+    `;
   }
 }
 
 function renderAllSections() {
   const pkg = cachedData.포장 || [];
   const ins = cachedData.검사 || [];
+  const cmb = cachedData.CMB || [];
   const html = `
     <div class="process-section">
       <div class="section-header">
@@ -713,6 +807,20 @@ function renderAllSections() {
               return `<div style="font-size:12px;color:#555;padding:6px 0;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between"><span>${r.work_date} · ${r.worker_id} · ${r.worker_name||'-'}</span><span><span style="color:#16a34a">합격 ${(r.pass_qty||0).toLocaleString()}</span> / <span style="color:#e53e3e">불합 ${fail.toLocaleString()}</span></span></div>`;
             }).join('')
           + (ins.length > 5 ? `<div style="text-align:center;padding-top:8px"><button class="btn-section-detail" onclick="switchProcess('검사')">전체 ${ins.length}건 보기 →</button></div>` : '')}
+      </div>
+    </div>
+    <div class="process-section">
+      <div class="section-header">
+        <span class="section-title">🧪 혼련(CMB) 작업일지</span>
+        <span class="section-count">${cmb.length}건</span>
+      </div>
+      <div class="section-card">
+        ${cmb.length === 0 ? '<div style="color:#aaa;text-align:center;padding:1rem;font-size:13px">데이터 없음</div>'
+          : cmb.slice(0, 5).map(r => {
+              const remixTag = r.is_remix ? '<span style="background:#fff4e6;color:#b45309;padding:1px 6px;border-radius:4px;font-size:10px;margin-left:4px">재믹싱</span>' : '';
+              return `<div style="font-size:12px;color:#555;padding:6px 0;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between"><span>${r.work_date} · ${r.lot_no||'-'} · ${r.material_name||'-'}${remixTag}</span><span style="color:#b45309;font-weight:500">${(parseFloat(r.weight)||0).toFixed(3)} Kg</span></div>`;
+            }).join('')
+          + (cmb.length > 5 ? `<div style="text-align:center;padding-top:8px"><button class="btn-section-detail" onclick="switchProcess('혼련(CMB)')">전체 ${cmb.length}건 보기 →</button></div>` : '')}
       </div>
     </div>
   `;
@@ -854,6 +962,170 @@ function renderInspectionTable(data) {
   `;
 }
 
+// ── 혼련(CMB) 테이블 렌더링 ──────────────────────────────
+function renderCmbTable(data) {
+  if (!data.length) {
+    document.getElementById('resultArea').innerHTML = '<div class="card"><div class="empty-row" style="padding:2rem;text-align:center;color:#aaa">조회된 데이터가 없어요.</div></div>';
+    return;
+  }
+  document.getElementById('resultArea').innerHTML = `
+    <div class="card" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>NO</th><th>작업일</th><th>BATCH No.</th><th>사번<br>(제품코드)</th>
+              <th>품명</th><th>재질명</th><th style="text-align:right">중량(Kg)</th>
+              <th>재믹싱</th><th>평량투입</th><th>작업자</th>
+              <th>비고</th><th>점검</th><th>특이사항</th>
+              <th>입력자</th><th>제출일시</th><th>작업</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.map((r, i) => {
+              const prod = PRODUCTS[r.worker_id] || {};
+              const isDeleted = !!r.deleted_at;
+              const canEdit = canEditDelete(r) && !isDeleted;
+              const reason = canEdit ? '' : (isDeleted ? '삭제됨' : getCannotEditReason(r));
+              const actionsHtml = isDeleted
+                ? (myInfo && myInfo.user_type === 'super' ? `<button class="btn-row btn-row-edit" onclick="restoreRecord('cmb_reports', ${r.id})">복구</button>` : '<span style="color:#aaa;font-size:11px">삭제됨</span>')
+                : `<div class="row-actions">
+                    <button class="btn-row btn-row-edit" ${canEdit ? `onclick='openEditCmb(${JSON.stringify(r).replace(/'/g, "&#39;")})'` : 'disabled'} title="${reason}">수정</button>
+                    <button class="btn-row btn-row-del" ${canEdit ? `onclick='openDelete("cmb_reports", ${JSON.stringify(r).replace(/'/g, "&#39;")})'` : 'disabled'} title="${reason}">삭제</button>
+                  </div>`;
+              const remixBadge = r.is_remix 
+                ? '<span style="background:#fff4e6;color:#b45309;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500">재믹싱</span>'
+                : '<span style="color:#aaa;font-size:11px">-</span>';
+              const weighingBadge = r.weighing_check === false
+                ? '<span style="background:#fee2e2;color:#c92a2a;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">X</span>'
+                : '<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">O</span>';
+              // 점검 데이터 요약 (펼치기 가능)
+              let checkSummary = '-';
+              if (r.check_data && typeof r.check_data === 'object') {
+                const times = Object.keys(r.check_data);
+                const filledCount = times.filter(t => {
+                  const v = r.check_data[t];
+                  return v && Object.values(v).some(x => x !== null && x !== '');
+                }).length;
+                if (filledCount > 0) {
+                  checkSummary = `<button class="btn-row" style="background:#f0f3f9;color:#243bb2;font-size:11px;padding:3px 8px" onclick='showCheckData(${JSON.stringify(r.check_data).replace(/'/g, "&#39;")})'>${filledCount}/4 보기</button>`;
+                }
+              }
+              return `<tr class="${isDeleted ? 'deleted-row' : ''}">
+                <td style="color:#bbb;font-size:12px">${i+1}</td>
+                <td>${r.work_date}${isDeleted ? '<span class="deleted-badge">삭제됨</span>' : ''}</td>
+                <td style="font-weight:500;color:#b45309">${r.lot_no||'-'}</td>
+                <td style="font-weight:500">${r.worker_id||'-'}</td>
+                <td style="font-size:12px;color:#555">${prod.partName||'-'}</td>
+                <td style="font-weight:500;color:#243bb2">${r.material_name||'-'}</td>
+                <td style="text-align:right;font-weight:500">${(parseFloat(r.weight)||0).toFixed(3)}</td>
+                <td style="text-align:center">${remixBadge}</td>
+                <td style="text-align:center">${weighingBadge}</td>
+                <td>${r.worker_name||'-'}</td>
+                <td style="font-size:12px;color:#888">${r.note||'-'}</td>
+                <td style="text-align:center">${checkSummary}</td>
+                <td style="font-size:12px;color:#888">${r.remarks||'-'}</td>
+                <td style="font-size:11px;color:#888">${r.created_by_name||'-'}</td>
+                <td style="font-size:11px;color:#aaa">${fmtDatetime(r.submitted_at)}</td>
+                <td>${actionsHtml}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// 점검 데이터 팝업으로 보여주기
+function showCheckData(checkData) {
+  const times = ['09:00', '11:00', '14:00', '16:00'];
+  const labels = {
+    airPressure: '에어압력',
+    kneaderIn: '니다 입수',
+    kneaderOut: '니다 출수',
+    rollerIn: '로라 입수',
+    rollerOut: '로라 출수'
+  };
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:13px">';
+  html += '<thead><tr><th style="background:#f0f3f9;padding:8px;border:1px solid #ddd">시간</th>';
+  Object.values(labels).forEach(l => {
+    html += `<th style="background:#f0f3f9;padding:8px;border:1px solid #ddd">${l}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+  times.forEach(time => {
+    const d = checkData[time] || {};
+    html += `<tr><td style="padding:6px;border:1px solid #ddd;background:#fafbfd;font-weight:600">${time}</td>`;
+    Object.keys(labels).forEach(k => {
+      html += `<td style="padding:6px;border:1px solid #ddd;text-align:center">${d[k] || '-'}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  
+  // 간단한 alert 대신 모달로
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML = `
+    <div style="background:white;border-radius:12px;padding:24px;max-width:700px;width:100%;max-height:80vh;overflow-y:auto">
+      <h3 style="margin:0 0 16px;color:#243bb2">🌡️ 시간대별 점검 데이터</h3>
+      ${html}
+      <div style="text-align:right;margin-top:16px">
+        <button onclick="this.closest('div[style*=\\'position:fixed\\']').remove()" style="padding:8px 20px;background:#243bb2;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600">닫기</button>
+      </div>
+    </div>
+  `;
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
+}
+
+// ── 혼련(CMB) 수정 ──────────────────────────────
+let editingCmbBefore = null;
+function openEditCmb(r) {
+  editingCmbBefore = JSON.parse(JSON.stringify(r));
+  document.getElementById('ec_id').value = r.id;
+  document.getElementById('ec_work_date').value = r.work_date;
+  document.getElementById('ec_worker_name').value = r.worker_name || '';
+  document.getElementById('ec_lot_no').value = r.lot_no || '';
+  document.getElementById('ec_worker_id').value = r.worker_id || '';
+  document.getElementById('ec_material_name').value = r.material_name || '';
+  document.getElementById('ec_weight').value = r.weight || 0;
+  document.getElementById('ec_is_remix').value = r.is_remix ? 'true' : 'false';
+  document.getElementById('ec_weighing_check').value = (r.weighing_check === false) ? 'false' : 'true';
+  document.getElementById('ec_note').value = r.note || '';
+  document.getElementById('ec_remarks').value = r.remarks || '';
+  document.getElementById('editCmbMeta').textContent = `입력자: ${r.created_by_name || '-'} (${r.created_by_emp_code || '-'}) · 작성일: ${r.work_date}`;
+  document.getElementById('editCmbModal').classList.add('open');
+}
+
+async function saveEditCmb() {
+  const id = parseInt(document.getElementById('ec_id').value);
+  const before = editingCmbBefore;
+  const after = {
+    work_date: document.getElementById('ec_work_date').value,
+    worker_name: document.getElementById('ec_worker_name').value.trim(),
+    lot_no: document.getElementById('ec_lot_no').value.trim(),
+    worker_id: document.getElementById('ec_worker_id').value.trim(),
+    material_name: document.getElementById('ec_material_name').value.trim(),
+    weight: parseFloat(document.getElementById('ec_weight').value) || 0,
+    is_remix: document.getElementById('ec_is_remix').value === 'true',
+    weighing_check: document.getElementById('ec_weighing_check').value === 'true',
+    note: document.getElementById('ec_note').value,
+    remarks: document.getElementById('ec_remarks').value,
+    modified_at: new Date().toISOString(),
+    modified_by: myInfo.emp_code + ' (' + myInfo.name + ')'
+  };
+
+  const { error } = await db.from('cmb_reports').update(after).eq('id', id);
+  if (error) { showToast('저장 실패: ' + error.message); return; }
+
+  await logAudit('update', 'cmb_reports', id, before, after, null);
+
+  showToast('수정 완료 ✓');
+  closeModal('editCmbModal');
+  loadData();
+}
+
 // ── 엑셀 다운로드 ──────────────────────────────
 function downloadExcel() {
   const wb = XLSX.utils.book_new();
@@ -907,6 +1179,61 @@ function downloadExcel() {
     const ws = XLSX.utils.json_to_sheet(rows);
     ws['!cols'] = [{wch:5},{wch:11},{wch:10},{wch:15},{wch:25},{wch:10},{wch:18},{wch:9},{wch:9},{wch:9},{wch:12},{wch:18},{wch:18},{wch:18}];
     XLSX.utils.book_append_sheet(wb, ws, '검사 작업일지');
+    added++;
+  }
+
+  // 혼련(CMB) 데이터
+  if ((currentProcess === 'all' || currentProcess === '혼련(CMB)') && cachedData.CMB.length > 0) {
+    const rows = cachedData.CMB.map((r, i) => {
+      const prod = PRODUCTS[r.worker_id] || {};
+      return {
+        'NO': i + 1,
+        '작업일': r.work_date || '',
+        'BATCH No.': r.lot_no || '',
+        '사번(제품코드)': r.worker_id || '',
+        '고객 품번': prod.partNo || '',
+        '품명': prod.partName || '',
+        '재질명': r.material_name || '',
+        '중량(Kg)': parseFloat(r.weight) || 0,
+        '재믹싱': r.is_remix ? 'O' : 'X',
+        '평량 정상투입': r.weighing_check === false ? 'X' : 'O',
+        '작업자': r.worker_name || '',
+        '비고': r.note || '',
+        '특이사항': r.remarks || '',
+        '입력자': r.created_by_name || '',
+        '제출일시': fmtDatetime(r.submitted_at)
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{wch:5},{wch:11},{wch:14},{wch:12},{wch:15},{wch:25},{wch:12},{wch:10},{wch:8},{wch:10},{wch:10},{wch:18},{wch:18},{wch:10},{wch:18}];
+    XLSX.utils.book_append_sheet(wb, ws, '혼련(CMB) 작업일지');
+    
+    // 점검 데이터 (별도 시트)
+    const checkRows = [];
+    cachedData.CMB.forEach(r => {
+      if (r.check_data && typeof r.check_data === 'object') {
+        Object.entries(r.check_data).forEach(([time, vals]) => {
+          if (vals && Object.values(vals).some(v => v !== null && v !== '')) {
+            checkRows.push({
+              '작업일': r.work_date || '',
+              'BATCH No.': r.lot_no || '',
+              '작업자': r.worker_name || '',
+              '점검 시간': time,
+              '에어압력(Kg/㎠)': vals.airPressure || '',
+              '니다 입수(℃)': vals.kneaderIn || '',
+              '니다 출수(℃)': vals.kneaderOut || '',
+              '로라 입수(℃)': vals.rollerIn || '',
+              '로라 출수(℃)': vals.rollerOut || ''
+            });
+          }
+        });
+      }
+    });
+    if (checkRows.length > 0) {
+      const wsCheck = XLSX.utils.json_to_sheet(checkRows);
+      wsCheck['!cols'] = [{wch:11},{wch:14},{wch:10},{wch:10},{wch:14},{wch:12},{wch:12},{wch:12},{wch:12}];
+      XLSX.utils.book_append_sheet(wb, wsCheck, '혼련(CMB) 점검데이터');
+    }
     added++;
   }
 
