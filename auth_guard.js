@@ -58,7 +58,20 @@ async function checkPageAccess(pageFile) {
   if (user.user_type === 'admin') {
     allowed = perm.admin.includes('all') || perm.admin.includes(user.department);
   } else if (user.user_type === 'worker') {
+    // 기본: users 테이블의 process로 체크
     allowed = perm.worker.includes('all') || perm.worker.includes(user.process);
+    
+    // 복수 공정 지원: workers 테이블에 등록된 공정도 체크
+    if (!allowed && user.name) {
+      const { data: workerEntries } = await dbAuth.from('workers')
+        .select('process')
+        .eq('name', user.name)
+        .eq('active', true);
+      if (workerEntries) {
+        const myProcesses = workerEntries.map(w => w.process);
+        allowed = perm.worker.some(p => myProcesses.includes(p));
+      }
+    }
   }
 
   if (!allowed) {

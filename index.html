@@ -342,24 +342,74 @@ function renderHeader() {
   document.getElementById('userRole').textContent = roleText;
 }
 
+// 공정별 아이콘 매핑
+const PROCESS_ICONS = {
+  '포장': '📦', '검사': '🔬', '혼련(CMB)': '🧪', '재단': '✂️',
+  '도포': '🎨', '성형': '🔧', '쇼트': '💥', '2차가류': '🔥'
+};
+
 // ── 작업자 화면 ──────────────────────────────
-function renderWorkerView() {
+async function renderWorkerView() {
   document.getElementById('workerView').classList.remove('hidden');
 
   document.getElementById('welcomeTitle').textContent = `안녕하세요, ${userInfo.name}님!`;
-  document.getElementById('welcomeMsg').textContent = `오늘도 ${userInfo.process} 공정 작업 잘 부탁드려요.`;
   document.getElementById('welcomeIcon').textContent = '👷';
 
-  const page = PROCESS_PAGES[userInfo.process];
-  if (page) {
-    document.getElementById('workerInputCard').href = page;
+  // workers 테이블에서 이 작업자가 등록된 모든 공정 조회
+  const { data: workerEntries } = await db.from('workers')
+    .select('process')
+    .eq('name', userInfo.name)
+    .eq('active', true);
+
+  // 기본 공정 + workers 테이블 공정 합치기 (중복 제거)
+  const myProcesses = new Set();
+  if (userInfo.process) myProcesses.add(userInfo.process);
+  if (workerEntries) workerEntries.forEach(w => myProcesses.add(w.process));
+
+  const processList = [...myProcesses];
+
+  if (processList.length === 1) {
+    document.getElementById('welcomeMsg').textContent = `오늘도 ${processList[0]} 공정 작업 잘 부탁드려요.`;
   } else {
-    document.getElementById('workerInputCard').onclick = (e) => {
-      e.preventDefault();
-      alert(userInfo.process + ' 공정 작업일지는 아직 준비중이에요.');
-    };
+    document.getElementById('welcomeMsg').textContent = `오늘도 ${processList.join(' · ')} 공정 작업 잘 부탁드려요.`;
   }
-  document.getElementById('workerInputName').textContent = userInfo.process + ' 작업일지 입력';
+
+  // 작업일지 카드 동적 생성
+  const actionsDiv = document.querySelector('.worker-actions');
+  actionsDiv.innerHTML = '';
+
+  processList.forEach((proc, idx) => {
+    const page = PROCESS_PAGES[proc];
+    const icon = PROCESS_ICONS[proc] || '📝';
+    const isPrimary = idx === 0;
+    
+    const card = document.createElement('a');
+    card.href = page || '#';
+    card.className = 'worker-card' + (isPrimary ? ' primary' : '');
+    card.innerHTML = `
+      <div class="wc-icon">${icon}</div>
+      <div class="wc-name">${proc} 작업일지 입력</div>
+      <div class="wc-desc">오늘의 ${proc} 작업 내용을 기록하세요</div>
+    `;
+    if (!page) {
+      card.onclick = (e) => {
+        e.preventDefault();
+        alert(proc + ' 공정 작업일지는 아직 준비중이에요.');
+      };
+    }
+    actionsDiv.appendChild(card);
+  });
+
+  // 문서 조회 카드 추가
+  const docCard = document.createElement('a');
+  docCard.href = 'docs_viewer.html';
+  docCard.className = 'worker-card';
+  docCard.innerHTML = `
+    <div class="wc-icon">🔍</div>
+    <div class="wc-name">문서 조회</div>
+    <div class="wc-desc">검사기준서 및 작업표준서 확인</div>
+  `;
+  actionsDiv.appendChild(docCard);
 }
 
 // ── 관리자 화면 ──────────────────────────────
