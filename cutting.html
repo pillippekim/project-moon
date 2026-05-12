@@ -165,7 +165,7 @@
     pointer-events: none;
   }
   
-  /* ── 안전 점검 테이블 ── */
+  /* ── 안전 점검 테이블 (축 전환: 점검항목=세로, 설비=가로) ── */
   .safety-table {
     width: 100%;
     border-collapse: separate;
@@ -175,7 +175,7 @@
   
   .safety-table th, .safety-table td {
     border: 1px solid #e0e4ed;
-    padding: 12px 8px;
+    padding: 10px 8px;
     text-align: center;
     vertical-align: middle;
   }
@@ -184,33 +184,78 @@
     background: #fef2f2;
     color: #991b1b;
     font-weight: 700;
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.3;
   }
   
-  .safety-table thead th.equipment-col {
+  /* 좌측 상단 "점검항목" 헤더 */
+  .safety-table thead th.item-col-header {
     background: #dc2626;
     color: white;
     width: 140px;
-    text-align: left;
-    padding-left: 12px;
+    min-width: 140px;
+    text-align: center;
+    padding: 10px 12px;
+    position: sticky;
+    left: 0;
+    z-index: 3;
   }
   
-  .safety-table .equipment-cell {
+  /* 설비명 가로 헤더 */
+  .safety-table thead th.equipment-header {
     background: #fef2f2;
     color: #991b1b;
     font-weight: 700;
-    text-align: left;
-    padding-left: 12px;
-    font-size: 13px;
+    font-size: 12px;
+    min-width: 180px;
+    padding: 10px 8px;
+    line-height: 1.4;
   }
-  
-  .safety-table .equipment-cell .equipment-sub {
+  .safety-table thead th.equipment-header .eq-sub {
     display: block;
     font-size: 10px;
     color: #b91c1c;
     font-weight: 500;
     margin-top: 2px;
+  }
+  
+  /* 점검항목 세로 헤더 (좌측 고정) */
+  .safety-table .item-cell {
+    background: #fef2f2;
+    color: #991b1b;
+    font-weight: 700;
+    text-align: left;
+    padding-left: 12px;
+    font-size: 12px;
+    white-space: nowrap;
+    position: sticky;
+    left: 0;
+    z-index: 2;
+  }
+  .safety-table .item-cell .item-num {
+    display: inline-block;
+    background: #dc2626;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    margin-right: 6px;
+    font-size: 10px;
+  }
+  
+  /* 특이사항 행 */
+  .safety-table .remarks-label-cell {
+    background: #fef2f2;
+    color: #991b1b;
+    font-weight: 700;
+    text-align: left;
+    padding-left: 12px;
+    font-size: 12px;
+    position: sticky;
+    left: 0;
+    z-index: 2;
   }
   
   /* ── 점검 상태 선택 ── */
@@ -221,13 +266,13 @@
   }
   
   .check-select button {
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
     border: 2px solid #d1d5db;
     background: white;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 700;
     transition: all 0.15s;
     padding: 0;
@@ -267,29 +312,6 @@
     box-shadow: 0 2px 6px rgba(107, 114, 128, 0.4);
   }
   
-  /* 점검 항목 헤더 (가로형 - 옵션B) */
-  .item-header {
-    background: #fef2f2;
-    color: #991b1b;
-    font-weight: 700;
-    font-size: 11px;
-    line-height: 1.3;
-    min-width: 95px;
-    padding: 10px 6px;
-  }
-  
-  .item-header .item-num {
-    display: inline-block;
-    background: #dc2626;
-    color: white;
-    border-radius: 50%;
-    width: 22px;
-    height: 22px;
-    line-height: 22px;
-    margin-right: 4px;
-    font-size: 11px;
-  }
-  
   /* 범례 */
   .legend-row {
     display: flex;
@@ -322,11 +344,11 @@
   /* 설비별 특이사항 */
   .equipment-remarks {
     width: 100%;
-    padding: 4px 8px;
+    padding: 6px 8px;
     border: 1px solid #e0e4ed;
     border-radius: 4px;
     font-size: 12px;
-    min-width: 100px;
+    min-width: 120px;
   }
   
   .equipment-remarks:focus { outline: none; border-color: #dc2626; }
@@ -567,13 +589,14 @@
     .header-info { grid-template-columns: 1fr; }
     .safety-table { font-size: 11px; }
     .safety-table th, .safety-table td { padding: 6px 4px; }
+    .check-select button { width: 32px; height: 32px; font-size: 15px; }
   }
   
   @media (max-width: 768px) {
     body { padding: 12px; }
     .section-body { padding: 12px; overflow-x: auto; }
-    .safety-table { min-width: 900px; }
     .input-table { min-width: 800px; }
+    .check-select button { width: 30px; height: 30px; font-size: 14px; }
   }
 </style>
 </head>
@@ -624,26 +647,20 @@
         <span class="legend-item"><span class="legend-mark notuse">│</span> 미가동</span>
       </div>
       
-      <!-- 점검 테이블 -->
+      <!-- 점검 테이블 (축 전환: 점검항목=세로, 설비=가로) -->
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
       <table class="safety-table" id="safetyTable">
         <thead>
           <tr>
-            <th class="equipment-col">설비명</th>
-            <th class="item-header"><span class="item-num">1</span><br>스위치<br>작동</th>
-            <th class="item-header"><span class="item-num">2</span><br>칼날<br>상태</th>
-            <th class="item-header"><span class="item-num">3</span><br>모터<br>이상음</th>
-            <th class="item-header"><span class="item-num">4</span><br>작동유<br>충만</th>
-            <th class="item-header"><span class="item-num">5</span><br>안전커버<br>작동</th>
-            <th class="item-header"><span class="item-num">6</span><br>에어압력<br>(3~5MPa)</th>
-            <th class="item-header"><span class="item-num">7</span><br>청결<br>상태</th>
-            <th class="item-header"><span class="item-num">8</span><br>비상정지<br>버튼</th>
-            <th style="min-width:140px">설비별<br>특이사항</th>
+            <th class="item-col-header">점검항목</th>
+            <!-- 설비 헤더는 JS에서 동적 생성 -->
           </tr>
         </thead>
         <tbody id="safetyRows">
           <!-- 동적 생성 -->
         </tbody>
       </table>
+      </div>
       
       <!-- 전체 특이사항 -->
       <div class="overall-remarks-box">
@@ -853,20 +870,26 @@ async function loadMaterials() {
 // 안전 점검 테이블
 // ═══════════════════════════════════════════════
 function initSafetyTable() {
+  // === thead: 설비명을 가로 헤더로 ===
+  const thead = document.querySelector('#safetyTable thead tr');
+  thead.innerHTML = '<th class="item-col-header">점검항목</th>';
+  EQUIPMENTS.forEach(eq => {
+    thead.innerHTML += `<th class="equipment-header">${eq.name}<span class="eq-sub">${eq.sub}</span></th>`;
+  });
+  
+  // === tbody: 점검항목이 세로(행), 설비가 가로(열) ===
   const tbody = document.getElementById('safetyRows');
   tbody.innerHTML = '';
   
-  EQUIPMENTS.forEach(eq => {
+  // 점검항목별 행
+  CHECK_ITEMS.forEach(item => {
     const tr = document.createElement('tr');
-    tr.dataset.equipment = eq.key;
+    let html = `<td class="item-cell"><span class="item-num">${item.num}</span>${item.label}</td>`;
     
-    let html = `<td class="equipment-cell">${eq.name}<span class="equipment-sub">${eq.sub}</span></td>`;
-    
-    CHECK_ITEMS.forEach(item => {
+    EQUIPMENTS.forEach(eq => {
       html += `<td>
         <div class="check-select" data-equipment="${eq.key}" data-item="${item.num}">
           ${CHECK_OPTIONS.map(opt => {
-            // 기본값으로 '○'(정상)을 활성화
             const activeClass = opt.value === '○' ? 'active' : '';
             return `<button type="button" class="${opt.class} ${activeClass}" data-value="${opt.value}" onclick="setCheck('${eq.key}', ${item.num}, '${opt.value}', this)">${opt.label}</button>`;
           }).join('')}
@@ -874,10 +897,18 @@ function initSafetyTable() {
       </td>`;
     });
     
-    html += `<td><input type="text" class="equipment-remarks" data-equipment="${eq.key}" placeholder="이상 시 입력" /></td>`;
     tr.innerHTML = html;
     tbody.appendChild(tr);
   });
+  
+  // 특이사항 행 (마지막)
+  const remarksTr = document.createElement('tr');
+  let remarksHtml = '<td class="remarks-label-cell">📝 특이사항</td>';
+  EQUIPMENTS.forEach(eq => {
+    remarksHtml += `<td><input type="text" class="equipment-remarks" data-equipment="${eq.key}" placeholder="이상 시 입력" /></td>`;
+  });
+  remarksTr.innerHTML = remarksHtml;
+  tbody.appendChild(remarksTr);
   
   // 기본값으로 모든 항목 ○ 활성화된 상태이므로 진행률 업데이트
   updateCheckProgress();
