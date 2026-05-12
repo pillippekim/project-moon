@@ -137,7 +137,7 @@ tr:hover td { background: #fafafa; }
     <button class="process-tab" data-process="재단" onclick="switchProcess('재단')">✂️ 재단</button>
     <button class="process-tab" data-process="도포" onclick="switchProcess('도포')">🎨 도포</button>
     <button class="process-tab" data-process="2차가류" onclick="switchProcess('2차가류')">🔥 2차가류</button>
-    <button class="process-tab" data-process="쇼트" onclick="switchProcess('쇼트')" disabled style="opacity:0.5">💥 쇼트</button>
+    <button class="process-tab" data-process="쇼트" onclick="switchProcess('쇼트')">💥 쇼트</button>
     <button class="process-tab" data-process="성형" onclick="switchProcess('성형')" disabled style="opacity:0.5">🔧 성형</button>
   </div>
 
@@ -462,7 +462,7 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentProcess = 'all';
 let unifiedView = false;
-let cachedData = { 포장: [], 검사: [], 'CMB': [], 재단: [], 재단점검: [], 도포: [], '2차가류': [], '2차가류점검': [] };
+let cachedData = { 포장: [], 검사: [], 'CMB': [], 재단: [], 재단점검: [], 도포: [], '2차가류': [], '2차가류점검': [], 쇼트: [] };
 let PRODUCTS = {};
 let myInfo = null;
 let showDeleted = false;
@@ -813,6 +813,16 @@ async function loadData() {
     cachedData['2차가류점검'] = pcSafety || [];
   }
 
+  // 쇼트
+  {
+    let q = db.from('shot_reports').select('*').gte('work_date', start).lte('work_date', end);
+    if (!showDeleted) q = q.is('deleted_at', null);
+    if (fSabun)  q = q.ilike('worker_id', `%${fSabun}%`);
+    if (fWorker) q = q.ilike('worker_name', `%${fWorker}%`);
+    const { data } = await q.order('work_date', { ascending: false });
+    cachedData.쇼트 = data || [];
+  }
+
   render();
 }
 
@@ -833,6 +843,8 @@ function render() {
     renderCoatingTable(cachedData.도포);
   } else if (currentProcess === '2차가류') {
     renderPostcureTable(cachedData['2차가류']);
+  } else if (currentProcess === '쇼트') {
+    renderShotTable(cachedData.쇼트);
   }
 }
 
@@ -844,9 +856,10 @@ function renderStats() {
   const cut = cachedData.재단 || [];
   const coat = cachedData.도포 || [];
   const pc = cachedData['2차가류'] || [];
+  const shot = cachedData.쇼트 || [];
 
   if (currentProcess === 'all') {
-    const totalCount = pkg.length + ins.length + cmb.length + cut.length + coat.length + pc.length;
+    const totalCount = pkg.length + ins.length + cmb.length + cut.length + coat.length + pc.length + shot.length;
     const totalQty = pkg.reduce((s,r)=>s+(r.quantity||0),0);
     const totalInspect = ins.reduce((s,r)=>s+(r.inspect_qty||0),0);
     const totalCmbWeight = cmb.filter(r => !r.is_remix).reduce((s,r)=>s+(parseFloat(r.weight)||0),0);
@@ -936,6 +949,16 @@ function renderStats() {
       <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-label">작업자 수</div><div class="stat-num orange">${workers} <span class="stat-unit">명</span></div></div>
       <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-label">조회 기간</div><div class="stat-num" style="font-size:14px">${document.getElementById('startDate').value} ~<br>${document.getElementById('endDate').value}</div></div>
     `;
+  } else if (currentProcess === '쇼트') {
+    const totalQty = shot.reduce((s,r)=>s+(r.work_qty||0),0);
+    const freezeCount = shot.filter(r=>r.shot_type==='freeze').length;
+    const autoCount = shot.filter(r=>r.shot_type==='auto').length;
+    statsEl.innerHTML = `
+      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">쇼트 건수</div><div class="stat-num blue">${shot.length} <span class="stat-unit">건</span></div></div>
+      <div class="stat-card"><div class="stat-icon">💥</div><div class="stat-label">총 작업수량</div><div class="stat-num green">${totalQty.toLocaleString()} <span class="stat-unit">EA</span></div></div>
+      <div class="stat-card"><div class="stat-icon">❄️</div><div class="stat-label">냉동 / 자동</div><div class="stat-num">${freezeCount} <span class="stat-unit">/ </span>${autoCount}</div></div>
+      <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-label">조회 기간</div><div class="stat-num" style="font-size:14px">${document.getElementById('startDate').value} ~<br>${document.getElementById('endDate').value}</div></div>
+    `;
   }
 }
 
@@ -946,6 +969,7 @@ function renderAllSections() {
   const cut = cachedData.재단 || [];
   const coat = cachedData.도포 || [];
   const pc = cachedData['2차가류'] || [];
+  const shot = cachedData.쇼트 || [];
   const html = `
     <div class="process-section">
       <div class="section-header">
@@ -1023,6 +1047,20 @@ function renderAllSections() {
               return `<div style="font-size:12px;color:#555;padding:6px 0;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between"><span>${r.work_date} · ${r.worker_id||'-'} · ${r.material_name||'-'}</span><span style="color:#243bb2;font-weight:500">${(r.input_qty||0).toLocaleString()} EA</span></div>`;
             }).join('')
           + (pc.length > 5 ? `<div style="text-align:center;padding-top:8px"><button class="btn-section-detail" onclick="switchProcess('2차가류')">전체 ${pc.length}건 보기 →</button></div>` : '')}
+      </div>
+    </div>
+    <div class="process-section">
+      <div class="section-header">
+        <span class="section-title">💥 쇼트 작업일지</span>
+        <span class="section-count">${shot.length}건</span>
+      </div>
+      <div class="section-card">
+        ${shot.length === 0 ? '<div style="color:#aaa;text-align:center;padding:1rem;font-size:13px">데이터 없음</div>'
+          : shot.slice(0, 5).map(r => {
+              const typeTag = r.shot_type==='freeze' ? '❄️냉동' : '⚙️자동';
+              return `<div style="font-size:12px;color:#555;padding:6px 0;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between"><span>${r.work_date} · ${typeTag} · ${r.worker_id||'-'}</span><span style="color:#243bb2;font-weight:500">${(r.work_qty||0).toLocaleString()} EA</span></div>`;
+            }).join('')
+          + (shot.length > 5 ? `<div style="text-align:center;padding-top:8px"><button class="btn-section-detail" onclick="switchProcess('쇼트')">전체 ${shot.length}건 보기 →</button></div>` : '')}
       </div>
     </div>
   `;
@@ -1750,6 +1788,37 @@ async function deletePostcure(id) {
   loadData();
 }
 
+// ── 쇼트 테이블 렌더링 ──────────────────────────────
+function renderShotTable(data) {
+  if (!data.length) { document.getElementById('resultArea').innerHTML = '<div class="card"><div style="padding:2rem;text-align:center;color:#aaa;font-size:13px">데이터가 없어요.</div></div>'; return; }
+  document.getElementById('resultArea').innerHTML = `
+    <div class="card" style="padding:0"><div class="table-wrap"><table><thead><tr>
+      <th>NO</th><th>작업일</th><th>유형</th><th>설비</th><th>사번</th>
+      <th>온도/사상시간</th><th>시간/회전시간</th><th>수량</th><th>볼크기</th><th>RPM</th>
+      <th>LOT</th><th>작업자</th><th>비고</th><th>입력자</th><th>제출일시</th><th>작업</th>
+    </tr></thead><tbody>
+    ${data.map((r,i) => {
+      const del = r.deleted_at;
+      const st = del ? 'background:#f9f9f9;opacity:0.5;text-decoration:line-through' : '';
+      const typeTag = r.shot_type==='freeze' ? '<span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:4px;font-size:11px">❄️ 냉동</span>' : '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px;font-size:11px">⚙️ 자동</span>';
+      const col1 = r.shot_type==='freeze' ? (r.temperature != null ? r.temperature+'℃' : '-') : (r.grinding_time_sec != null ? r.grinding_time_sec+'초' : '-');
+      const col2 = r.shot_type==='freeze' ? (r.duration_min != null ? r.duration_min+'분' : '-') : (r.rotation_time_sec != null ? r.rotation_time_sec+'초' : '-');
+      return `<tr style="${st}"><td>${i+1}</td><td>${r.work_date}</td><td>${typeTag}</td><td style="font-size:11px">${r.equipment||'-'}</td><td>${r.worker_id||'-'}</td>
+        <td>${col1}</td><td>${col2}</td><td style="font-weight:600;color:#243bb2">${(r.work_qty||0).toLocaleString()}</td><td>${r.ball_size||'-'}</td><td>${r.rpm||'-'}</td>
+        <td style="font-size:11px">${r.lot_no||'-'}</td><td>${r.worker_name||'-'}</td><td style="font-size:11px">${r.note||'-'}</td>
+        <td style="font-size:11px">${r.created_by_name||'-'}</td><td style="font-size:11px">${r.created_at?new Date(r.created_at).toLocaleString('ko-KR'):'-'}</td>
+        <td>${del?'<span style="color:#aaa;font-size:11px">삭제됨</span>':`<button class="btn-row-del" onclick="deleteShot(${r.id})">삭제</button>`}</td></tr>`;
+    }).join('')}
+    </tbody></table></div></div>`;
+}
+
+async function deleteShot(id) {
+  if (!confirm('이 기록을 삭제할까요?')) return;
+  await db.from('shot_reports').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+  try { await db.from('audit_logs').insert({ table_name:'shot_reports', record_id:id, action:'DELETE', performed_by:currentUser?.name||'-', performed_at:new Date().toISOString() }); } catch(e){}
+  alert('삭제 완료!'); loadData();
+}
+
 // ── 엑셀 다운로드 ──────────────────────────────
 function downloadExcel() {
   const wb = XLSX.utils.book_new();
@@ -1965,6 +2034,30 @@ function downloadExcel() {
     const ws = XLSX.utils.json_to_sheet(pcRows);
     ws['!cols'] = [{wch:11},{wch:10},{wch:12},{wch:8},{wch:8},{wch:8},{wch:10},{wch:8},{wch:12},{wch:10},{wch:15},{wch:15},{wch:10},{wch:18}];
     XLSX.utils.book_append_sheet(wb, ws, '2차가류 작업일지');
+    added++;
+  }
+
+  // 쇼트 데이터
+  if ((currentProcess === 'all' || currentProcess === '쇼트') && cachedData.쇼트.length > 0) {
+    const shotRows = cachedData.쇼트.filter(r => !r.deleted_at).map(r => ({
+      '작업일': r.work_date,
+      '유형': r.shot_type === 'freeze' ? '냉동쇼트' : '자동사상',
+      '설비명': r.equipment || '',
+      '사번': r.worker_id || '',
+      '온도(℃)': r.temperature || '',
+      '시간(분)': r.duration_min || '',
+      '사상시간(초)': r.grinding_time_sec || '',
+      '회전시간(초)': r.rotation_time_sec || '',
+      '작업수량': r.work_qty || 0,
+      '볼크기': r.ball_size || '',
+      'RPM': r.rpm || '',
+      '생산LOT': r.lot_no || '',
+      '작업자': r.worker_name || '',
+      '비고': r.note || '',
+      '입력자': r.created_by_name || '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(shotRows);
+    XLSX.utils.book_append_sheet(wb, ws, '쇼트 작업일지');
     added++;
   }
 

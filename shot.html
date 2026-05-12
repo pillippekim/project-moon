@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>쇼트 작업일지 - HKHT</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth_guard.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f7fb; color: #1a1a2e; min-height: 100vh; padding: 20px; }
+  .container { max-width: 1400px; margin: 0 auto; }
+
+  .top-bar { position: sticky; top: 0; z-index: 50; display: flex; justify-content: space-between; align-items: center; background: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(36,59,178,0.08); margin-bottom: 20px; }
+  .top-bar .back-btn { background: #f0f3f9; color: #243bb2; border: none; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+  .top-bar .back-btn:hover { background: #e3e8f5; }
+  .top-bar h1 { font-size: 20px; font-weight: 700; color: #243bb2; }
+  .top-bar .user-info { font-size: 13px; color: #666; }
+
+  .alert-banner { background: linear-gradient(135deg, #e8ecfa, #d1d9f5); color: #1a2d8a; padding: 16px 24px; border-radius: 10px; font-size: 14px; margin-bottom: 20px; border-left: 4px solid #243bb2; }
+  .alert-banner .alert-title { font-size: 15px; font-weight: 700; color: #1a2d8a; margin-bottom: 8px; }
+  .alert-banner .alert-sub { font-size: 13px; color: #3b5399; line-height: 1.8; font-weight: 500; }
+
+  .header-info { background: white; padding: 20px 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(36,59,178,0.08); margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: center; }
+  .info-block label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; font-weight: 500; }
+  .info-block input, .info-block select { width: 100%; padding: 10px 12px; border: 1px solid #e0e4ed; border-radius: 8px; font-size: 14px; background: #fafbfd; }
+  .info-block input:focus, .info-block select:focus { outline: none; border-color: #243bb2; background: white; }
+  .info-block .day-display { padding: 10px 12px; font-size: 14px; font-weight: 600; }
+
+  .section { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(36,59,178,0.08); margin-bottom: 20px; overflow: hidden; }
+  .section-header { background: linear-gradient(135deg, #243bb2, #3651d5); color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+  .section-header h2 { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+  .section-body { padding: 20px; }
+
+  /* 잠금 */
+  .work-area-locked { position: relative; }
+  .work-area-locked::before { content: '🔒 설비 점검 완료 후 입력 가능'; position: absolute; inset: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #dc2626; z-index: 10; border-radius: 12px; }
+
+  /* 점검 테이블 */
+  .safety-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+  .safety-table th, .safety-table td { border: 1px solid #e0e4ed; padding: 10px 8px; text-align: center; vertical-align: middle; }
+  .safety-table thead th { background: #fef2f2; color: #991b1b; font-weight: 700; }
+  .safety-table thead th.item-col-header { background: #dc2626; color: white; width: 160px; min-width: 160px; position: sticky; left: 0; z-index: 3; }
+  .safety-table thead th.equipment-header { background: #fef2f2; color: #991b1b; font-weight: 700; min-width: 150px; line-height: 1.4; }
+  .safety-table thead th.equipment-header .eq-sub { display: block; font-size: 10px; color: #b91c1c; font-weight: 400; margin-top: 2px; }
+  .safety-table .item-cell { background: #fef2f2; color: #991b1b; font-weight: 700; text-align: left; padding-left: 12px; font-size: 12px; white-space: nowrap; position: sticky; left: 0; z-index: 2; }
+  .safety-table .item-cell .item-num { display: inline-block; background: #dc2626; color: white; border-radius: 50%; width: 20px; height: 20px; line-height: 20px; text-align: center; margin-right: 6px; font-size: 10px; }
+  .safety-table .remarks-label-cell { background: #fef2f2; color: #991b1b; font-weight: 700; text-align: left; padding-left: 12px; position: sticky; left: 0; z-index: 2; }
+  .cs { display: flex; gap: 4px; justify-content: center; }
+  .cs button { width: 36px; height: 36px; border: 2px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; font-size: 17px; font-weight: 700; transition: all 0.15s; padding: 0; line-height: 1; }
+  .cs button:hover { transform: scale(1.1); }
+  .cs button.active.normal { background: #10b981; color: white; border-color: #10b981; }
+  .cs button.active.repair { background: #f59e0b; color: white; border-color: #f59e0b; }
+  .cs button.active.unusable { background: #ef4444; color: white; border-color: #ef4444; }
+  .cs button.active.notuse { background: #6b7280; color: white; border-color: #6b7280; }
+  .eq-rem { width: 100%; padding: 6px 8px; border: 1px solid #e0e4ed; border-radius: 4px; font-size: 12px; min-width: 120px; }
+  .eq-rem:focus { outline: none; border-color: #dc2626; }
+
+  /* 탭 */
+  .shot-tabs { display: flex; gap: 0; margin-bottom: 16px; border-radius: 10px; overflow: hidden; border: 2px solid #243bb2; }
+  .shot-tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-size: 14px; font-weight: 600; border: none; background: white; color: #243bb2; font-family: inherit; transition: all 0.2s; }
+  .shot-tab.active { background: #243bb2; color: white; }
+  .shot-tab:hover:not(.active) { background: #f0f3f9; }
+
+  /* 입력 테이블 */
+  .input-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+  .input-table th { background: #f0f3f9; color: #243bb2; padding: 12px 8px; font-weight: 700; text-align: center; border-bottom: 2px solid #d6dcec; font-size: 12px; white-space: nowrap; }
+  .input-table td { padding: 6px; border-bottom: 1px solid #f0f2f7; text-align: center; vertical-align: middle; }
+  .input-table tr:hover td { background: #fafbfd; }
+  .input-table input, .input-table select { width: 100%; padding: 8px 10px; border: 1px solid #e0e4ed; border-radius: 6px; font-size: 13px; text-align: center; background: white; }
+  .input-table input:focus, .input-table select:focus { outline: none; border-color: #243bb2; }
+
+  .btn-add-row { margin-top: 12px; width: 100%; padding: 12px; background: #f0f3f9; color: #243bb2; border: 2px dashed #b8c2dc; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+  .btn-add-row:hover { background: #e3e8f5; border-color: #243bb2; }
+  .btn-del-row { background: #fff0f0; color: #c92a2a; border: none; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 16px; }
+
+  .summary-box { margin-top: 20px; padding: 16px 20px; background: linear-gradient(135deg, #f0f3f9, #e3e8f5); border-radius: 10px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .stat-card { text-align: center; padding: 12px; background: white; border-radius: 8px; }
+  .stat-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+  .stat-num { font-size: 22px; font-weight: 800; }
+  .stat-num.blue { color: #243bb2; }
+  .stat-unit { font-size: 12px; color: #999; }
+
+  .remarks-area { width: 100%; min-height: 80px; padding: 12px; border: 1px solid #e0e4ed; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical; }
+  .remarks-area:focus { outline: none; border-color: #243bb2; }
+
+  .action-bar { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(36,59,178,0.08); }
+  .btn-primary, .btn-secondary { padding: 12px 28px; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+  .btn-primary { background: #243bb2; color: white; }
+  .btn-primary:hover { background: #1a2d8e; transform: translateY(-1px); }
+  .btn-primary:disabled { background: #b8c2dc; cursor: not-allowed; transform: none; }
+  .btn-secondary { background: #f0f3f9; color: #555; }
+  .btn-secondary:hover { background: #e3e8f5; }
+
+  .toast { position: fixed; top: 30px; left: 50%; transform: translateX(-50%) translateY(-100px); background: #243bb2; color: white; padding: 14px 28px; border-radius: 10px; box-shadow: 0 8px 24px rgba(36,59,178,0.3); font-weight: 600; z-index: 9999; transition: transform 0.3s; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.error { background: #c92a2a; }
+
+  @media (max-width:1024px) { .header-info { grid-template-columns: 1fr 1fr; } .cs button { width: 32px; height: 32px; font-size: 15px; } }
+  @media (max-width:768px) { body { padding: 12px; } .header-info { grid-template-columns: 1fr; } .section-body { padding: 12px; overflow-x: auto; } .input-table { min-width: 900px; } .top-bar { padding: 12px 16px; } .top-bar h1 { font-size: 16px; } .summary-box { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div id="authCheckOverlay" style="position:fixed;inset:0;background:#f5f7fb;z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+  <div style="width:36px;height:36px;border:3px solid #e0e4ed;border-top-color:#243bb2;border-radius:50%;animation:authSpin 0.8s linear infinite"></div>
+  <div style="font-size:13px;color:#888">권한 확인 중...</div>
+  <style>@keyframes authSpin{to{transform:rotate(360deg)}}</style>
+</div>
+
+<div class="container">
+  <div class="top-bar">
+    <a href="index.html" class="back-btn">← 메인으로</a>
+    <h1>💥 쇼트 작업일지</h1>
+    <div class="user-info" id="userInfo">로딩 중...</div>
+  </div>
+
+  <div class="alert-banner">
+    <div class="alert-title">⚠️ 안전이 최우선! 설비 가동 전 보호구 착용 및 점검을 반드시 확인하세요!</div>
+    <div class="alert-sub">📌 쇼트 작업 순서: ☑ 설비 점검 → ☑ 조건 설정(온도/RPM) → ☑ 투입 → ☑ 작업 → ☑ 수량 확인 → ☑ 기록</div>
+  </div>
+
+  <div class="header-info">
+    <div class="info-block"><label>작성일</label><input type="date" id="workDate" onchange="onDateChange()" /></div>
+    <div class="info-block"><label>요일</label><div class="day-display" id="dayDisplay">-</div></div>
+    <div class="info-block"><label>작업자</label><select id="workerSelect"><option value="">선택하세요...</option></select></div>
+  </div>
+
+  <!-- 일일 설비 점검 -->
+  <div class="section" id="safetySection">
+    <div class="section-header" style="background:linear-gradient(135deg,#dc2626,#ef4444)">
+      <h2>🔒 일일 설비 점검 (작업 전 필수)</h2>
+      <span id="safetyStatus" style="font-size:12px;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:6px">점검 진행 중</span>
+    </div>
+    <div class="section-body">
+      <div style="display:flex;justify-content:center;gap:16px;margin-bottom:14px;padding:10px;background:#fef2f2;border-radius:8px;font-size:12px">
+        <span style="display:inline-flex;align-items:center;gap:4px;font-weight:600"><span style="display:inline-block;width:22px;height:22px;border-radius:4px;background:#10b981;color:white;text-align:center;line-height:22px">○</span> 정상</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;font-weight:600"><span style="display:inline-block;width:22px;height:22px;border-radius:4px;background:#f59e0b;color:white;text-align:center;line-height:22px">△</span> 수리요망</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;font-weight:600"><span style="display:inline-block;width:22px;height:22px;border-radius:4px;background:#ef4444;color:white;text-align:center;line-height:22px">×</span> 사용불가</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;font-weight:600"><span style="display:inline-block;width:22px;height:22px;border-radius:4px;background:#6b7280;color:white;text-align:center;line-height:22px">│</span> 미가동</span>
+      </div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <table class="safety-table" id="safetyTable"><thead><tr><th class="item-col-header">점검항목</th></tr></thead><tbody id="safetyRows"></tbody></table>
+      </div>
+      <div style="margin-top:16px;padding:14px;background:#fef2f2;border-radius:8px;border-left:4px solid #dc2626">
+        <label style="font-size:13px;font-weight:600;color:#991b1b;display:block;margin-bottom:8px">📝 전체 특이사항 (선택)</label>
+        <textarea id="safetyOverall" placeholder="설비점검 시 발견한 전체 특이사항" style="width:100%;padding:10px;border:1px solid #e0e4ed;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px"></textarea>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding:12px 16px;background:#f8f9fb;border-radius:8px">
+        <div id="safetyProgress" style="font-size:13px;color:#555">✓ 모든 항목 정상(○)으로 자동 설정됨</div>
+        <button onclick="completeSafety()" style="background:#dc2626;color:white;border:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">점검 완료 ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 작업 영역 -->
+  <div id="workArea" class="work-area-locked">
+
+  <!-- 작업 방식 탭 -->
+  <div class="shot-tabs">
+    <button class="shot-tab active" onclick="switchTab('freeze')">❄️ 냉동쇼트</button>
+    <button class="shot-tab" onclick="switchTab('auto')">⚙️ 자동사상</button>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <h2 id="tableTitle">📋 냉동쇼트 작업 내역</h2>
+    </div>
+    <div class="section-body">
+      <div style="overflow-x:auto">
+        <table class="input-table">
+          <thead id="tableHead"></thead>
+          <tbody id="rowBody"><tr><td colspan="11" style="text-align:center;color:#888;padding:1rem">점검 완료 후 입력 가능</td></tr></tbody>
+        </table>
+      </div>
+      <button class="btn-add-row" onclick="addRow()">+ 행 추가</button>
+      <div class="summary-box">
+        <div class="stat-card"><div class="stat-label">입력 행 수</div><div class="stat-num" id="cntRows">0 <span class="stat-unit">행</span></div></div>
+        <div class="stat-card"><div class="stat-label">총 작업수량</div><div class="stat-num blue" id="cntQty">0 <span class="stat-unit">EA</span></div></div>
+        <div class="stat-card"><div class="stat-label">작업자 수</div><div class="stat-num" id="cntWorkers">0 <span class="stat-unit">명</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header"><h2>💬 특이사항 / 비고</h2></div>
+    <div class="section-body"><textarea class="remarks-area" id="remarks" placeholder="특이사항이 있으면 입력하세요 (선택)"></textarea></div>
+  </div>
+
+  </div><!-- /workArea -->
+
+  <div class="action-bar">
+    <button class="btn-secondary" onclick="resetForm()">초기화</button>
+    <button class="btn-primary" id="submitBtn" onclick="submitForm()">제출하기</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://vpaixxlhzkwtgcllimvn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwYWl4eGxoemt3dGdjbGxpbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNzk4NjMsImV4cCI6MjA5MTk1NTg2M30.V8Bj0cMbM0E2TFhklYYa7TM-vO6Fi70ctACA7uUf4Ig';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const DAYS = ['일','월','화','수','목','금','토'];
+
+// 설비 점검
+const EQUIPMENTS = [
+  { key: 'freeze_1', name: '냉동사상기 1', sub: '생-B-01' },
+  { key: 'freeze_3', name: '냉동사상기 3', sub: '생-B-03' },
+  { key: 'auto_3', name: '자동사상기 3', sub: '생-B-34' },
+  { key: 'cleaning', name: '클리닝기', sub: '품-A-006' }
+];
+
+const CHECK_MAP = {
+  freeze_1: [{num:1,label:'스위치 작동'},{num:2,label:'냉각온도 유지'},{num:3,label:'RPM 설정치'},{num:4,label:'드럼 회전'},{num:5,label:'질소공급'},{num:6,label:'모터 이상음'},{num:7,label:'청결 상태'},{num:8,label:'비상정지 버튼'}],
+  freeze_3: [{num:1,label:'스위치 작동'},{num:2,label:'냉각온도 유지'},{num:3,label:'RPM 설정치'},{num:4,label:'드럼 회전'},{num:5,label:'질소공급'},{num:6,label:'모터 이상음'},{num:7,label:'청결 상태'},{num:8,label:'비상정지 버튼'}],
+  auto_3: [{num:1,label:'스위치 작동'},{num:2,label:'분리기 작동'},{num:3,label:'타이머 작동'},{num:4,label:'드럼 회전'},{num:5,label:'모터 이상음'},{num:6,label:'청결 상태'},{num:7,label:'비상정지 버튼'}],
+  cleaning: [{num:1,label:'스위치 작동'},{num:2,label:'공압실린더'},{num:3,label:'에어 압력'},{num:4,label:'조명 상태'},{num:5,label:'청결 상태'},{num:6,label:'내부 오염도'},{num:7,label:'흡입기 상태'}]
+};
+
+const S_OPTS = [
+  {value:'○',label:'○',cls:'normal'},{value:'△',label:'△',cls:'repair'},
+  {value:'×',label:'×',cls:'unusable'},{value:'│',label:'│',cls:'notuse'}
+];
+
+// 설비명 목록 (작업 내역용)
+const FREEZE_EQUIPS = ['냉동사상기 1','냉동사상기 3'];
+const AUTO_EQUIPS = ['자동사상기 3'];
+
+let myInfo = null, WORKERS = [], PRODUCTS = {};
+let MY_NAME = '', MY_EMP_CODE = '';
+let rows = [], uid = 0;
+let currentTab = 'freeze';
+let safetyDone = false, existSafetyId = null;
+
+function todayStr() { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function onDateChange() {
+  const v=document.getElementById('workDate').value; if(!v){document.getElementById('dayDisplay').textContent='-';return;}
+  const p=v.split('-'); document.getElementById('dayDisplay').textContent=DAYS[new Date(+p[0],+p[1]-1,+p[2]).getDay()]+'요일';
+  checkTodaySafety();
+}
+
+async function loadMaster() {
+  let arr=[],from=0; while(true){const{data}=await db.from('products').select('sabun,part_no,part_name').range(from,from+999);if(!data||!data.length)break;arr=arr.concat(data);if(data.length<1000)break;from+=1000;}
+  arr.forEach(r=>{PRODUCTS[r.sabun]={partNo:r.part_no||'',partName:r.part_name||''};});
+  const{data:w}=await db.from('workers').select('name').eq('process','쇼트').eq('active',true).order('name');
+  if(w) WORKERS=w.map(x=>x.name);
+  const{data:{session}}=await db.auth.getSession();
+  if(session){const{data:u}=await db.from('users').select('emp_code,name').eq('auth_user_id',session.user.id).single();if(u){MY_NAME=u.name;MY_EMP_CODE=u.emp_code;document.getElementById('userInfo').textContent=`${u.name} (입사코드: ${u.emp_code})`;if(!WORKERS.includes(u.name))WORKERS.unshift(u.name);}}
+  const sel=document.getElementById('workerSelect');sel.innerHTML='<option value="">선택하세요...</option>';
+  WORKERS.forEach(n=>{sel.innerHTML+=`<option value="${n}" ${MY_NAME===n?'selected':''}>${n}</option>`;});
+}
+
+// ═══ 점검 ═══
+function initSafety() {
+  const th=document.querySelector('#safetyTable thead tr');
+  th.innerHTML='<th class="item-col-header">점검항목</th>';
+  EQUIPMENTS.forEach(eq=>{th.innerHTML+=`<th class="equipment-header">${eq.name}<span class="eq-sub">${eq.sub}</span></th>`;});
+  const tb=document.getElementById('safetyRows'); tb.innerHTML='';
+  for(let i=1;i<=8;i++){
+    const tr=document.createElement('tr');
+    const fi=CHECK_MAP[EQUIPMENTS[0].key].find(x=>x.num===i);
+    let h=`<td class="item-cell"><span class="item-num">${i}</span>${fi?fi.label:'-'}</td>`;
+    EQUIPMENTS.forEach(eq=>{
+      const it=CHECK_MAP[eq.key].find(x=>x.num===i);
+      if(it){h+=`<td title="${it.label}"><div class="cs" data-eq="${eq.key}" data-item="${i}">${S_OPTS.map(o=>`<button type="button" class="${o.cls} ${o.value==='○'?'active':''}" data-value="${o.value}" onclick="setS('${eq.key}',${i},'${o.value}',this)">${o.label}</button>`).join('')}</div></td>`;}
+      else{h+='<td style="background:#f9f9f9;color:#ccc">-</td>';}
+    });
+    tr.innerHTML=h; tb.appendChild(tr);
+  }
+  const rtr=document.createElement('tr');let rh='<td class="remarks-label-cell">📝 특이사항</td>';
+  EQUIPMENTS.forEach(eq=>{rh+=`<td><input type="text" class="eq-rem" data-eq="${eq.key}" placeholder="이상 시 입력" /></td>`;});
+  rtr.innerHTML=rh; tb.appendChild(rtr);
+}
+function setS(eq,item,val,btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+function collectSafety(){
+  const r={};EQUIPMENTS.forEach(eq=>{r[eq.key]={};CHECK_MAP[eq.key].forEach(it=>{const a=document.querySelector(`#safetyTable .cs[data-eq="${eq.key}"][data-item="${it.num}"] button.active`);r[eq.key][it.num]=a?a.dataset.value:'○';});const rem=document.querySelector(`#safetyTable .eq-rem[data-eq="${eq.key}"]`);r[eq.key].remarks=rem?rem.value:'';});return r;
+}
+async function completeSafety(){
+  const cd=collectSafety(),ov=document.getElementById('safetyOverall').value,wd=document.getElementById('workDate').value;
+  if(!wd){showToast('작성일을 입력해주세요.','error');return;}
+  let bad=false;EQUIPMENTS.forEach(eq=>{CHECK_MAP[eq.key].forEach(it=>{if(cd[eq.key][it.num]==='×')bad=true;});});
+  if(bad&&!confirm('사용불가(×) 항목이 있습니다! 관리자에게 보고하셨나요?'))return;
+  try{const p={check_date:wd,check_data:cd,overall_remarks:ov||null,checked_by_emp_code:MY_EMP_CODE,checked_by_name:MY_NAME,checked_at:new Date().toISOString()};
+  if(existSafetyId){await db.from('shot_safety_check').update(p).eq('id',existSafetyId);}else{await db.from('shot_safety_check').insert(p);}}catch(e){}
+  safetyDone=true;document.getElementById('workArea').classList.remove('work-area-locked');
+  document.getElementById('safetyStatus').textContent='✓ 점검 완료';document.getElementById('safetyStatus').style.background='rgba(255,255,255,0.3)';
+  showToast('✓ 설비 점검 완료!');if(!rows.length){addRow();addRow();addRow();}
+}
+async function checkTodaySafety(){
+  const wd=document.getElementById('workDate').value;if(!wd)return;
+  try{const{data}=await db.from('shot_safety_check').select('*').eq('check_date',wd).order('checked_at',{ascending:false}).limit(1);
+  if(data&&data.length>0){existSafetyId=data[0].id;const cd=data[0].check_data;if(cd){EQUIPMENTS.forEach(eq=>{if(cd[eq.key]){CHECK_MAP[eq.key].forEach(it=>{const v=cd[eq.key][it.num];if(v){const b=document.querySelector(`#safetyTable .cs[data-eq="${eq.key}"][data-item="${it.num}"] button[data-value="${v}"]`);if(b){b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('active'));b.classList.add('active');}}});const rem=document.querySelector(`#safetyTable .eq-rem[data-eq="${eq.key}"]`);if(rem&&cd[eq.key].remarks)rem.value=cd[eq.key].remarks;}});}
+  if(data[0].overall_remarks)document.getElementById('safetyOverall').value=data[0].overall_remarks;
+  safetyDone=true;document.getElementById('workArea').classList.remove('work-area-locked');document.getElementById('safetyStatus').textContent='✓ 점검 완료';showToast('오늘 점검 이력을 불러왔어요');
+  }else{existSafetyId=null;safetyDone=false;document.getElementById('workArea').classList.add('work-area-locked');document.getElementById('safetyStatus').textContent='점검 진행 중';}
+  }catch(e){safetyDone=true;document.getElementById('workArea').classList.remove('work-area-locked');if(!rows.length){addRow();addRow();addRow();}}
+}
+
+// ═══ 탭 전환 ═══
+function switchTab(tab){
+  currentTab=tab;rows=[];uid=0;
+  document.querySelectorAll('.shot-tab').forEach((t,i)=>t.classList.toggle('active',i===(tab==='freeze'?0:1)));
+  document.getElementById('tableTitle').textContent=tab==='freeze'?'📋 냉동쇼트 작업 내역':'📋 자동사상 작업 내역';
+  renderHead();if(safetyDone){addRow();addRow();addRow();}else{document.getElementById('rowBody').innerHTML='<tr><td colspan="11" style="text-align:center;color:#888;padding:1rem">점검 완료 후 입력 가능</td></tr>';}
+  updateSummary();
+}
+function renderHead(){
+  const h=document.getElementById('tableHead');
+  if(currentTab==='freeze'){
+    h.innerHTML='<tr><th style="width:40px">NO</th><th style="width:110px">설비명</th><th style="width:85px">사번</th><th style="width:100px">고객품번</th><th style="width:100px">품명</th><th style="width:70px">온도(℃)</th><th style="width:70px">시간(분)</th><th style="width:80px">작업수량</th><th style="width:70px">볼크기</th><th style="width:60px">RPM</th><th style="min-width:100px">생산LOT</th><th style="min-width:80px">비고</th><th style="width:40px"></th></tr>';
+  }else{
+    h.innerHTML='<tr><th style="width:40px">NO</th><th style="width:110px">설비명</th><th style="width:85px">사번</th><th style="width:100px">고객품번</th><th style="width:100px">품명</th><th style="width:80px">사상시간(초)</th><th style="width:80px">회전시간(초)</th><th style="width:80px">작업수량</th><th style="width:60px">RPM</th><th style="min-width:100px">생산LOT</th><th style="min-width:80px">비고</th><th style="width:40px"></th></tr>';
+  }
+}
+
+// ═══ 행 관리 ═══
+function addRow(){
+  if(!safetyDone){showToast('설비 점검을 먼저 완료해주세요!','error');return;}
+  uid++;const equips=currentTab==='freeze'?FREEZE_EQUIPS:AUTO_EQUIPS;
+  rows.push({id:uid,equip:equips[0]||'',sabun:'',partNo:'',partName:'',temp:'',dur:'',qty:'',ballSize:'',rpm:'',grindSec:'',rotSec:'',lot:'',note:''});
+  renderRows();
+}
+function removeRow(id){rows=rows.filter(r=>r.id!==id);renderRows();}
+function setSabun(id,v){const r=rows.find(x=>x.id===id);if(r)r.sabun=v;}
+function applySabun(id,v){const r=rows.find(x=>x.id===id);if(!r)return;r.sabun=v;const p=PRODUCTS[v];r.partNo=p?p.partNo:'';r.partName=p?p.partName:'';renderRows();}
+function setF(id,f,v){const r=rows.find(x=>x.id===id);if(r)r[f]=v;updateSummary();}
+
+function renderRows(){
+  const tb=document.getElementById('rowBody');
+  if(!rows.length){tb.innerHTML=`<tr><td colspan="13" style="text-align:center;color:#888;padding:1rem">+ 행 추가 버튼을 눌러주세요</td></tr>`;updateSummary();return;}
+  const equips=currentTab==='freeze'?FREEZE_EQUIPS:AUTO_EQUIPS;
+  tb.innerHTML=rows.map((r,i)=>{
+    const eqOpts=equips.map(e=>`<option value="${e}" ${r.equip===e?'selected':''}>${e}</option>`).join('');
+    let cols=`<td><strong>${i+1}</strong></td>
+      <td><select onchange="setF(${r.id},'equip',this.value)">${eqOpts}</select></td>
+      <td><input type="text" value="${r.sabun}" placeholder="사번" oninput="setSabun(${r.id},this.value)" onblur="applySabun(${r.id},this.value)" onkeydown="if(event.key==='Enter')applySabun(${r.id},this.value)" /></td>
+      <td style="font-size:12px;color:${r.partNo?'#1a1a2e':'#bbb'}">${r.partNo||'-'}</td>
+      <td style="font-size:12px;color:${r.partName?'#1a1a2e':'#bbb'}">${r.partName||'-'}</td>`;
+    if(currentTab==='freeze'){
+      cols+=`<td><input type="number" value="${r.temp}" placeholder="℃" step="0.1" oninput="setF(${r.id},'temp',this.value)" /></td>
+        <td><input type="number" value="${r.dur}" placeholder="분" oninput="setF(${r.id},'dur',this.value)" /></td>
+        <td><input type="number" value="${r.qty}" placeholder="0" oninput="setF(${r.id},'qty',this.value)" /></td>
+        <td><input type="text" value="${r.ballSize}" placeholder="-" oninput="setF(${r.id},'ballSize',this.value)" /></td>
+        <td><input type="number" value="${r.rpm}" placeholder="-" oninput="setF(${r.id},'rpm',this.value)" /></td>`;
+    }else{
+      cols+=`<td><input type="number" value="${r.grindSec}" placeholder="초" oninput="setF(${r.id},'grindSec',this.value)" /></td>
+        <td><input type="number" value="${r.rotSec}" placeholder="초" oninput="setF(${r.id},'rotSec',this.value)" /></td>
+        <td><input type="number" value="${r.qty}" placeholder="0" oninput="setF(${r.id},'qty',this.value)" /></td>
+        <td><input type="number" value="${r.rpm}" placeholder="-" oninput="setF(${r.id},'rpm',this.value)" /></td>`;
+    }
+    cols+=`<td><input type="text" value="${r.lot}" placeholder="LOT" oninput="setF(${r.id},'lot',this.value)" /></td>
+      <td><input type="text" value="${r.note}" placeholder="-" oninput="setF(${r.id},'note',this.value)" /></td>
+      <td><button class="btn-del-row" onclick="removeRow(${r.id})">×</button></td>`;
+    return `<tr>${cols}</tr>`;
+  }).join('');
+  updateSummary();
+}
+
+function updateSummary(){
+  const tq=rows.reduce((s,r)=>s+(parseInt(r.qty)||0),0);
+  document.getElementById('cntRows').innerHTML=rows.length+' <span class="stat-unit">행</span>';
+  document.getElementById('cntQty').innerHTML=tq.toLocaleString()+' <span class="stat-unit">EA</span>';
+  document.getElementById('cntWorkers').innerHTML=(document.getElementById('workerSelect').value?1:0)+' <span class="stat-unit">명</span>';
+}
+
+async function submitForm(){
+  const wd=document.getElementById('workDate').value,wn=document.getElementById('workerSelect').value,rem=document.getElementById('remarks').value;
+  const valid=rows.filter(r=>r.sabun||r.qty);
+  if(!wd){showToast('작성일을 입력해주세요.','error');return;}
+  if(!wn){showToast('작업자를 선택해주세요.','error');return;}
+  if(!valid.length){showToast('작업 내역을 1건 이상 입력해주세요.','error');return;}
+  const btn=document.getElementById('submitBtn');btn.disabled=true;btn.textContent='제출 중...';
+  const recs=valid.map(r=>({
+    work_date:wd,shot_type:currentTab,equipment:r.equip,worker_id:r.sabun,worker_name:wn,
+    temperature:currentTab==='freeze'?(parseFloat(r.temp)||null):null,
+    duration_min:currentTab==='freeze'?(parseInt(r.dur)||null):null,
+    ball_size:currentTab==='freeze'?r.ballSize:null,
+    grinding_time_sec:currentTab==='auto'?(parseInt(r.grindSec)||null):null,
+    rotation_time_sec:currentTab==='auto'?(parseInt(r.rotSec)||null):null,
+    work_qty:parseInt(r.qty)||0,rpm:parseInt(r.rpm)||null,lot_no:r.lot,note:r.note,remarks:rem,
+    created_by_emp_code:MY_EMP_CODE,created_by_name:MY_NAME
+  }));
+  const{error}=await db.from('shot_reports').insert(recs);
+  if(error){showToast('저장 실패: '+error.message,'error');btn.disabled=false;btn.textContent='제출하기';}
+  else{showToast('✓ '+recs.length+'건 제출 완료!');setTimeout(()=>resetForm(false),1500);}
+}
+
+function resetForm(ask=true){
+  if(ask&&!confirm('입력한 내용을 모두 초기화할까요?'))return;
+  rows=[];uid=0;document.getElementById('remarks').value='';
+  const btn=document.getElementById('submitBtn');btn.disabled=false;btn.textContent='제출하기';
+  renderRows(); if(safetyDone){addRow();addRow();addRow();}
+}
+
+function showToast(m,t){const e=document.getElementById('toast');e.textContent=m;e.className='toast show'+(t==='error'?' error':'');setTimeout(()=>e.classList.remove('show'),3000);}
+
+// 초기화
+(async function(){
+  if(typeof checkPageAccess==='function'){myInfo=await checkPageAccess('shot.html');if(!myInfo)return;}
+  document.getElementById('authCheckOverlay').style.display='none';
+  document.getElementById('workDate').value=todayStr();onDateChange();
+  await loadMaster();initSafety();await checkTodaySafety();
+  document.getElementById('workDate').addEventListener('change',checkTodaySafety);
+  renderHead();if(safetyDone){addRow();addRow();addRow();}
+})();
+</script>
+</body>
+</html>
