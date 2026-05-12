@@ -990,13 +990,12 @@ function getNextBatchNo() {
 function addRow() {
   rowCounter++;
   const rowId = `row_${rowCounter}`;
-  const batchNo = getNextBatchNo();
   
   const tr = document.createElement('tr');
   tr.id = rowId;
   tr.innerHTML = `
     <td><strong>${document.querySelectorAll('#mainRows tr').length + 1}</strong></td>
-    <td><input type="text" class="batch-no" value="${batchNo}" /></td>
+    <td><input type="text" class="batch-no" value="" placeholder="자동부여" readonly style="color:#999" /></td>
     <td><input type="text" class="sabun" placeholder="제품코드 (예: 502335)" oninput="onSabunChange('${rowId}')" /></td>
     <td>
       <select class="material">
@@ -1038,13 +1037,20 @@ function renumberRows() {
   });
 }
 
-// 사번 입력 시 재질 자동 채움
+// 사번 입력 시 재질 자동 채움 + BATCH No. 자동 부여
 function onSabunChange(rowId) {
   const tr = document.getElementById(rowId);
   const sabun = tr.querySelector('.sabun').value.trim();
   const material = tr.querySelector('.material');
+  const batchInput = tr.querySelector('.batch-no');
   
   if (!sabun) return;
+  
+  // BATCH No.가 비어있으면 자동 채번
+  if (!batchInput.value) {
+    batchInput.value = getNextBatchNo();
+    batchInput.style.color = '#555';
+  }
   
   // 사번을 문자열로 강제 변환하여 비교 (DB의 text 타입에 맞춤)
   const product = productsCache.find(p => String(p.sabun).trim() === sabun);
@@ -1164,6 +1170,10 @@ async function submitReport() {
     const isRemix = tr.querySelector('.remix').checked;
     const weighingOK = tr.querySelector('.weighing-check').value === 'true';
     const note = tr.querySelector('.note').value.trim();
+    
+    if (!batchNo && !sabun && weight <= 0) {
+      continue; // 빈 행은 건너뜀
+    }
     
     if (!batchNo || !material || weight <= 0) {
       showToast(`행 ${tr.querySelector('td:first-child').textContent}: BATCH/재질/중량 필수`, 'error');
