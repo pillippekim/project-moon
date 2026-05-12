@@ -118,22 +118,45 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
   <!-- 관리자 화면 -->
   <div id="adminView" class="hidden">
-    <!-- 오늘 통계 (관리자만) -->
+    <!-- 오늘 통계 (관리자만) - 상단 4개 -->
     <div class="stats-row" id="statsRow">
       <div class="stat-card">
-        <div class="stat-icon">📦</div>
-        <div class="stat-label">오늘 작업일지</div>
+        <div class="stat-icon">📋</div>
+        <div class="stat-label">오늘 전체 작업일지</div>
         <div class="stat-num blue" id="todayCount">- <span class="stat-unit">건</span></div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon">📊</div>
+        <div class="stat-icon">📦</div>
         <div class="stat-label">오늘 포장수량</div>
         <div class="stat-num green" id="todayQty">- <span class="stat-unit">EA</span></div>
       </div>
       <div class="stat-card">
+        <div class="stat-icon">🔬</div>
+        <div class="stat-label">오늘 검사수량</div>
+        <div class="stat-num" id="todayInspect">- <span class="stat-unit">EA</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-label">오늘 합격수량</div>
+        <div class="stat-num green" id="todayPass">- <span class="stat-unit">EA</span></div>
+      </div>
+    </div>
+    <!-- 하단 4개 -->
+    <div class="stats-row" id="statsRow2">
+      <div class="stat-card">
+        <div class="stat-icon">🧪</div>
+        <div class="stat-label">혼련 사용량</div>
+        <div class="stat-num blue" id="todayCmb">- <span class="stat-unit">Kg</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">✂️</div>
+        <div class="stat-label">재단 박스</div>
+        <div class="stat-num orange" id="todayCutting">- <span class="stat-unit">개</span></div>
+      </div>
+      <div class="stat-card">
         <div class="stat-icon">👥</div>
         <div class="stat-label">오늘 작업자</div>
-        <div class="stat-num orange" id="todayWorkers">- <span class="stat-unit">명</span></div>
+        <div class="stat-num" id="todayWorkers">- <span class="stat-unit">명</span></div>
       </div>
       <div class="stat-card">
         <div class="stat-icon">📄</div>
@@ -388,17 +411,56 @@ async function loadStats() {
     String(today.getMonth()+1).padStart(2,'0') + '-' +
     String(today.getDate()).padStart(2,'0');
 
-  const { data: reports } = await db.from('packaging_reports')
+  // 포장
+  const { data: pkgReports } = await db.from('packaging_reports')
     .select('quantity, worker_name')
     .eq('work_date', todayStr);
 
-  const count = reports ? reports.length : 0;
-  const totalQty = reports ? reports.reduce((s,r) => s+(r.quantity||0), 0) : 0;
-  const workers = reports ? new Set(reports.filter(r=>r.worker_name).map(r=>r.worker_name)).size : 0;
+  const pkgCount = pkgReports ? pkgReports.length : 0;
+  const totalQty = pkgReports ? pkgReports.reduce((s,r) => s+(r.quantity||0), 0) : 0;
 
-  document.getElementById('todayCount').innerHTML = count + ' <span class="stat-unit">건</span>';
+  // 검사
+  const { data: insReports } = await db.from('inspection_reports')
+    .select('inspect_qty, pass_qty, worker_name')
+    .eq('work_date', todayStr);
+
+  const insCount = insReports ? insReports.length : 0;
+  const totalInspect = insReports ? insReports.reduce((s,r) => s+(r.inspect_qty||0), 0) : 0;
+  const totalPass = insReports ? insReports.reduce((s,r) => s+(r.pass_qty||0), 0) : 0;
+
+  // 혼련(CMB)
+  const { data: cmbReports } = await db.from('cmb_reports')
+    .select('weight, is_remix, worker_name')
+    .eq('work_date', todayStr);
+
+  const cmbCount = cmbReports ? cmbReports.length : 0;
+  const totalCmb = cmbReports ? cmbReports.filter(r => !r.is_remix).reduce((s,r) => s+(r.weight||0), 0) : 0;
+
+  // 재단
+  const { data: cutReports } = await db.from('cutting_reports')
+    .select('box_count, worker_name')
+    .eq('work_date', todayStr);
+
+  const cutCount = cutReports ? cutReports.length : 0;
+  const totalCutBox = cutReports ? cutReports.reduce((s,r) => s+(r.box_count||0), 0) : 0;
+
+  // 전체 작업자 수 (모든 공정 합산)
+  const allWorkers = new Set();
+  [pkgReports, insReports, cmbReports, cutReports].forEach(arr => {
+    if (arr) arr.forEach(r => { if (r.worker_name) allWorkers.add(r.worker_name); });
+  });
+
+  // 전체 건수
+  const totalCount = pkgCount + insCount + cmbCount + cutCount;
+
+  // 화면 업데이트
+  document.getElementById('todayCount').innerHTML = totalCount + ' <span class="stat-unit">건</span>';
   document.getElementById('todayQty').innerHTML = totalQty.toLocaleString() + ' <span class="stat-unit">EA</span>';
-  document.getElementById('todayWorkers').innerHTML = workers + ' <span class="stat-unit">명</span>';
+  document.getElementById('todayInspect').innerHTML = totalInspect.toLocaleString() + ' <span class="stat-unit">EA</span>';
+  document.getElementById('todayPass').innerHTML = totalPass.toLocaleString() + ' <span class="stat-unit">EA</span>';
+  document.getElementById('todayCmb').innerHTML = totalCmb.toFixed(1) + ' <span class="stat-unit">Kg</span>';
+  document.getElementById('todayCutting').innerHTML = totalCutBox.toLocaleString() + ' <span class="stat-unit">개</span>';
+  document.getElementById('todayWorkers').innerHTML = allWorkers.size + ' <span class="stat-unit">명</span>';
 
   const { data: docs } = await db.from('documents').select('id').eq('is_current', true);
   document.getElementById('totalDocs').innerHTML = (docs ? docs.length : 0) + ' <span class="stat-unit">건</span>';
