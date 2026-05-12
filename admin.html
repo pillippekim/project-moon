@@ -135,7 +135,7 @@ tr:hover td { background: #fafafa; }
     <button class="process-tab" data-process="검사" onclick="switchProcess('검사')">🔬 검사</button>
     <button class="process-tab" data-process="혼련(CMB)" onclick="switchProcess('혼련(CMB)')">🧪 혼련(CMB)</button>
     <button class="process-tab" data-process="재단" onclick="switchProcess('재단')">✂️ 재단</button>
-    <button class="process-tab" data-process="도포" onclick="switchProcess('도포')" disabled style="opacity:0.5">🎨 도포</button>
+    <button class="process-tab" data-process="도포" onclick="switchProcess('도포')">🎨 도포</button>
     <button class="process-tab" data-process="쇼트" onclick="switchProcess('쇼트')" disabled style="opacity:0.5">💥 쇼트</button>
     <button class="process-tab" data-process="성형" onclick="switchProcess('성형')" disabled style="opacity:0.5">🔧 성형</button>
   </div>
@@ -461,7 +461,7 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentProcess = 'all';
 let unifiedView = false;
-let cachedData = { 포장: [], 검사: [], 'CMB': [], 재단: [], 재단점검: [] };
+let cachedData = { 포장: [], 검사: [], 'CMB': [], 재단: [], 재단점검: [], 도포: [] };
 let PRODUCTS = {};
 let myInfo = null;
 let showDeleted = false;
@@ -787,6 +787,16 @@ async function loadData() {
     cachedData.재단점검 = safetyData || [];
   }
 
+  // 도포
+  {
+    let q = db.from('coating_reports').select('*').gte('work_date', start).lte('work_date', end);
+    if (!showDeleted) q = q.is('deleted_at', null);
+    if (fSabun)  q = q.ilike('worker_id', `%${fSabun}%`);
+    if (fWorker) q = q.ilike('worker_name', `%${fWorker}%`);
+    const { data } = await q.order('work_date', { ascending: false });
+    cachedData.도포 = data || [];
+  }
+
   render();
 }
 
@@ -803,6 +813,8 @@ function render() {
     renderCmbTable(cachedData.CMB);
   } else if (currentProcess === '재단') {
     renderCuttingTable(cachedData.재단);
+  } else if (currentProcess === '도포') {
+    renderCoatingTable(cachedData.도포);
   }
 }
 
@@ -812,9 +824,10 @@ function renderStats() {
   const ins = cachedData.검사 || [];
   const cmb = cachedData.CMB || [];
   const cut = cachedData.재단 || [];
+  const coat = cachedData.도포 || [];
 
   if (currentProcess === 'all') {
-    const totalCount = pkg.length + ins.length + cmb.length + cut.length;
+    const totalCount = pkg.length + ins.length + cmb.length + cut.length + coat.length;
     const totalQty = pkg.reduce((s,r)=>s+(r.quantity||0),0);
     const totalInspect = ins.reduce((s,r)=>s+(r.inspect_qty||0),0);
     const totalCmbWeight = cmb.filter(r => !r.is_remix).reduce((s,r)=>s+(parseFloat(r.weight)||0),0);
@@ -884,6 +897,17 @@ function renderStats() {
       <div class="stat-card"><div class="stat-icon">🗑️</div><div class="stat-label">총 자투리</div><div class="stat-num orange">${totalScrap.toFixed(2)} <span class="stat-unit">g</span></div></div>
       <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-label">설비 이상 (△/×)</div><div class="stat-num red">${repairCount}/${unusableCount} <span class="stat-unit">건</span></div></div>
     `;
+  } else if (currentProcess === '도포') {
+    const coat = cachedData.도포 || [];
+    const totalQty = coat.reduce((s,r)=>s+(r.total_qty||0),0);
+    const totalDefect = coat.reduce((s,r)=>s+(r.defect_qty||0),0);
+    const defectRate = totalQty > 0 ? ((totalDefect/totalQty)*100).toFixed(1) : '0.0';
+    statsEl.innerHTML = `
+      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">도포 건수</div><div class="stat-num blue">${coat.length} <span class="stat-unit">건</span></div></div>
+      <div class="stat-card"><div class="stat-icon">🎨</div><div class="stat-label">총 작업수량</div><div class="stat-num green">${totalQty.toLocaleString()} <span class="stat-unit">EA</span></div></div>
+      <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-label">불량수량</div><div class="stat-num red">${totalDefect.toLocaleString()} <span class="stat-unit">EA</span></div></div>
+      <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-label">불량률</div><div class="stat-num">${defectRate} <span class="stat-unit">%</span></div></div>
+    `;
   }
 }
 
@@ -892,6 +916,7 @@ function renderAllSections() {
   const ins = cachedData.검사 || [];
   const cmb = cachedData.CMB || [];
   const cut = cachedData.재단 || [];
+  const coat = cachedData.도포 || [];
   const html = `
     <div class="process-section">
       <div class="section-header">
@@ -943,6 +968,19 @@ function renderAllSections() {
               return `<div style="font-size:12px;color:#555;padding:6px 0;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between"><span>${r.work_date} · ${r.worker_id||'-'} · ${r.material_name||'-'}</span><span style="color:#7e22ce;font-weight:500">${(r.box_count||0).toLocaleString()} 박스</span></div>`;
             }).join('')
           + (cut.length > 5 ? `<div style="text-align:center;padding-top:8px"><button class="btn-section-detail" onclick="switchProcess('재단')">전체 ${cut.length}건 보기 →</button></div>` : '')}
+      </div>
+    </div>
+    <div class="process-section">
+      <div class="section-header">
+        <span class="section-title">🎨 도포 작업일지</span>
+        <span class="section-count">${coat.length}건</span>
+      </div>
+      <div class="section-card">
+        ${coat.length === 0 ? '<div style="color:#aaa;text-align:center;padding:1rem;font-size:13px">데이터 없음</div>'
+          : coat.slice(0, 5).map(r => {
+              return `<div style="font-size:12px;color:#555;padding:6px 0;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between"><span>${r.work_date} · ${r.worker_id||'-'} · ${r.work_type||'-'}</span><span style="color:#243bb2;font-weight:500">${(r.total_qty||0).toLocaleString()} EA</span></div>`;
+            }).join('')
+          + (coat.length > 5 ? `<div style="text-align:center;padding-top:8px"><button class="btn-section-detail" onclick="switchProcess('도포')">전체 ${coat.length}건 보기 →</button></div>` : '')}
       </div>
     </div>
   `;
@@ -1333,40 +1371,62 @@ function renderCuttingTable(data) {
 // 안전점검 데이터 팝업으로 보여주기
 function showSafetyData(safety) {
   const EQUIPMENTS = [
-    { key: 'sharing_1', name: '샤링 1호 (자동재단기 1)' },
-    { key: 'sharing_2', name: '샤링 2호 (자동재단기 2)' },
-    { key: 'sharing_3', name: '샤링 3호 (폭재단기 1)' },
-    { key: 'sharing_4', name: '샤링 4호 (폭재단기 2)' }
+    { key: 'sharing_1', name: '샤링 1호', sub: '자동재단기 1' },
+    { key: 'sharing_2', name: '샤링 2호', sub: '자동재단기 2' },
+    { key: 'sharing_3', name: '샤링 3호', sub: '폭재단기 1' },
+    { key: 'sharing_4', name: '샤링 4호', sub: '폭재단기 2' }
   ];
   const ITEMS = [
-    '1.스위치 작동', '2.칼날 상태', '3.모터 이상음', '4.작동유 충만',
-    '5.안전커버 작동', '6.에어압력', '7.청결 상태', '8.비상정지 버튼'
+    { num: 1, label: '스위치 작동' },
+    { num: 2, label: '칼날 상태' },
+    { num: 3, label: '모터 이상음' },
+    { num: 4, label: '작동유 충만' },
+    { num: 5, label: '안전커버 작동' },
+    { num: 6, label: '에어압력' },
+    { num: 7, label: '청결 상태' },
+    { num: 8, label: '비상정지 버튼' }
   ];
   
-  let html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
-  html += '<thead><tr><th style="background:#dc2626;color:white;padding:8px;border:1px solid #ddd">설비</th>';
-  for (let i = 1; i <= 8; i++) {
-    html += `<th style="background:#fef2f2;color:#991b1b;padding:6px 4px;border:1px solid #ddd;font-size:10px">${ITEMS[i-1]}</th>`;
-  }
-  html += '<th style="background:#fef2f2;color:#991b1b;padding:6px 4px;border:1px solid #ddd">특이사항</th>';
+  // 축 전환: 점검항목=세로(행), 설비=가로(열) — cutting.html과 동일
+  let html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">';
+  // thead: 점검항목 | 설비1 | 설비2 | ...
+  html += '<thead><tr><th style="background:#dc2626;color:white;padding:10px 12px;border:1px solid #ddd;text-align:center;min-width:130px">점검항목</th>';
+  EQUIPMENTS.forEach(eq => {
+    html += `<th style="background:#fef2f2;color:#991b1b;padding:8px 6px;border:1px solid #ddd;font-size:11px;min-width:140px">${eq.name}<br><span style="font-size:10px;font-weight:400;color:#b91c1c">${eq.sub}</span></th>`;
+  });
   html += '</tr></thead><tbody>';
   
-  EQUIPMENTS.forEach(eq => {
-    const data = safety.check_data?.[eq.key] || {};
-    html += `<tr><td style="padding:8px;border:1px solid #ddd;background:#fef2f2;font-weight:600;color:#991b1b">${eq.name}</td>`;
-    for (let i = 1; i <= 8; i++) {
-      const v = data[i] || '-';
+  // 점검항목별 행
+  ITEMS.forEach(item => {
+    html += `<tr><td style="padding:8px 12px;border:1px solid #ddd;background:#fef2f2;font-weight:600;color:#991b1b;white-space:nowrap"><span style="display:inline-block;background:#dc2626;color:white;border-radius:50%;width:18px;height:18px;line-height:18px;text-align:center;font-size:10px;margin-right:4px">${item.num}</span>${item.label}</td>`;
+    EQUIPMENTS.forEach(eq => {
+      const data = safety.check_data?.[eq.key] || {};
+      const v = data[item.num] || '-';
       let bg = 'white', color = '#666';
       if (v === '○') { bg = '#10b981'; color = 'white'; }
       else if (v === '△') { bg = '#f59e0b'; color = 'white'; }
       else if (v === '×') { bg = '#ef4444'; color = 'white'; }
       else if (v === '│') { bg = '#6b7280'; color = 'white'; }
-      html += `<td style="padding:6px;border:1px solid #ddd;text-align:center;background:${bg};color:${color};font-weight:700">${v}</td>`;
-    }
-    html += `<td style="padding:6px;border:1px solid #ddd;font-size:11px">${data.remarks || '-'}</td>`;
+      html += `<td style="padding:6px;border:1px solid #ddd;text-align:center;background:${bg};color:${color};font-weight:700;font-size:16px">${v}</td>`;
+    });
     html += '</tr>';
   });
-  html += '</tbody></table>';
+  
+  // 특이사항 행
+  html += '<tr><td style="padding:8px 12px;border:1px solid #ddd;background:#fef2f2;font-weight:600;color:#991b1b">📝 특이사항</td>';
+  EQUIPMENTS.forEach(eq => {
+    const data = safety.check_data?.[eq.key] || {};
+    html += `<td style="padding:6px;border:1px solid #ddd;font-size:11px">${data.remarks || '-'}</td>`;
+  });
+  html += '</tr></tbody></table></div>';
+  
+  // 범례
+  html += '<div style="display:flex;gap:12px;justify-content:center;margin-top:12px;font-size:11px;font-weight:600">';
+  html += '<span><span style="display:inline-block;width:18px;height:18px;background:#10b981;color:white;border-radius:4px;text-align:center;line-height:18px;font-size:10px;margin-right:3px">○</span>정상</span>';
+  html += '<span><span style="display:inline-block;width:18px;height:18px;background:#f59e0b;color:white;border-radius:4px;text-align:center;line-height:18px;font-size:10px;margin-right:3px">△</span>수리요망</span>';
+  html += '<span><span style="display:inline-block;width:18px;height:18px;background:#ef4444;color:white;border-radius:4px;text-align:center;line-height:18px;font-size:10px;margin-right:3px">×</span>사용불가</span>';
+  html += '<span><span style="display:inline-block;width:18px;height:18px;background:#6b7280;color:white;border-radius:4px;text-align:center;line-height:18px;font-size:10px;margin-right:3px">│</span>미가동</span>';
+  html += '</div>';
   
   if (safety.overall_remarks) {
     html += `<div style="margin-top:14px;padding:12px;background:#fef2f2;border-left:4px solid #dc2626;border-radius:6px"><strong style="color:#991b1b">전체 특이사항:</strong><br>${safety.overall_remarks}</div>`;
@@ -1376,17 +1436,19 @@ function showSafetyData(safety) {
   
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  overlay.innerHTML = `
-    <div style="background:white;border-radius:12px;padding:24px;max-width:900px;width:100%;max-height:85vh;overflow-y:auto">
-      <h3 style="margin:0 0 16px;color:#dc2626">🔒 일일 안전 점검 (${safety.check_date})</h3>
-      ${html}
-      <div style="text-align:right;margin-top:16px">
-        <button onclick="this.closest('div[style*=\\'position:fixed\\']').remove()" style="padding:8px 20px;background:#243bb2;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600">닫기</button>
-      </div>
+  const box = document.createElement('div');
+  box.style.cssText = 'background:white;border-radius:12px;padding:24px;max-width:900px;width:100%;max-height:85vh;overflow-y:auto';
+  box.innerHTML = `
+    <h3 style="margin:0 0 16px;color:#dc2626">🔒 일일 안전 점검 (${safety.check_date})</h3>
+    ${html}
+    <div style="text-align:right;margin-top:16px">
+      <button id="__safetyPopupClose" style="padding:8px 20px;background:#243bb2;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600">닫기</button>
     </div>
   `;
+  overlay.appendChild(box);
   overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
   document.body.appendChild(overlay);
+  document.getElementById('__safetyPopupClose').onclick = () => overlay.remove();
 }
 
 // ── 재단 수정 ──────────────────────────────
@@ -1431,6 +1493,125 @@ async function saveEditCutting() {
 
   showToast('수정 완료 ✓');
   closeModal('editCuttingModal');
+  loadData();
+}
+
+// ── 도포 테이블 렌더링 ──────────────────────────────
+function renderCoatingTable(data) {
+  if (!data.length) {
+    document.getElementById('resultArea').innerHTML = '<div class="card"><div style="padding:2rem;text-align:center;color:#aaa;font-size:13px">데이터가 없어요.</div></div>';
+    return;
+  }
+  document.getElementById('resultArea').innerHTML = `
+    <div class="card" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>NO</th><th>작업일</th><th>사번</th><th>작업종류</th>
+              <th>줄당EA</th><th>줄수</th><th>총수량</th><th>불량</th>
+              <th>작업자</th><th>비고</th><th>특이사항</th>
+              <th>입력자</th><th>제출일시</th><th>작업</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.map((r, i) => {
+              const isDeleted = r.deleted_at;
+              const rowStyle = isDeleted ? 'background:#f9f9f9;opacity:0.5;text-decoration:line-through' : '';
+              const defectStyle = (r.defect_qty||0) > 0 ? 'color:#e53e3e;font-weight:600' : '';
+              return `<tr style="${rowStyle}">
+                <td>${i+1}</td>
+                <td>${r.work_date}</td>
+                <td>${r.worker_id||'-'}</td>
+                <td><span style="background:#e8ecfa;color:#243bb2;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500">${r.work_type||'-'}</span></td>
+                <td>${r.qty_per_line||0}</td>
+                <td>${r.line_count||0}</td>
+                <td style="font-weight:600;color:#243bb2">${(r.total_qty||0).toLocaleString()}</td>
+                <td style="${defectStyle}">${(r.defect_qty||0).toLocaleString()}</td>
+                <td>${r.worker_name||'-'}</td>
+                <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.note||'-'}</td>
+                <td style="font-size:11px">${r.remarks||'-'}</td>
+                <td style="font-size:11px">${r.created_by_name||'-'}</td>
+                <td style="font-size:11px">${r.created_at ? new Date(r.created_at).toLocaleString('ko-KR') : '-'}</td>
+                <td>${isDeleted ? '<span style="color:#aaa;font-size:11px">삭제됨</span>' : `<button class="btn-row" onclick='openEditCoating(${JSON.stringify(r).replace(/'/g, "&#39;")})'>수정</button> <button class="btn-row-del" onclick="deleteCoating(${r.id})">삭제</button>`}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ── 도포 수정 ──────────────────────────────
+let editingCoatingBefore = null;
+function openEditCoating(r) {
+  editingCoatingBefore = JSON.parse(JSON.stringify(r));
+  // 간단한 프롬프트 방식 수정 (모달 없이)
+  const newWorkType = prompt('작업종류:', r.work_type || '');
+  if (newWorkType === null) return;
+  const newPerLine = prompt('줄당EA:', r.qty_per_line || '0');
+  if (newPerLine === null) return;
+  const newLines = prompt('줄수:', r.line_count || '0');
+  if (newLines === null) return;
+  const newDefect = prompt('불량수량:', r.defect_qty || '0');
+  if (newDefect === null) return;
+  const newNote = prompt('비고:', r.note || '');
+  if (newNote === null) return;
+
+  const pl = parseInt(newPerLine) || 0;
+  const lc = parseInt(newLines) || 0;
+
+  saveEditCoating(r.id, {
+    work_type: newWorkType,
+    qty_per_line: pl,
+    line_count: lc,
+    total_qty: pl * lc,
+    defect_qty: parseInt(newDefect) || 0,
+    note: newNote,
+    updated_at: new Date().toISOString()
+  });
+}
+
+async function saveEditCoating(id, updates) {
+  const { error } = await db.from('coating_reports').update(updates).eq('id', id);
+  if (error) { alert('수정 실패: ' + error.message); return; }
+
+  // 감사 로그
+  try {
+    await db.from('audit_logs').insert({
+      table_name: 'coating_reports',
+      record_id: id,
+      action: 'UPDATE',
+      before_data: editingCoatingBefore,
+      after_data: updates,
+      performed_by: currentUser?.name || '-',
+      performed_at: new Date().toISOString()
+    });
+  } catch(e) {}
+
+  alert('수정 완료!');
+  loadData();
+}
+
+async function deleteCoating(id) {
+  if (!confirm('이 기록을 삭제할까요? (복구 가능)')) return;
+  const { error } = await db.from('coating_reports').update({
+    deleted_at: new Date().toISOString()
+  }).eq('id', id);
+  if (error) { alert('삭제 실패: ' + error.message); return; }
+
+  try {
+    await db.from('audit_logs').insert({
+      table_name: 'coating_reports',
+      record_id: id,
+      action: 'DELETE',
+      performed_by: currentUser?.name || '-',
+      performed_at: new Date().toISOString()
+    });
+  } catch(e) {}
+
+  alert('삭제 완료!');
   loadData();
 }
 
@@ -1603,6 +1784,28 @@ function downloadExcel() {
       wsSafety['!cols'] = [{wch:11},{wch:22},{wch:10},{wch:14},{wch:12},{wch:14},{wch:14},{wch:14},{wch:12},{wch:12},{wch:14},{wch:20},{wch:25}];
       XLSX.utils.book_append_sheet(wb, wsSafety, '재단 안전점검');
     }
+    added++;
+  }
+
+  // 도포 데이터
+  if ((currentProcess === 'all' || currentProcess === '도포') && cachedData.도포.length > 0) {
+    const coatRows = cachedData.도포.filter(r => !r.deleted_at).map(r => ({
+      '작업일': r.work_date,
+      '사번': r.worker_id || '',
+      '작업종류': r.work_type || '',
+      '줄당EA': r.qty_per_line || 0,
+      '줄수': r.line_count || 0,
+      '총작업수량': r.total_qty || 0,
+      '불량수량': r.defect_qty || 0,
+      '작업자': r.worker_name || '',
+      '비고': r.note || '',
+      '특이사항': r.remarks || '',
+      '입력자': r.created_by_name || '',
+      '제출일시': r.created_at ? new Date(r.created_at).toLocaleString('ko-KR') : ''
+    }));
+    const ws = XLSX.utils.json_to_sheet(coatRows);
+    ws['!cols'] = [{wch:11},{wch:10},{wch:20},{wch:8},{wch:6},{wch:10},{wch:8},{wch:10},{wch:15},{wch:15},{wch:10},{wch:18}];
+    XLSX.utils.book_append_sheet(wb, ws, '도포 작업일지');
     added++;
   }
 
