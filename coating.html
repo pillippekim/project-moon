@@ -52,6 +52,35 @@
   .top-bar h1 { font-size: 20px; font-weight: 700; color: #243bb2; }
   .top-bar .user-info { font-size: 13px; color: #666; }
   
+  /* ── 작업 영역 잠금 ── */
+  .work-area-locked { position: relative; }
+  .work-area-locked::before {
+    content: '🔒 설비 점검 완료 후 입력 가능';
+    position: absolute; inset: 0; background: rgba(255,255,255,0.9);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; color: #dc2626; z-index: 10; border-radius: 12px;
+  }
+
+  /* ── 설비 일상점검 테이블 ── */
+  .safety-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+  .safety-table th, .safety-table td { border: 1px solid #e0e4ed; padding: 10px 8px; text-align: center; vertical-align: middle; }
+  .safety-table thead th { background: #fef2f2; color: #991b1b; font-weight: 700; font-size: 12px; }
+  .safety-table thead th.item-col-header { background: #dc2626; color: white; width: 160px; min-width: 160px; position: sticky; left: 0; z-index: 3; }
+  .safety-table thead th.equipment-header { background: #fef2f2; color: #991b1b; font-weight: 700; min-width: 170px; line-height: 1.4; }
+  .safety-table thead th.equipment-header .eq-sub { display: block; font-size: 10px; color: #b91c1c; font-weight: 400; margin-top: 2px; }
+  .safety-table .item-cell { background: #fef2f2; color: #991b1b; font-weight: 700; text-align: left; padding-left: 12px; font-size: 12px; white-space: nowrap; position: sticky; left: 0; z-index: 2; }
+  .safety-table .item-cell .item-num { display: inline-block; background: #dc2626; color: white; border-radius: 50%; width: 20px; height: 20px; line-height: 20px; text-align: center; margin-right: 6px; font-size: 10px; }
+  .safety-table .remarks-label-cell { background: #fef2f2; color: #991b1b; font-weight: 700; text-align: left; padding-left: 12px; position: sticky; left: 0; z-index: 2; }
+  .check-select-s { display: flex; gap: 4px; justify-content: center; }
+  .check-select-s button { width: 36px; height: 36px; border: 2px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; font-size: 17px; font-weight: 700; transition: all 0.15s; padding: 0; line-height: 1; }
+  .check-select-s button:hover { transform: scale(1.1); }
+  .check-select-s button.active.normal { background: #10b981; color: white; border-color: #10b981; }
+  .check-select-s button.active.repair { background: #f59e0b; color: white; border-color: #f59e0b; }
+  .check-select-s button.active.unusable { background: #ef4444; color: white; border-color: #ef4444; }
+  .check-select-s button.active.notuse { background: #6b7280; color: white; border-color: #6b7280; }
+  .eq-remarks { width: 100%; padding: 6px 8px; border: 1px solid #e0e4ed; border-radius: 4px; font-size: 12px; min-width: 120px; }
+  .eq-remarks:focus { outline: none; border-color: #dc2626; }
+
   /* ── 안내 배너 ── */
   .alert-banner {
     background: linear-gradient(135deg, #e8ecfa, #d1d9f5);
@@ -242,7 +271,38 @@
     <div class="alert-sub">📌 도포 순서: ☑ 그라인딩(표면처리) → ☑ 1차 약칠(켐록6125) → ☑ 2차 약칠(켐록205) → ☑ 건조 확인</div>
   </div>
 
+  <!-- 일일 설비 점검 -->
+  <div class="section" id="safetySection">
+    <div class="section-header" style="background:linear-gradient(135deg,#dc2626,#ef4444)">
+      <h2>🔒 일일 설비 점검 (작업 전 필수)</h2>
+      <span id="safetyStatus" style="font-size:12px;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:6px">점검 진행 중</span>
+    </div>
+    <div class="section-body">
+      <div style="display:flex;justify-content:center;gap:16px;margin-bottom:14px;padding:10px;background:#fef2f2;border-radius:8px;font-size:12px">
+        <span style="display:inline-flex;align-items:center;gap:4px;font-weight:600"><span style="display:inline-block;width:22px;height:22px;border-radius:4px;background:#10b981;color:white;text-align:center;line-height:22px;font-size:12px">○</span> 정상</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;font-weight:600"><span style="display:inline-block;width:22px;height:22px;border-radius:4px;background:#f59e0b;color:white;text-align:center;line-height:22px;font-size:12px">△</span> 수리요망</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;font-weight:600"><span style="display:inline-block;width:22px;height:22px;border-radius:4px;background:#ef4444;color:white;text-align:center;line-height:22px;font-size:12px">×</span> 사용불가</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;font-weight:600"><span style="display:inline-block;width:22px;height:22px;border-radius:4px;background:#6b7280;color:white;text-align:center;line-height:22px;font-size:12px">│</span> 미가동</span>
+      </div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <table class="safety-table" id="safetyTable">
+          <thead><tr><th class="item-col-header">점검항목</th></tr></thead>
+          <tbody id="safetyRows"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:16px;padding:14px;background:#fef2f2;border-radius:8px;border-left:4px solid #dc2626">
+        <label style="font-size:13px;font-weight:600;color:#991b1b;display:block;margin-bottom:8px">📝 전체 특이사항 (선택)</label>
+        <textarea id="safetyOverallRemarks" placeholder="설비점검 시 발견한 전체 특이사항을 입력하세요" style="width:100%;padding:10px;border:1px solid #e0e4ed;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px"></textarea>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding:12px 16px;background:#f8f9fb;border-radius:8px">
+        <div id="safetyProgress" style="font-size:13px;color:#555">✓ 모든 항목 정상(○)으로 자동 설정됨</div>
+        <button onclick="completeSafetyCheck()" style="background:#dc2626;color:white;border:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">점검 완료 ✓</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 작업 정보 -->
+  <div id="workArea" class="work-area-locked">
   <div class="header-info">
     <div class="info-block">
       <label>작성일</label>
@@ -322,6 +382,8 @@
     </div>
   </div>
 
+  </div><!-- /workArea -->
+
   <!-- 액션 버튼 -->
   <div class="action-bar">
     <button class="btn-secondary" onclick="resetForm()">초기화</button>
@@ -357,6 +419,52 @@ let myInfo = null;
 
 let rows = [];
 let uid = 0;
+
+// 설비 일상점검
+const COAT_EQUIPMENTS = [
+  { key: 'compressor_1', name: '컴프레서 1', sub: '생-B-04' },
+  { key: 'compressor_2', name: '컴프레서 2', sub: '생-B-05' },
+  { key: 'shot_grinder', name: '연마쇼트기', sub: '생-B-18' }
+];
+
+const COAT_CHECK_ITEMS = {
+  compressor_1: [
+    { num: 1, label: '스위치 작동' },
+    { num: 2, label: '작동유 충만' },
+    { num: 3, label: '모터 이상음' },
+    { num: 4, label: '유수분리기 오일통' },
+    { num: 5, label: '탱크에어 점검' },
+    { num: 6, label: '필터 청소' },
+    { num: 7, label: '청결 상태' }
+  ],
+  compressor_2: [
+    { num: 1, label: '스위치 작동' },
+    { num: 2, label: '작동유 충만' },
+    { num: 3, label: '모터 이상음' },
+    { num: 4, label: '유수분리기 오일통' },
+    { num: 5, label: '탱크에어 점검' },
+    { num: 6, label: '필터 청소' },
+    { num: 7, label: '청결 상태' }
+  ],
+  shot_grinder: [
+    { num: 1, label: '스위치 작동' },
+    { num: 2, label: 'Air 습기 확인' },
+    { num: 3, label: '쇼트볼 공급' },
+    { num: 4, label: '이상음 확인' },
+    { num: 5, label: '안전기 작동' },
+    { num: 6, label: '청결 상태' }
+  ]
+};
+
+const SAFETY_OPTS = [
+  { value: '○', label: '○', cls: 'normal' },
+  { value: '△', label: '△', cls: 'repair' },
+  { value: '×', label: '×', cls: 'unusable' },
+  { value: '│', label: '│', cls: 'notuse' }
+];
+
+let safetyCheckCompleted = false;
+let existingSafetyId = null;
 
 function todayStr() {
   const d = new Date();
@@ -421,6 +529,7 @@ async function loadMasterData() {
 }
 
 function addRow() {
+  if (!safetyCheckCompleted) { showToast('설비 점검을 먼저 완료해주세요!', 'error'); return; }
   uid++;
   rows.push({
     id: uid, sabun: '', partNo: '', partName: '',
@@ -558,7 +667,7 @@ function resetForm(askConfirm = true) {
   document.getElementById('remarks').value = '';
   const btn = document.getElementById('submitBtn');
   btn.disabled = false; btn.textContent = '제출하기';
-  addRow(); addRow(); addRow();
+  if (safetyCheckCompleted) { addRow(); addRow(); addRow(); }
 }
 
 function showToast(msg, type) {
@@ -566,6 +675,135 @@ function showToast(msg, type) {
   t.textContent = msg;
   t.className = 'toast show' + (type === 'error' ? ' error' : '');
   setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ═══ 설비 일상점검 ═══
+function initSafetyTable() {
+  const thead = document.querySelector('#safetyTable thead tr');
+  thead.innerHTML = '<th class="item-col-header">점검항목</th>';
+  COAT_EQUIPMENTS.forEach(eq => {
+    thead.innerHTML += `<th class="equipment-header">${eq.name}<span class="eq-sub">${eq.sub}</span></th>`;
+  });
+
+  const tbody = document.getElementById('safetyRows');
+  tbody.innerHTML = '';
+  const maxItems = 7;
+  for (let idx = 1; idx <= maxItems; idx++) {
+    const tr = document.createElement('tr');
+    const firstItems = COAT_CHECK_ITEMS[COAT_EQUIPMENTS[0].key];
+    const firstItem = firstItems.find(it => it.num === idx);
+    let html = `<td class="item-cell"><span class="item-num">${idx}</span>${firstItem ? firstItem.label : '-'}</td>`;
+    COAT_EQUIPMENTS.forEach(eq => {
+      const items = COAT_CHECK_ITEMS[eq.key];
+      const item = items.find(it => it.num === idx);
+      if (item) {
+        html += `<td title="${item.label}"><div class="check-select-s" data-eq="${eq.key}" data-item="${idx}">
+          ${SAFETY_OPTS.map(o => `<button type="button" class="${o.cls} ${o.value==='○'?'active':''}" data-value="${o.value}" onclick="setSC('${eq.key}',${idx},'${o.value}',this)">${o.label}</button>`).join('')}
+        </div></td>`;
+      } else {
+        html += '<td style="background:#f9f9f9;color:#ccc;font-size:11px">-</td>';
+      }
+    });
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  }
+  const rtr = document.createElement('tr');
+  let rh = '<td class="remarks-label-cell">📝 특이사항</td>';
+  COAT_EQUIPMENTS.forEach(eq => { rh += `<td><input type="text" class="eq-remarks" data-eq="${eq.key}" placeholder="이상 시 입력" /></td>`; });
+  rtr.innerHTML = rh;
+  tbody.appendChild(rtr);
+}
+
+function setSC(eqKey, itemNum, value, btn) {
+  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function collectSafetyData() {
+  const result = {};
+  COAT_EQUIPMENTS.forEach(eq => {
+    result[eq.key] = {};
+    COAT_CHECK_ITEMS[eq.key].forEach(item => {
+      const active = document.querySelector(`#safetyTable .check-select-s[data-eq="${eq.key}"][data-item="${item.num}"] button.active`);
+      result[eq.key][item.num] = active ? active.dataset.value : '○';
+    });
+    const rem = document.querySelector(`#safetyTable input.eq-remarks[data-eq="${eq.key}"]`);
+    result[eq.key].remarks = rem ? rem.value : '';
+  });
+  return result;
+}
+
+async function completeSafetyCheck() {
+  const checkData = collectSafetyData();
+  const overallRemarks = document.getElementById('safetyOverallRemarks').value;
+  const workDate = document.getElementById('workDate').value;
+  if (!workDate) { showToast('작성일을 입력해주세요.', 'error'); return; }
+
+  let hasUnusable = false;
+  COAT_EQUIPMENTS.forEach(eq => {
+    COAT_CHECK_ITEMS[eq.key].forEach(item => {
+      if (checkData[eq.key][item.num] === '×') hasUnusable = true;
+    });
+  });
+  if (hasUnusable && !confirm('사용불가(×) 항목이 있습니다! 관리자에게 보고하셨나요?')) return;
+
+  try {
+    const payload = { check_date: workDate, check_data: checkData, overall_remarks: overallRemarks || null, checked_by_emp_code: MY_EMP_CODE, checked_by_name: MY_NAME, checked_at: new Date().toISOString() };
+    if (existingSafetyId) {
+      await db.from('coating_safety_check').update(payload).eq('id', existingSafetyId);
+    } else {
+      await db.from('coating_safety_check').insert(payload);
+    }
+  } catch(e) { console.log('coating_safety_check 저장 실패:', e); }
+
+  safetyCheckCompleted = true;
+  document.getElementById('workArea').classList.remove('work-area-locked');
+  document.getElementById('safetyStatus').textContent = '✓ 점검 완료';
+  document.getElementById('safetyStatus').style.background = 'rgba(255,255,255,0.3)';
+  showToast('✓ 설비 점검 완료! 작업 내역을 입력하세요.');
+  if (!rows.length) { addRow(); addRow(); addRow(); }
+}
+
+async function checkTodaySafety() {
+  const workDate = document.getElementById('workDate').value;
+  if (!workDate) return;
+  try {
+    const { data } = await db.from('coating_safety_check').select('*').eq('check_date', workDate).order('checked_at', { ascending: false }).limit(1);
+    if (data && data.length > 0) {
+      existingSafetyId = data[0].id;
+      const cd = data[0].check_data;
+      if (cd) {
+        COAT_EQUIPMENTS.forEach(eq => {
+          if (cd[eq.key]) {
+            COAT_CHECK_ITEMS[eq.key].forEach(item => {
+              const val = cd[eq.key][item.num];
+              if (val) {
+                const btn = document.querySelector(`#safetyTable .check-select-s[data-eq="${eq.key}"][data-item="${item.num}"] button[data-value="${val}"]`);
+                if (btn) { btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+              }
+            });
+            const rem = document.querySelector(`#safetyTable input.eq-remarks[data-eq="${eq.key}"]`);
+            if (rem && cd[eq.key].remarks) rem.value = cd[eq.key].remarks;
+          }
+        });
+      }
+      if (data[0].overall_remarks) document.getElementById('safetyOverallRemarks').value = data[0].overall_remarks;
+      safetyCheckCompleted = true;
+      document.getElementById('workArea').classList.remove('work-area-locked');
+      document.getElementById('safetyStatus').textContent = '✓ 점검 완료';
+      showToast('오늘 점검 이력을 불러왔어요');
+    } else {
+      existingSafetyId = null;
+      safetyCheckCompleted = false;
+      document.getElementById('workArea').classList.add('work-area-locked');
+      document.getElementById('safetyStatus').textContent = '점검 진행 중';
+    }
+  } catch(e) {
+    console.log('coating_safety_check 테이블 없음 - 점검 건너뜀');
+    safetyCheckCompleted = true;
+    document.getElementById('workArea').classList.remove('work-area-locked');
+    if (!rows.length) { addRow(); addRow(); addRow(); }
+  }
 }
 
 // 초기화
@@ -579,7 +817,14 @@ function showToast(msg, type) {
   document.getElementById('workDate').value = todayStr();
   onDateChange();
   await loadMasterData();
-  addRow(); addRow(); addRow();
+  
+  // 설비 점검 초기화
+  initSafetyTable();
+  await checkTodaySafety();
+  document.getElementById('workDate').addEventListener('change', checkTodaySafety);
+  
+  // 점검 완료 시에만 행 추가
+  if (safetyCheckCompleted) { addRow(); addRow(); addRow(); }
 })();
 </script>
 </body>
