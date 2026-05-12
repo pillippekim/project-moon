@@ -175,7 +175,7 @@
   
   .safety-table th, .safety-table td {
     border: 1px solid #e0e4ed;
-    padding: 8px 6px;
+    padding: 12px 8px;
     text-align: center;
     vertical-align: middle;
   }
@@ -216,47 +216,55 @@
   /* ── 점검 상태 선택 ── */
   .check-select {
     display: flex;
-    gap: 2px;
+    gap: 4px;
     justify-content: center;
   }
   
   .check-select button {
-    width: 26px;
-    height: 26px;
-    border: 1px solid #d1d5db;
+    width: 38px;
+    height: 38px;
+    border: 2px solid #d1d5db;
     background: white;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 18px;
     font-weight: 700;
     transition: all 0.15s;
     padding: 0;
+    line-height: 1;
   }
   
-  .check-select button:hover { transform: scale(1.1); }
+  .check-select button:hover { 
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
   
   .check-select button.active.normal {
     background: #10b981;
     color: white;
     border-color: #10b981;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
   }
   
   .check-select button.active.repair {
     background: #f59e0b;
     color: white;
     border-color: #f59e0b;
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.4);
   }
   
   .check-select button.active.unusable {
     background: #ef4444;
     color: white;
     border-color: #ef4444;
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
   }
   
   .check-select button.active.notuse {
     background: #6b7280;
     color: white;
     border-color: #6b7280;
+    box-shadow: 0 2px 6px rgba(107, 114, 128, 0.4);
   }
   
   /* 점검 항목 헤더 (가로형 - 옵션B) */
@@ -264,9 +272,10 @@
     background: #fef2f2;
     color: #991b1b;
     font-weight: 700;
-    font-size: 10px;
-    line-height: 1.2;
-    min-width: 60px;
+    font-size: 11px;
+    line-height: 1.3;
+    min-width: 95px;
+    padding: 10px 6px;
   }
   
   .item-header .item-num {
@@ -274,11 +283,11 @@
     background: #dc2626;
     color: white;
     border-radius: 50%;
-    width: 18px;
-    height: 18px;
-    line-height: 18px;
-    margin-right: 3px;
-    font-size: 10px;
+    width: 22px;
+    height: 22px;
+    line-height: 22px;
+    margin-right: 4px;
+    font-size: 11px;
   }
   
   /* 범례 */
@@ -644,7 +653,7 @@
       
       <!-- 진행 상태 + 완료 버튼 -->
       <div class="complete-check-bar">
-        <div class="check-progress" id="checkProgress">진행률: <strong>0</strong> / 32</div>
+        <div class="check-progress" id="checkProgress">✓ 모든 항목 정상(○)으로 자동 설정됨. 이상 시 다른 옵션 선택!</div>
         <button class="btn-complete-check" id="btnCompleteCheck" onclick="completeCheck()">점검 완료 ✓</button>
       </div>
     </div>
@@ -856,9 +865,11 @@ function initSafetyTable() {
     CHECK_ITEMS.forEach(item => {
       html += `<td>
         <div class="check-select" data-equipment="${eq.key}" data-item="${item.num}">
-          ${CHECK_OPTIONS.map(opt => 
-            `<button type="button" class="${opt.class}" data-value="${opt.value}" onclick="setCheck('${eq.key}', ${item.num}, '${opt.value}', this)">${opt.label}</button>`
-          ).join('')}
+          ${CHECK_OPTIONS.map(opt => {
+            // 기본값으로 '○'(정상)을 활성화
+            const activeClass = opt.value === '○' ? 'active' : '';
+            return `<button type="button" class="${opt.class} ${activeClass}" data-value="${opt.value}" onclick="setCheck('${eq.key}', ${item.num}, '${opt.value}', this)">${opt.label}</button>`;
+          }).join('')}
         </div>
       </td>`;
     });
@@ -867,6 +878,9 @@ function initSafetyTable() {
     tr.innerHTML = html;
     tbody.appendChild(tr);
   });
+  
+  // 기본값으로 모든 항목 ○ 활성화된 상태이므로 진행률 업데이트
+  updateCheckProgress();
 }
 
 // 점검 상태 설정
@@ -879,18 +893,43 @@ function setCheck(eqKey, itemNum, value, btn) {
   updateCheckProgress();
 }
 
-// 진행률 업데이트
+// 진행률 업데이트 → 이상 항목 표시로 변경
 function updateCheckProgress() {
-  const activeButtons = document.querySelectorAll('#safetyTable .check-select button.active').length;
-  const total = EQUIPMENTS.length * CHECK_ITEMS.length;  // 4 * 8 = 32
-  document.getElementById('checkProgress').innerHTML = `진행률: <strong>${activeButtons}</strong> / ${total}`;
+  // 정상(○) 외의 항목 카운트
+  let normalCount = 0;
+  let repairCount = 0;
+  let unusableCount = 0;
+  let notuseCount = 0;
   
-  // 완료 버튼 활성화 여부
-  const btnComplete = document.getElementById('btnCompleteCheck');
-  if (activeButtons >= total) {
-    btnComplete.disabled = false;
+  document.querySelectorAll('#safetyTable .check-select button.active').forEach(btn => {
+    const v = btn.dataset.value;
+    if (v === '○') normalCount++;
+    else if (v === '△') repairCount++;
+    else if (v === '×') unusableCount++;
+    else if (v === '│') notuseCount++;
+  });
+  
+  const total = EQUIPMENTS.length * CHECK_ITEMS.length;  // 32
+  const checked = normalCount + repairCount + unusableCount + notuseCount;
+  
+  const progressEl = document.getElementById('checkProgress');
+  
+  if (checked < total) {
+    // 미체크 항목 있음
+    progressEl.innerHTML = `⚠️ 미체크 항목 <strong>${total - checked}</strong>건 / 32`;
+    progressEl.style.color = '#dc2626';
+  } else if (repairCount === 0 && unusableCount === 0 && notuseCount === 0) {
+    // 모두 정상
+    progressEl.innerHTML = `✅ 모든 항목 정상 (총 ${total}건)`;
+    progressEl.style.color = '#10b981';
   } else {
-    btnComplete.disabled = false;  // 미완료여도 클릭 가능 (확인 후 진행)
+    // 이상 항목 있음
+    const parts = [];
+    if (repairCount > 0) parts.push(`<span style="color:#f59e0b">△ ${repairCount}</span>`);
+    if (unusableCount > 0) parts.push(`<span style="color:#ef4444">× ${unusableCount}</span>`);
+    if (notuseCount > 0) parts.push(`<span style="color:#6b7280">│ ${notuseCount}</span>`);
+    progressEl.innerHTML = `⚠️ 이상 발견: ${parts.join(' / ')} (정상 ${normalCount}건)`;
+    progressEl.style.color = '#dc2626';
   }
 }
 
@@ -1058,9 +1097,11 @@ function unlockWorkSection() {
   // 제출 버튼 활성화
   document.getElementById('submitBtn').disabled = false;
   
-  // 첫 행 추가
+  // 초기 10개 행 자동 추가 (기존 행이 없을 때만)
   if (document.querySelectorAll('#mainRows tr').length === 0) {
-    addRow();
+    for (let i = 0; i < 10; i++) {
+      addRow();
+    }
   }
 }
 
@@ -1185,6 +1226,8 @@ async function submitReport() {
   if (rows.length === 0) { showToast('최소 1건의 작업 내역이 필요해요.', 'error'); return; }
   
   const reportRows = [];
+  let validRowCount = 0;
+  
   for (const tr of rows) {
     const sabun = tr.querySelector('.sabun').value.trim();
     const material = tr.querySelector('.material').value;
@@ -1193,8 +1236,16 @@ async function submitReport() {
     const scrapWeight = parseFloat(tr.querySelector('.scrap-weight').value) || 0;
     const note = tr.querySelector('.note').value.trim();
     
+    // 사번/재질/박스 모두 비어있으면 빈 행으로 간주 → 무시
+    if (!sabun && !material && boxCount === 0 && scrapWeight === 0 && !note) {
+      continue;
+    }
+    
+    validRowCount++;
+    
+    // 일부만 입력된 경우 검증
     if (!sabun || !material || boxCount <= 0) {
-      showToast(`행 ${tr.querySelector('td:first-child').textContent}: 사번/재질/박스수량 필수`, 'error');
+      showToast(`행 ${tr.querySelector('td:first-child').textContent}: 사번/재질/박스수량은 필수예요!`, 'error');
       return;
     }
     
@@ -1211,6 +1262,11 @@ async function submitReport() {
       created_by_emp_code: myInfo?.emp_code || null,
       created_by_name: myInfo?.name || null
     });
+  }
+  
+  if (validRowCount === 0) {
+    showToast('작성된 작업 내역이 없어요. 최소 1건은 입력해주세요!', 'error');
+    return;
   }
   
   const submitBtn = document.getElementById('submitBtn');
@@ -1237,7 +1293,10 @@ function resetWorkRows() {
   document.getElementById('mainRows').innerHTML = '';
   rowCounter = 0;
   document.getElementById('remarks').value = '';
-  addRow();
+  // 초기 10개 행 추가
+  for (let i = 0; i < 10; i++) {
+    addRow();
+  }
   updateSummary();
 }
 
