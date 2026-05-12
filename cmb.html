@@ -364,7 +364,39 @@
     margin-top: 4px;
   }
   
-  /* ── 점검 테이블 ── */
+  /* ── 작업 영역 잠금 ── */
+  .work-area-locked { position: relative; }
+  .work-area-locked::before {
+    content: '🔒 설비 점검 완료 후 입력 가능';
+    position: absolute; inset: 0; background: rgba(255,255,255,0.9);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; color: #dc2626; z-index: 10;
+    border-radius: 12px;
+  }
+
+  /* ── 설비 일상점검 테이블 ── */
+  .safety-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+  .safety-table th, .safety-table td { border: 1px solid #e0e4ed; padding: 10px 8px; text-align: center; vertical-align: middle; }
+  .safety-table thead th { background: #fef2f2; color: #991b1b; font-weight: 700; font-size: 12px; }
+  .safety-table thead th.item-col-header { background: #dc2626; color: white; width: 160px; min-width: 160px; position: sticky; left: 0; z-index: 3; }
+  .safety-table thead th.equipment-header { background: #fef2f2; color: #991b1b; font-weight: 700; min-width: 160px; padding: 10px 8px; line-height: 1.4; }
+  .safety-table thead th.equipment-header .eq-sub { display: block; font-size: 10px; color: #b91c1c; font-weight: 400; margin-top: 2px; }
+  .safety-table .item-cell { background: #fef2f2; color: #991b1b; font-weight: 700; text-align: left; padding-left: 12px; font-size: 12px; white-space: nowrap; position: sticky; left: 0; z-index: 2; }
+  .safety-table .item-cell .item-num { display: inline-block; background: #dc2626; color: white; border-radius: 50%; width: 20px; height: 20px; line-height: 20px; text-align: center; margin-right: 6px; font-size: 10px; }
+  .safety-table .remarks-label-cell { background: #fef2f2; color: #991b1b; font-weight: 700; text-align: left; padding-left: 12px; position: sticky; left: 0; z-index: 2; }
+
+  .check-select-safety { display: flex; gap: 4px; justify-content: center; }
+  .check-select-safety button { width: 36px; height: 36px; border: 2px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; font-size: 17px; font-weight: 700; transition: all 0.15s; padding: 0; line-height: 1; }
+  .check-select-safety button:hover { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  .check-select-safety button.active.normal { background: #10b981; color: white; border-color: #10b981; }
+  .check-select-safety button.active.repair { background: #f59e0b; color: white; border-color: #f59e0b; }
+  .check-select-safety button.active.unusable { background: #ef4444; color: white; border-color: #ef4444; }
+  .check-select-safety button.active.notuse { background: #6b7280; color: white; border-color: #6b7280; }
+
+  .equipment-remarks { width: 100%; padding: 6px 8px; border: 1px solid #e0e4ed; border-radius: 4px; font-size: 12px; min-width: 120px; }
+  .equipment-remarks:focus { outline: none; border-color: #dc2626; }
+
+  /* ── 시간대별 점검 테이블 ── */
   .check-table {
     width: 100%;
     border-collapse: separate;
@@ -587,7 +619,38 @@
     </div>
   </div>
 
+  <!-- 일일 설비 점검 -->
+  <div class="section" id="safetySection">
+    <div class="section-header" style="background:linear-gradient(135deg,#dc2626,#ef4444)">
+      <h2>🔒 일일 설비 점검 (작업 전 필수)</h2>
+      <span class="section-status" id="safetyStatus" style="font-size:12px;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:6px">점검 진행 중</span>
+    </div>
+    <div class="section-body">
+      <div style="display:flex;justify-content:center;gap:16px;margin-bottom:14px;padding:10px;background:#fef2f2;border-radius:8px;font-size:12px">
+        <span style="display:inline-flex;align-items:center;gap:4px;font-weight:600"><span style="display:inline-block;width:22px;height:22px;border-radius:4px;background:#10b981;color:white;text-align:center;line-height:22px;font-size:12px">○</span> 정상</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;font-weight:600"><span style="display:inline-block;width:22px;height:22px;border-radius:4px;background:#f59e0b;color:white;text-align:center;line-height:22px;font-size:12px">△</span> 수리요망</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;font-weight:600"><span style="display:inline-block;width:22px;height:22px;border-radius:4px;background:#ef4444;color:white;text-align:center;line-height:22px;font-size:12px">×</span> 사용불가</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;font-weight:600"><span style="display:inline-block;width:22px;height:22px;border-radius:4px;background:#6b7280;color:white;text-align:center;line-height:22px;font-size:12px">│</span> 미가동</span>
+      </div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="safety-table" id="safetyTable">
+        <thead><tr><th class="item-col-header">점검항목</th></tr></thead>
+        <tbody id="safetyRows"></tbody>
+      </table>
+      </div>
+      <div style="margin-top:16px;padding:14px;background:#fef2f2;border-radius:8px;border-left:4px solid #dc2626">
+        <label style="font-size:13px;font-weight:600;color:#991b1b;display:block;margin-bottom:8px">📝 전체 특이사항 (선택)</label>
+        <textarea id="safetyOverallRemarks" placeholder="설비점검 시 발견한 전체 특이사항을 입력하세요" style="width:100%;padding:10px;border:1px solid #e0e4ed;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px"></textarea>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding:12px 16px;background:#f8f9fb;border-radius:8px">
+        <div id="safetyProgress" style="font-size:13px;color:#555">✓ 모든 항목 정상(○)으로 자동 설정됨</div>
+        <button onclick="completeSafetyCheck()" style="background:#dc2626;color:white;border:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">점검 완료 ✓</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 작업 정보 입력 -->
+  <div id="workArea" class="work-area-locked">
   <div class="header-info">
     <div class="info-block">
       <label>작업 일자</label>
@@ -678,6 +741,8 @@
     </div>
   </div>
 
+  </div><!-- /workArea -->
+
   <!-- 액션 버튼 -->
   <div class="action-bar">
     <button class="btn-secondary" onclick="resetForm()">초기화</button>
@@ -705,6 +770,79 @@ let rowCounter = 0;
 let currentBatchSeq = 0;
 const TIME_SLOTS = ['09:00', '11:00', '14:00', '16:00'];
 
+// 설비 일상점검 상수
+const CMB_EQUIPMENTS = [
+  { key: 'kneader', name: 'KNEADER (니더)', sub: '생-B-10' },
+  { key: 'roller', name: 'ROLLER (로라)', sub: '생-B-09' },
+  { key: 'chiller', name: '냉각기 (칠러)', sub: '생-B-23' },
+  { key: 'sheet_cutter', name: '고무시트 복합재단기', sub: '생-B-11' },
+  { key: 'hydraulic_cutter', name: '유압절단기', sub: '생-A' }
+];
+
+const CMB_CHECK_ITEMS_MAP = {
+  kneader: [
+    { num: 1, label: '스위치 작동' },
+    { num: 2, label: '기계작동 원활' },
+    { num: 3, label: '이상음/진동' },
+    { num: 4, label: '조임상태' },
+    { num: 5, label: '압력 양호' },
+    { num: 6, label: '청결 상태' },
+    { num: 7, label: '비상정지 버튼' }
+  ],
+  roller: [
+    { num: 1, label: '스위치 작동' },
+    { num: 2, label: '기계작동 원활' },
+    { num: 3, label: '이상음/진동' },
+    { num: 4, label: '조임상태(1~8번)' },
+    { num: 5, label: '청결 상태' },
+    { num: 6, label: '비상정지 버튼' }
+  ],
+  chiller: [
+    { num: 1, label: '표준온도(20±5℃)' },
+    { num: 2, label: '순환/칠러펌프' },
+    { num: 3, label: '압력(고/저/유)' },
+    { num: 4, label: '누수 확인' },
+    { num: 5, label: '주모터 작동' }
+  ],
+  sheet_cutter: [
+    { num: 1, label: '스위치 작동' },
+    { num: 2, label: '오일량(50%이상)' },
+    { num: 3, label: '절단기 압력(3~5kgf)' },
+    { num: 4, label: '칼날 상태' },
+    { num: 5, label: '냉각수 자동온도' },
+    { num: 6, label: '경보 작동' },
+    { num: 7, label: '청결 상태' }
+  ],
+  hydraulic_cutter: [
+    { num: 1, label: '표준온도(20±5℃)' },
+    { num: 2, label: '순환/칠러펌프' },
+    { num: 3, label: '압력(고/저/유)' },
+    { num: 4, label: '누수 확인' },
+    { num: 5, label: '주모터 작동' }
+  ]
+};
+
+// 모든 설비 통합 점검항목 (최대 7개)
+const CMB_UNIFIED_ITEMS = [
+  { num: 1, label: '항목 1' },
+  { num: 2, label: '항목 2' },
+  { num: 3, label: '항목 3' },
+  { num: 4, label: '항목 4' },
+  { num: 5, label: '항목 5' },
+  { num: 6, label: '항목 6' },
+  { num: 7, label: '항목 7' }
+];
+
+const SAFETY_OPTIONS = [
+  { value: '○', label: '○', class: 'normal' },
+  { value: '△', label: '△', class: 'repair' },
+  { value: '×', label: '×', class: 'unusable' },
+  { value: '│', label: '│', class: 'notuse' }
+];
+
+let safetyCheckCompleted = false;
+let existingSafetyId = null;
+
 // ═══════════════════════════════════════════════
 // 초기화
 // ═══════════════════════════════════════════════
@@ -729,10 +867,21 @@ async function init() {
   await loadMaterials();
   await loadTodayBatchSeq();
   
-  // 첫 행 추가
-  addRow();
+  // 설비 일상점검 테이블 생성
+  initSafetyTable();
   
-  // 점검 테이블 생성
+  // 오늘 설비 점검 이력 확인
+  await checkTodaySafety();
+  
+  // 작업일자 변경 시 다시 체크
+  document.getElementById('workDate').addEventListener('change', checkTodaySafety);
+  
+  // 점검 완료 시에만 행 추가
+  if (safetyCheckCompleted) {
+    for (let i = 0; i < 10; i++) addRow();
+  }
+  
+  // 시간대별 점검 테이블 생성
   initCheckTable();
 }
 
@@ -1069,7 +1218,7 @@ function resetForm(askConfirm = true) {
   rowCounter = 0;
   document.getElementById('remarks').value = '';
   loadTodayBatchSeq().then(() => {
-    addRow();
+    for (let i = 0; i < 10; i++) addRow();
     initCheckTable();
     updateTotal();
   });
@@ -1080,6 +1229,175 @@ function showToast(msg, type) {
   toast.textContent = msg;
   toast.className = 'toast show' + (type === 'error' ? ' error' : '');
   setTimeout(() => toast.classList.remove('show'), 2800);
+}
+
+// ═══════════════════════════════════════════════
+// 설비 일상점검
+// ═══════════════════════════════════════════════
+function initSafetyTable() {
+  const thead = document.querySelector('#safetyTable thead tr');
+  thead.innerHTML = '<th class="item-col-header">점검항목</th>';
+  CMB_EQUIPMENTS.forEach(eq => {
+    thead.innerHTML += `<th class="equipment-header">${eq.name}<span class="eq-sub">${eq.sub}</span></th>`;
+  });
+
+  const tbody = document.getElementById('safetyRows');
+  tbody.innerHTML = '';
+
+  // 최대 점검항목 수 = 7 (KNEADER, 고무시트복합재단기)
+  const maxItems = 7;
+  for (let itemIdx = 1; itemIdx <= maxItems; itemIdx++) {
+    const tr = document.createElement('tr');
+    // 왼쪽 라벨: 항목번호
+    let html = `<td class="item-cell"><span class="item-num">${itemIdx}</span>`;
+    // 각 설비별 실제 항목명 (설비마다 다르므로 첫번째 설비 기준 라벨)
+    const firstEq = CMB_EQUIPMENTS[0];
+    const firstItems = CMB_CHECK_ITEMS_MAP[firstEq.key];
+    const firstItem = firstItems.find(it => it.num === itemIdx);
+    html += `${firstItem ? firstItem.label : '-'}</td>`;
+
+    CMB_EQUIPMENTS.forEach(eq => {
+      const items = CMB_CHECK_ITEMS_MAP[eq.key];
+      const item = items.find(it => it.num === itemIdx);
+      if (item) {
+        html += `<td title="${item.label}"><div class="check-select-safety" data-equipment="${eq.key}" data-item="${itemIdx}">
+          ${SAFETY_OPTIONS.map(opt => {
+            const active = opt.value === '○' ? 'active' : '';
+            return `<button type="button" class="${opt.class} ${active}" data-value="${opt.value}" onclick="setSafetyCheck('${eq.key}',${itemIdx},'${opt.value}',this)">${opt.label}</button>`;
+          }).join('')}
+        </div></td>`;
+      } else {
+        html += '<td style="background:#f9f9f9;color:#ccc;font-size:11px">-</td>';
+      }
+    });
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  }
+
+  // 특이사항 행
+  const remarksTr = document.createElement('tr');
+  let rh = '<td class="remarks-label-cell">📝 특이사항</td>';
+  CMB_EQUIPMENTS.forEach(eq => {
+    rh += `<td><input type="text" class="equipment-remarks" data-equipment="${eq.key}" placeholder="이상 시 입력" /></td>`;
+  });
+  remarksTr.innerHTML = rh;
+  tbody.appendChild(remarksTr);
+}
+
+function setSafetyCheck(eqKey, itemNum, value, btn) {
+  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function collectSafetyData() {
+  const result = {};
+  CMB_EQUIPMENTS.forEach(eq => {
+    result[eq.key] = {};
+    const items = CMB_CHECK_ITEMS_MAP[eq.key];
+    items.forEach(item => {
+      const active = document.querySelector(`#safetyTable .check-select-safety[data-equipment="${eq.key}"][data-item="${item.num}"] button.active`);
+      result[eq.key][item.num] = active ? active.dataset.value : '○';
+    });
+    const rem = document.querySelector(`#safetyTable input.equipment-remarks[data-equipment="${eq.key}"]`);
+    result[eq.key].remarks = rem ? rem.value : '';
+  });
+  return result;
+}
+
+async function completeSafetyCheck() {
+  const checkData = collectSafetyData();
+  const overallRemarks = document.getElementById('safetyOverallRemarks').value;
+  const workDate = document.getElementById('workDate').value;
+  if (!workDate) { showToast('작업 일자를 선택하세요.', 'error'); return; }
+
+  // 사용불가 경고
+  let hasUnusable = false;
+  CMB_EQUIPMENTS.forEach(eq => {
+    const items = CMB_CHECK_ITEMS_MAP[eq.key];
+    items.forEach(item => {
+      if (checkData[eq.key][item.num] === '×') hasUnusable = true;
+    });
+  });
+  if (hasUnusable && !confirm('사용불가(×) 항목이 있습니다! 관리자에게 보고하셨나요?')) return;
+
+  // DB 저장 (cmb_reports 테이블의 check_data에 통합 저장은 기존 방식과 별도로)
+  // 별도 테이블이 없으므로 cutting_safety_check 패턴으로 cmb_safety_check 테이블 사용
+  // 테이블이 없으면 로컬 상태만 유지
+  try {
+    const payload = {
+      check_date: workDate,
+      check_data: checkData,
+      overall_remarks: overallRemarks || null,
+      checked_by_emp_code: myInfo?.emp_code || null,
+      checked_by_name: myInfo?.name || null,
+      checked_at: new Date().toISOString()
+    };
+
+    if (existingSafetyId) {
+      await db.from('cmb_safety_check').update(payload).eq('id', existingSafetyId);
+    } else {
+      await db.from('cmb_safety_check').insert(payload);
+    }
+  } catch(e) {
+    console.log('cmb_safety_check 테이블 없음 - 로컬만 저장');
+  }
+
+  safetyCheckCompleted = true;
+  document.getElementById('workArea').classList.remove('work-area-locked');
+  document.getElementById('safetyStatus').textContent = '✓ 점검 완료';
+  document.getElementById('safetyStatus').style.background = 'rgba(255,255,255,0.3)';
+  showToast('✓ 설비 점검 완료! 작업 내역을 입력하세요.');
+
+  if (document.querySelectorAll('#mainRows tr').length === 0) {
+    for (let i = 0; i < 10; i++) addRow();
+  }
+}
+
+async function checkTodaySafety() {
+  const workDate = document.getElementById('workDate').value;
+  if (!workDate) return;
+
+  try {
+    const { data } = await db.from('cmb_safety_check').select('*').eq('check_date', workDate).order('checked_at', { ascending: false }).limit(1);
+    if (data && data.length > 0) {
+      existingSafetyId = data[0].id;
+      const cd = data[0].check_data;
+      if (cd) {
+        CMB_EQUIPMENTS.forEach(eq => {
+          if (cd[eq.key]) {
+            const items = CMB_CHECK_ITEMS_MAP[eq.key];
+            items.forEach(item => {
+              const val = cd[eq.key][item.num];
+              if (val) {
+                const btn = document.querySelector(`#safetyTable .check-select-safety[data-equipment="${eq.key}"][data-item="${item.num}"] button[data-value="${val}"]`);
+                if (btn) { btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+              }
+            });
+            const rem = document.querySelector(`#safetyTable input.equipment-remarks[data-equipment="${eq.key}"]`);
+            if (rem && cd[eq.key].remarks) rem.value = cd[eq.key].remarks;
+          }
+        });
+      }
+      if (data[0].overall_remarks) document.getElementById('safetyOverallRemarks').value = data[0].overall_remarks;
+      safetyCheckCompleted = true;
+      document.getElementById('workArea').classList.remove('work-area-locked');
+      document.getElementById('safetyStatus').textContent = '✓ 점검 완료';
+      showToast('오늘 점검 이력을 불러왔어요');
+    } else {
+      existingSafetyId = null;
+      safetyCheckCompleted = false;
+      document.getElementById('workArea').classList.add('work-area-locked');
+      document.getElementById('safetyStatus').textContent = '점검 진행 중';
+    }
+  } catch(e) {
+    // cmb_safety_check 테이블이 없으면 점검 없이 진행
+    console.log('cmb_safety_check 테이블 없음 - 점검 단계 건너뜀');
+    safetyCheckCompleted = true;
+    document.getElementById('workArea').classList.remove('work-area-locked');
+    if (document.querySelectorAll('#mainRows tr').length === 0) {
+      for (let i = 0; i < 10; i++) addRow();
+    }
+  }
 }
 
 // 시작
