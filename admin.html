@@ -60,6 +60,7 @@ tr:hover td { background: #fafafa; }
 .process-포장 { background: #eff6ff; color: #243bb2; }
 .process-검사 { background: #f0fdf4; color: #16a34a; }
 .process-혼련\(CMB\) { background: #fef3c7; color: #b45309; }
+.process-재단 { background: #f3e8ff; color: #7e22ce; }
 .process-재단 { background: #fff7ed; color: #ea580c; }
 .process-도포 { background: #fdf4ff; color: #9333ea; }
 .process-쇼트 { background: #fef2f2; color: #dc2626; }
@@ -132,7 +133,7 @@ tr:hover td { background: #fafafa; }
     <button class="process-tab" data-process="포장" onclick="switchProcess('포장')">📦 포장</button>
     <button class="process-tab" data-process="검사" onclick="switchProcess('검사')">🔬 검사</button>
     <button class="process-tab" data-process="혼련(CMB)" onclick="switchProcess('혼련(CMB)')">🧪 혼련(CMB)</button>
-    <button class="process-tab" data-process="재단" onclick="switchProcess('재단')" disabled style="opacity:0.5">✂️ 재단</button>
+    <button class="process-tab" data-process="재단" onclick="switchProcess('재단')">✂️ 재단</button>
     <button class="process-tab" data-process="도포" onclick="switchProcess('도포')" disabled style="opacity:0.5">🎨 도포</button>
     <button class="process-tab" data-process="쇼트" onclick="switchProcess('쇼트')" disabled style="opacity:0.5">💥 쇼트</button>
     <button class="process-tab" data-process="성형" onclick="switchProcess('성형')" disabled style="opacity:0.5">🔧 성형</button>
@@ -371,6 +372,63 @@ tr:hover td { background: #fafafa; }
   </div>
 </div>
 
+<!-- 재단 수정 모달 -->
+<div class="modal-overlay" id="editCuttingModal">
+  <div class="modal-box" style="max-width:720px">
+    <div class="modal-title">✂️ 재단 작업일지 수정</div>
+    <div class="modal-sub" id="editCuttingMeta">-</div>
+    <input type="hidden" id="ect_id" />
+    <div class="modal-grid modal-grid-2">
+      <div class="modal-field">
+        <span class="modal-label">작업일</span>
+        <input class="modal-input" type="date" id="ect_work_date" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">작업자</span>
+        <input class="modal-input" id="ect_worker_name" />
+      </div>
+    </div>
+    <div class="modal-grid modal-grid-3">
+      <div class="modal-field">
+        <span class="modal-label">사번 (제품코드)</span>
+        <input class="modal-input" id="ect_worker_id" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">재질명</span>
+        <input class="modal-input" id="ect_material_name" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">뱃지 No</span>
+        <input class="modal-input" id="ect_lot_no" />
+      </div>
+    </div>
+    <div class="modal-grid modal-grid-2">
+      <div class="modal-field">
+        <span class="modal-label">재단박스 수량 (개)</span>
+        <input class="modal-input" type="number" id="ect_box_count" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">자투리 발생량 (g)</span>
+        <input class="modal-input" type="number" step="0.01" id="ect_scrap_weight" />
+      </div>
+    </div>
+    <div class="modal-grid">
+      <div class="modal-field">
+        <span class="modal-label">비고</span>
+        <input class="modal-input" id="ect_note" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">특이사항</span>
+        <textarea class="modal-textarea" id="ect_remarks" rows="2"></textarea>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-modal-cancel" onclick="closeModal('editCuttingModal')">취소</button>
+      <button class="btn-modal-save" onclick="saveEditCutting()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- 삭제 확인 모달 -->
 <div class="modal-overlay" id="deleteModal">
   <div class="modal-box" style="max-width:440px">
@@ -402,7 +460,7 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentProcess = 'all';
 let unifiedView = false;
-let cachedData = { 포장: [], 검사: [], 'CMB': [] };
+let cachedData = { 포장: [], 검사: [], 'CMB': [], 재단: [], 재단점검: [] };
 let PRODUCTS = {};
 let myInfo = null;
 let showDeleted = false;
@@ -711,6 +769,23 @@ async function loadData() {
     cachedData.CMB = data || [];
   }
 
+  // 재단 데이터 로드 (필요 시)
+  if (currentProcess === 'all' || currentProcess === '재단') {
+    let q = db.from('cutting_reports').select('*').gte('work_date', start).lte('work_date', end);
+    if (!showDeleted) q = q.is('deleted_at', null);
+    if (fSabun)  q = q.ilike('worker_id', `%${fSabun}%`);
+    if (fWorker) q = q.ilike('worker_name', `%${fWorker}%`);
+    const { data } = await q.order('work_date', { ascending: false });
+    cachedData.재단 = data || [];
+    
+    // 재단 안전 점검 데이터 별도 로드
+    const { data: safetyData } = await db.from('cutting_safety_check')
+      .select('*')
+      .gte('check_date', start).lte('check_date', end)
+      .order('check_date', { ascending: false });
+    cachedData.재단점검 = safetyData || [];
+  }
+
   render();
 }
 
@@ -725,6 +800,8 @@ function render() {
     renderInspectionTable(cachedData.검사);
   } else if (currentProcess === '혼련(CMB)') {
     renderCmbTable(cachedData.CMB);
+  } else if (currentProcess === '재단') {
+    renderCuttingTable(cachedData.재단);
   }
 }
 
@@ -733,17 +810,19 @@ function renderStats() {
   const pkg = cachedData.포장 || [];
   const ins = cachedData.검사 || [];
   const cmb = cachedData.CMB || [];
+  const cut = cachedData.재단 || [];
 
   if (currentProcess === 'all') {
-    const totalCount = pkg.length + ins.length + cmb.length;
+    const totalCount = pkg.length + ins.length + cmb.length + cut.length;
     const totalQty = pkg.reduce((s,r)=>s+(r.quantity||0),0);
     const totalInspect = ins.reduce((s,r)=>s+(r.inspect_qty||0),0);
     const totalCmbWeight = cmb.filter(r => !r.is_remix).reduce((s,r)=>s+(parseFloat(r.weight)||0),0);
+    const totalCutBoxes = cut.reduce((s,r)=>s+(r.box_count||0),0);
     statsEl.innerHTML = `
       <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">전체 작업일지</div><div class="stat-num blue">${totalCount} <span class="stat-unit">건</span></div></div>
       <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-label">포장수량</div><div class="stat-num green">${totalQty.toLocaleString()} <span class="stat-unit">EA</span></div></div>
-      <div class="stat-card"><div class="stat-icon">🔬</div><div class="stat-label">검사수량</div><div class="stat-num orange">${totalInspect.toLocaleString()} <span class="stat-unit">EA</span></div></div>
       <div class="stat-card"><div class="stat-icon">🧪</div><div class="stat-label">혼련 사용량</div><div class="stat-num" style="color:#b45309">${totalCmbWeight.toFixed(3)} <span class="stat-unit">Kg</span></div></div>
+      <div class="stat-card"><div class="stat-icon">✂️</div><div class="stat-label">재단 박스</div><div class="stat-num" style="color:#7e22ce">${totalCutBoxes.toLocaleString()} <span class="stat-unit">개</span></div></div>
     `;
   } else if (currentProcess === '포장') {
     const totalQty = pkg.reduce((s,r)=>s+(r.quantity||0),0);
@@ -776,6 +855,34 @@ function renderStats() {
       <div class="stat-card"><div class="stat-icon">🔄</div><div class="stat-label">재믹싱 건수</div><div class="stat-num orange">${remixCount} <span class="stat-unit">건</span></div></div>
       <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-label">평량 비정상</div><div class="stat-num red">${weighingNG} <span class="stat-unit">건</span></div></div>
     `;
+  } else if (currentProcess === '재단') {
+    const totalBoxes = cut.reduce((s,r)=>s+(r.box_count||0),0);
+    const totalScrap = cut.reduce((s,r)=>s+(parseFloat(r.scrap_weight)||0),0);
+    const workers = new Set(cut.map(r=>r.worker_name).filter(Boolean)).size;
+    
+    // 안전점검에서 사용불가/수리요망 카운트
+    const safety = cachedData.재단점검 || [];
+    let unusableCount = 0;
+    let repairCount = 0;
+    safety.forEach(s => {
+      if (s.check_data) {
+        Object.values(s.check_data).forEach(eq => {
+          Object.entries(eq).forEach(([k, v]) => {
+            if (k !== 'remarks') {
+              if (v === '×') unusableCount++;
+              if (v === '△') repairCount++;
+            }
+          });
+        });
+      }
+    });
+    
+    statsEl.innerHTML = `
+      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">재단 건수</div><div class="stat-num blue">${cut.length} <span class="stat-unit">건</span></div></div>
+      <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-label">총 재단박스</div><div class="stat-num" style="color:#7e22ce">${totalBoxes.toLocaleString()} <span class="stat-unit">개</span></div></div>
+      <div class="stat-card"><div class="stat-icon">🗑️</div><div class="stat-label">총 자투리</div><div class="stat-num orange">${totalScrap.toFixed(2)} <span class="stat-unit">g</span></div></div>
+      <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-label">설비 이상 (△/×)</div><div class="stat-num red">${repairCount}/${unusableCount} <span class="stat-unit">건</span></div></div>
+    `;
   }
 }
 
@@ -783,6 +890,7 @@ function renderAllSections() {
   const pkg = cachedData.포장 || [];
   const ins = cachedData.검사 || [];
   const cmb = cachedData.CMB || [];
+  const cut = cachedData.재단 || [];
   const html = `
     <div class="process-section">
       <div class="section-header">
@@ -821,6 +929,19 @@ function renderAllSections() {
               return `<div style="font-size:12px;color:#555;padding:6px 0;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between"><span>${r.work_date} · ${r.lot_no||'-'} · ${r.material_name||'-'}${remixTag}</span><span style="color:#b45309;font-weight:500">${(parseFloat(r.weight)||0).toFixed(3)} Kg</span></div>`;
             }).join('')
           + (cmb.length > 5 ? `<div style="text-align:center;padding-top:8px"><button class="btn-section-detail" onclick="switchProcess('혼련(CMB)')">전체 ${cmb.length}건 보기 →</button></div>` : '')}
+      </div>
+    </div>
+    <div class="process-section">
+      <div class="section-header">
+        <span class="section-title">✂️ 재단 작업일지</span>
+        <span class="section-count">${cut.length}건</span>
+      </div>
+      <div class="section-card">
+        ${cut.length === 0 ? '<div style="color:#aaa;text-align:center;padding:1rem;font-size:13px">데이터 없음</div>'
+          : cut.slice(0, 5).map(r => {
+              return `<div style="font-size:12px;color:#555;padding:6px 0;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between"><span>${r.work_date} · ${r.worker_id||'-'} · ${r.material_name||'-'}</span><span style="color:#7e22ce;font-weight:500">${(r.box_count||0).toLocaleString()} 박스</span></div>`;
+            }).join('')
+          + (cut.length > 5 ? `<div style="text-align:center;padding-top:8px"><button class="btn-section-detail" onclick="switchProcess('재단')">전체 ${cut.length}건 보기 →</button></div>` : '')}
       </div>
     </div>
   `;
@@ -1126,6 +1247,190 @@ async function saveEditCmb() {
   loadData();
 }
 
+// ── 재단 테이블 렌더링 ──────────────────────────────
+function renderCuttingTable(data) {
+  if (!data.length) {
+    document.getElementById('resultArea').innerHTML = '<div class="card"><div class="empty-row" style="padding:2rem;text-align:center;color:#aaa">조회된 데이터가 없어요.</div></div>';
+    return;
+  }
+  
+  // 날짜별 안전점검 매핑
+  const safetyByDate = {};
+  (cachedData.재단점검 || []).forEach(s => {
+    safetyByDate[s.check_date] = s;
+  });
+  
+  document.getElementById('resultArea').innerHTML = `
+    <div class="card" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>NO</th><th>작업일</th><th>사번<br>(제품코드)</th>
+              <th>품명</th><th>재질명</th><th>뱃지 No</th>
+              <th style="text-align:right">박스수량(개)</th>
+              <th style="text-align:right">자투리(g)</th>
+              <th>작업자</th><th>비고</th><th>특이사항</th>
+              <th>안전점검</th><th>입력자</th><th>제출일시</th><th>작업</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.map((r, i) => {
+              const prod = PRODUCTS[r.worker_id] || {};
+              const isDeleted = !!r.deleted_at;
+              const canEdit = canEditDelete(r) && !isDeleted;
+              const reason = canEdit ? '' : (isDeleted ? '삭제됨' : getCannotEditReason(r));
+              const actionsHtml = isDeleted
+                ? (myInfo && myInfo.user_type === 'super' ? `<button class="btn-row btn-row-edit" onclick="restoreRecord('cutting_reports', ${r.id})">복구</button>` : '<span style="color:#aaa;font-size:11px">삭제됨</span>')
+                : `<div class="row-actions">
+                    <button class="btn-row btn-row-edit" ${canEdit ? `onclick='openEditCutting(${JSON.stringify(r).replace(/'/g, "&#39;")})'` : 'disabled'} title="${reason}">수정</button>
+                    <button class="btn-row btn-row-del" ${canEdit ? `onclick='openDelete("cutting_reports", ${JSON.stringify(r).replace(/'/g, "&#39;")})'` : 'disabled'} title="${reason}">삭제</button>
+                  </div>`;
+              
+              // 해당 날짜의 안전점검 데이터
+              const safety = safetyByDate[r.work_date];
+              let safetyBtn = '<span style="color:#aaa;font-size:11px">점검 없음</span>';
+              if (safety) {
+                let abnormalCount = 0;
+                Object.values(safety.check_data || {}).forEach(eq => {
+                  Object.entries(eq).forEach(([k, v]) => {
+                    if (k !== 'remarks' && (v === '×' || v === '△')) abnormalCount++;
+                  });
+                });
+                const color = abnormalCount > 0 ? '#dc2626' : '#10b981';
+                const bgColor = abnormalCount > 0 ? '#fee2e2' : '#d1fae5';
+                safetyBtn = `<button class="btn-row" style="background:${bgColor};color:${color};font-size:11px;padding:3px 8px;font-weight:600" onclick='showSafetyData(${JSON.stringify(safety).replace(/'/g, "&#39;")})'>${abnormalCount > 0 ? '⚠️ ' : '✓ '}${abnormalCount === 0 ? '정상' : abnormalCount + '건 이상'}</button>`;
+              }
+              
+              return `<tr class="${isDeleted ? 'deleted-row' : ''}">
+                <td style="color:#bbb;font-size:12px">${i+1}</td>
+                <td>${r.work_date}${isDeleted ? '<span class="deleted-badge">삭제됨</span>' : ''}</td>
+                <td style="font-weight:500">${r.worker_id||'-'}</td>
+                <td style="font-size:12px;color:#555">${prod.partName||'-'}</td>
+                <td style="font-weight:500;color:#7e22ce">${r.material_name||'-'}</td>
+                <td style="color:#7e22ce;font-size:12px">${r.lot_no||'-'}</td>
+                <td style="text-align:right;font-weight:500">${(r.box_count||0).toLocaleString()}</td>
+                <td style="text-align:right">${(parseFloat(r.scrap_weight)||0).toFixed(2)}</td>
+                <td>${r.worker_name||'-'}</td>
+                <td style="font-size:12px;color:#888">${r.note||'-'}</td>
+                <td style="font-size:12px;color:#888">${r.remarks||'-'}</td>
+                <td style="text-align:center">${safetyBtn}</td>
+                <td style="font-size:11px;color:#888">${r.created_by_name||'-'}</td>
+                <td style="font-size:11px;color:#aaa">${fmtDatetime(r.submitted_at)}</td>
+                <td>${actionsHtml}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// 안전점검 데이터 팝업으로 보여주기
+function showSafetyData(safety) {
+  const EQUIPMENTS = [
+    { key: 'sharing_1', name: '샤링 1호 (자동재단기 1)' },
+    { key: 'sharing_2', name: '샤링 2호 (자동재단기 2)' },
+    { key: 'sharing_3', name: '샤링 3호 (폭재단기 1)' },
+    { key: 'sharing_4', name: '샤링 4호 (폭재단기 2)' }
+  ];
+  const ITEMS = [
+    '1.스위치 작동', '2.칼날 상태', '3.모터 이상음', '4.작동유 충만',
+    '5.안전커버 작동', '6.에어압력', '7.청결 상태', '8.비상정지 버튼'
+  ];
+  
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html += '<thead><tr><th style="background:#dc2626;color:white;padding:8px;border:1px solid #ddd">설비</th>';
+  for (let i = 1; i <= 8; i++) {
+    html += `<th style="background:#fef2f2;color:#991b1b;padding:6px 4px;border:1px solid #ddd;font-size:10px">${ITEMS[i-1]}</th>`;
+  }
+  html += '<th style="background:#fef2f2;color:#991b1b;padding:6px 4px;border:1px solid #ddd">특이사항</th>';
+  html += '</tr></thead><tbody>';
+  
+  EQUIPMENTS.forEach(eq => {
+    const data = safety.check_data?.[eq.key] || {};
+    html += `<tr><td style="padding:8px;border:1px solid #ddd;background:#fef2f2;font-weight:600;color:#991b1b">${eq.name}</td>`;
+    for (let i = 1; i <= 8; i++) {
+      const v = data[i] || '-';
+      let bg = 'white', color = '#666';
+      if (v === '○') { bg = '#10b981'; color = 'white'; }
+      else if (v === '△') { bg = '#f59e0b'; color = 'white'; }
+      else if (v === '×') { bg = '#ef4444'; color = 'white'; }
+      else if (v === '│') { bg = '#6b7280'; color = 'white'; }
+      html += `<td style="padding:6px;border:1px solid #ddd;text-align:center;background:${bg};color:${color};font-weight:700">${v}</td>`;
+    }
+    html += `<td style="padding:6px;border:1px solid #ddd;font-size:11px">${data.remarks || '-'}</td>`;
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  
+  if (safety.overall_remarks) {
+    html += `<div style="margin-top:14px;padding:12px;background:#fef2f2;border-left:4px solid #dc2626;border-radius:6px"><strong style="color:#991b1b">전체 특이사항:</strong><br>${safety.overall_remarks}</div>`;
+  }
+  
+  html += `<div style="margin-top:10px;font-size:11px;color:#888;text-align:right">점검자: ${safety.checked_by_name || '-'} · ${fmtDatetime(safety.checked_at)}</div>`;
+  
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML = `
+    <div style="background:white;border-radius:12px;padding:24px;max-width:900px;width:100%;max-height:85vh;overflow-y:auto">
+      <h3 style="margin:0 0 16px;color:#dc2626">🔒 일일 안전 점검 (${safety.check_date})</h3>
+      ${html}
+      <div style="text-align:right;margin-top:16px">
+        <button onclick="this.closest('div[style*=\\'position:fixed\\']').remove()" style="padding:8px 20px;background:#243bb2;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600">닫기</button>
+      </div>
+    </div>
+  `;
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
+}
+
+// ── 재단 수정 ──────────────────────────────
+let editingCuttingBefore = null;
+function openEditCutting(r) {
+  editingCuttingBefore = JSON.parse(JSON.stringify(r));
+  document.getElementById('ect_id').value = r.id;
+  document.getElementById('ect_work_date').value = r.work_date;
+  document.getElementById('ect_worker_name').value = r.worker_name || '';
+  document.getElementById('ect_worker_id').value = r.worker_id || '';
+  document.getElementById('ect_material_name').value = r.material_name || '';
+  document.getElementById('ect_lot_no').value = r.lot_no || '';
+  document.getElementById('ect_box_count').value = r.box_count || 0;
+  document.getElementById('ect_scrap_weight').value = r.scrap_weight || 0;
+  document.getElementById('ect_note').value = r.note || '';
+  document.getElementById('ect_remarks').value = r.remarks || '';
+  document.getElementById('editCuttingMeta').textContent = `입력자: ${r.created_by_name || '-'} (${r.created_by_emp_code || '-'}) · 작성일: ${r.work_date}`;
+  document.getElementById('editCuttingModal').classList.add('open');
+}
+
+async function saveEditCutting() {
+  const id = parseInt(document.getElementById('ect_id').value);
+  const before = editingCuttingBefore;
+  const after = {
+    work_date: document.getElementById('ect_work_date').value,
+    worker_name: document.getElementById('ect_worker_name').value.trim(),
+    worker_id: document.getElementById('ect_worker_id').value.trim(),
+    material_name: document.getElementById('ect_material_name').value.trim(),
+    lot_no: document.getElementById('ect_lot_no').value.trim() || null,
+    box_count: parseInt(document.getElementById('ect_box_count').value) || 0,
+    scrap_weight: parseFloat(document.getElementById('ect_scrap_weight').value) || 0,
+    note: document.getElementById('ect_note').value,
+    remarks: document.getElementById('ect_remarks').value,
+    modified_at: new Date().toISOString(),
+    modified_by: myInfo.emp_code + ' (' + myInfo.name + ')'
+  };
+
+  const { error } = await db.from('cutting_reports').update(after).eq('id', id);
+  if (error) { showToast('저장 실패: ' + error.message); return; }
+
+  await logAudit('update', 'cutting_reports', id, before, after, null);
+
+  showToast('수정 완료 ✓');
+  closeModal('editCuttingModal');
+  loadData();
+}
+
 // ── 엑셀 다운로드 ──────────────────────────────
 function downloadExcel() {
   const wb = XLSX.utils.book_new();
@@ -1233,6 +1538,67 @@ function downloadExcel() {
       const wsCheck = XLSX.utils.json_to_sheet(checkRows);
       wsCheck['!cols'] = [{wch:11},{wch:14},{wch:10},{wch:10},{wch:14},{wch:12},{wch:12},{wch:12},{wch:12}];
       XLSX.utils.book_append_sheet(wb, wsCheck, '혼련(CMB) 점검데이터');
+    }
+    added++;
+  }
+
+  // 재단 데이터
+  if ((currentProcess === 'all' || currentProcess === '재단') && cachedData.재단.length > 0) {
+    const rows = cachedData.재단.map((r, i) => {
+      const prod = PRODUCTS[r.worker_id] || {};
+      return {
+        'NO': i + 1,
+        '작업일': r.work_date || '',
+        '사번(제품코드)': r.worker_id || '',
+        '고객 품번': prod.partNo || '',
+        '품명': prod.partName || '',
+        '재질명': r.material_name || '',
+        '뱃지 No': r.lot_no || '',
+        '재단박스 수량(개)': r.box_count || 0,
+        '자투리 발생량(g)': parseFloat(r.scrap_weight) || 0,
+        '작업자': r.worker_name || '',
+        '비고': r.note || '',
+        '특이사항': r.remarks || '',
+        '입력자': r.created_by_name || '',
+        '제출일시': fmtDatetime(r.submitted_at)
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{wch:5},{wch:11},{wch:12},{wch:15},{wch:25},{wch:12},{wch:14},{wch:12},{wch:12},{wch:10},{wch:18},{wch:18},{wch:10},{wch:18}];
+    XLSX.utils.book_append_sheet(wb, ws, '재단 작업일지');
+    
+    // 안전 점검 데이터 (별도 시트)
+    if (cachedData.재단점검.length > 0) {
+      const ITEMS = [
+        '1.스위치 작동', '2.칼날 상태', '3.모터 이상음', '4.작동유 충만',
+        '5.안전커버 작동', '6.에어압력', '7.청결 상태', '8.비상정지 버튼'
+      ];
+      const EQUIPS = [
+        { key: 'sharing_1', name: '샤링 1호 (자동재단기 1)' },
+        { key: 'sharing_2', name: '샤링 2호 (자동재단기 2)' },
+        { key: 'sharing_3', name: '샤링 3호 (폭재단기 1)' },
+        { key: 'sharing_4', name: '샤링 4호 (폭재단기 2)' }
+      ];
+      const safetyRows = [];
+      cachedData.재단점검.forEach(s => {
+        EQUIPS.forEach(eq => {
+          const data = s.check_data?.[eq.key] || {};
+          const row = {
+            '점검일자': s.check_date,
+            '설비명': eq.name,
+            '점검자': s.checked_by_name || ''
+          };
+          for (let i = 1; i <= 8; i++) {
+            row[ITEMS[i-1]] = data[i] || '';
+          }
+          row['설비별 특이사항'] = data.remarks || '';
+          row['전체 특이사항'] = s.overall_remarks || '';
+          safetyRows.push(row);
+        });
+      });
+      const wsSafety = XLSX.utils.json_to_sheet(safetyRows);
+      wsSafety['!cols'] = [{wch:11},{wch:22},{wch:10},{wch:14},{wch:12},{wch:14},{wch:14},{wch:14},{wch:12},{wch:12},{wch:14},{wch:20},{wch:25}];
+      XLSX.utils.book_append_sheet(wb, wsSafety, '재단 안전점검');
     }
     added++;
   }
