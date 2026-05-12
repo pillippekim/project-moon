@@ -136,6 +136,7 @@ tr:hover td { background: #fafafa; }
     <button class="process-tab" data-process="혼련(CMB)" onclick="switchProcess('혼련(CMB)')">🧪 혼련(CMB)</button>
     <button class="process-tab" data-process="재단" onclick="switchProcess('재단')">✂️ 재단</button>
     <button class="process-tab" data-process="도포" onclick="switchProcess('도포')">🎨 도포</button>
+    <button class="process-tab" data-process="2차가류" onclick="switchProcess('2차가류')">🔥 2차가류</button>
     <button class="process-tab" data-process="쇼트" onclick="switchProcess('쇼트')" disabled style="opacity:0.5">💥 쇼트</button>
     <button class="process-tab" data-process="성형" onclick="switchProcess('성형')" disabled style="opacity:0.5">🔧 성형</button>
   </div>
@@ -461,7 +462,7 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentProcess = 'all';
 let unifiedView = false;
-let cachedData = { 포장: [], 검사: [], 'CMB': [], 재단: [], 재단점검: [], 도포: [] };
+let cachedData = { 포장: [], 검사: [], 'CMB': [], 재단: [], 재단점검: [], 도포: [], '2차가류': [], '2차가류점검': [] };
 let PRODUCTS = {};
 let myInfo = null;
 let showDeleted = false;
@@ -797,6 +798,21 @@ async function loadData() {
     cachedData.도포 = data || [];
   }
 
+  // 2차가류
+  {
+    let q = db.from('postcure_reports').select('*').gte('work_date', start).lte('work_date', end);
+    if (!showDeleted) q = q.is('deleted_at', null);
+    if (fSabun)  q = q.ilike('worker_id', `%${fSabun}%`);
+    if (fWorker) q = q.ilike('worker_name', `%${fWorker}%`);
+    const { data } = await q.order('work_date', { ascending: false });
+    cachedData['2차가류'] = data || [];
+
+    const { data: pcSafety } = await db.from('postcure_safety_check')
+      .select('*').gte('check_date', start).lte('check_date', end)
+      .order('check_date', { ascending: false });
+    cachedData['2차가류점검'] = pcSafety || [];
+  }
+
   render();
 }
 
@@ -815,6 +831,8 @@ function render() {
     renderCuttingTable(cachedData.재단);
   } else if (currentProcess === '도포') {
     renderCoatingTable(cachedData.도포);
+  } else if (currentProcess === '2차가류') {
+    renderPostcureTable(cachedData['2차가류']);
   }
 }
 
@@ -825,9 +843,10 @@ function renderStats() {
   const cmb = cachedData.CMB || [];
   const cut = cachedData.재단 || [];
   const coat = cachedData.도포 || [];
+  const pc = cachedData['2차가류'] || [];
 
   if (currentProcess === 'all') {
-    const totalCount = pkg.length + ins.length + cmb.length + cut.length + coat.length;
+    const totalCount = pkg.length + ins.length + cmb.length + cut.length + coat.length + pc.length;
     const totalQty = pkg.reduce((s,r)=>s+(r.quantity||0),0);
     const totalInspect = ins.reduce((s,r)=>s+(r.inspect_qty||0),0);
     const totalCmbWeight = cmb.filter(r => !r.is_remix).reduce((s,r)=>s+(parseFloat(r.weight)||0),0);
@@ -908,6 +927,15 @@ function renderStats() {
       <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-label">불량수량</div><div class="stat-num red">${totalDefect.toLocaleString()} <span class="stat-unit">EA</span></div></div>
       <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-label">불량률</div><div class="stat-num">${defectRate} <span class="stat-unit">%</span></div></div>
     `;
+  } else if (currentProcess === '2차가류') {
+    const totalInput = pc.reduce((s,r)=>s+(r.input_qty||0),0);
+    const workers = new Set(pc.map(r=>r.worker_name).filter(Boolean)).size;
+    statsEl.innerHTML = `
+      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">2차가류 건수</div><div class="stat-num blue">${pc.length} <span class="stat-unit">건</span></div></div>
+      <div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-label">총 투입량</div><div class="stat-num green">${totalInput.toLocaleString()} <span class="stat-unit">EA</span></div></div>
+      <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-label">작업자 수</div><div class="stat-num orange">${workers} <span class="stat-unit">명</span></div></div>
+      <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-label">조회 기간</div><div class="stat-num" style="font-size:14px">${document.getElementById('startDate').value} ~<br>${document.getElementById('endDate').value}</div></div>
+    `;
   }
 }
 
@@ -917,6 +945,7 @@ function renderAllSections() {
   const cmb = cachedData.CMB || [];
   const cut = cachedData.재단 || [];
   const coat = cachedData.도포 || [];
+  const pc = cachedData['2차가류'] || [];
   const html = `
     <div class="process-section">
       <div class="section-header">
@@ -981,6 +1010,19 @@ function renderAllSections() {
               return `<div style="font-size:12px;color:#555;padding:6px 0;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between"><span>${r.work_date} · ${r.worker_id||'-'} · ${r.work_type||'-'}</span><span style="color:#243bb2;font-weight:500">${(r.total_qty||0).toLocaleString()} EA</span></div>`;
             }).join('')
           + (coat.length > 5 ? `<div style="text-align:center;padding-top:8px"><button class="btn-section-detail" onclick="switchProcess('도포')">전체 ${coat.length}건 보기 →</button></div>` : '')}
+      </div>
+    </div>
+    <div class="process-section">
+      <div class="section-header">
+        <span class="section-title">🔥 2차가류 작업일지</span>
+        <span class="section-count">${pc.length}건</span>
+      </div>
+      <div class="section-card">
+        ${pc.length === 0 ? '<div style="color:#aaa;text-align:center;padding:1rem;font-size:13px">데이터 없음</div>'
+          : pc.slice(0, 5).map(r => {
+              return `<div style="font-size:12px;color:#555;padding:6px 0;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between"><span>${r.work_date} · ${r.worker_id||'-'} · ${r.material_name||'-'}</span><span style="color:#243bb2;font-weight:500">${(r.input_qty||0).toLocaleString()} EA</span></div>`;
+            }).join('')
+          + (pc.length > 5 ? `<div style="text-align:center;padding-top:8px"><button class="btn-section-detail" onclick="switchProcess('2차가류')">전체 ${pc.length}건 보기 →</button></div>` : '')}
       </div>
     </div>
   `;
@@ -1615,6 +1657,99 @@ async function deleteCoating(id) {
   loadData();
 }
 
+// ── 2차가류 테이블 렌더링 ──────────────────────────────
+function renderPostcureTable(data) {
+  if (!data.length) {
+    document.getElementById('resultArea').innerHTML = '<div class="card"><div style="padding:2rem;text-align:center;color:#aaa;font-size:13px">데이터가 없어요.</div></div>';
+    return;
+  }
+  document.getElementById('resultArea').innerHTML = `
+    <div class="card" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>NO</th><th>작업일</th><th>사번</th><th>재질명</th>
+              <th>온도(℃)</th><th>시간(분)</th><th>투입량</th><th>성형작업자</th>
+              <th>경도</th><th>생산LOT</th><th>작업자</th><th>비고</th>
+              <th>특이사항</th><th>입력자</th><th>제출일시</th><th>작업</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.map((r, i) => {
+              const isDeleted = r.deleted_at;
+              const rowStyle = isDeleted ? 'background:#f9f9f9;opacity:0.5;text-decoration:line-through' : '';
+              return `<tr style="${rowStyle}">
+                <td>${i+1}</td>
+                <td>${r.work_date}</td>
+                <td>${r.worker_id||'-'}</td>
+                <td>${r.material_name||'-'}</td>
+                <td>${r.temperature != null ? r.temperature : '-'}</td>
+                <td>${r.duration_min != null ? r.duration_min : '-'}</td>
+                <td style="font-weight:600;color:#243bb2">${(r.input_qty||0).toLocaleString()}</td>
+                <td>${r.molding_worker||'-'}</td>
+                <td>${r.hardness||'-'}</td>
+                <td style="font-size:11px">${r.lot_no||'-'}</td>
+                <td>${r.worker_name||'-'}</td>
+                <td style="font-size:11px">${r.note||'-'}</td>
+                <td style="font-size:11px">${r.remarks||'-'}</td>
+                <td style="font-size:11px">${r.created_by_name||'-'}</td>
+                <td style="font-size:11px">${r.created_at ? new Date(r.created_at).toLocaleString('ko-KR') : '-'}</td>
+                <td>${isDeleted ? '<span style="color:#aaa;font-size:11px">삭제됨</span>' : `<button class="btn-row" onclick='openEditPostcure(${JSON.stringify(r).replace(/'/g, "&#39;")})'>수정</button> <button class="btn-row-del" onclick="deletePostcure(${r.id})">삭제</button>`}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+let editingPostcureBefore = null;
+function openEditPostcure(r) {
+  editingPostcureBefore = JSON.parse(JSON.stringify(r));
+  const newTemp = prompt('온도(℃):', r.temperature || '');
+  if (newTemp === null) return;
+  const newDur = prompt('시간(분):', r.duration_min || '');
+  if (newDur === null) return;
+  const newInput = prompt('투입량:', r.input_qty || '0');
+  if (newInput === null) return;
+  const newHardness = prompt('경도:', r.hardness || '');
+  if (newHardness === null) return;
+  const newNote = prompt('비고:', r.note || '');
+  if (newNote === null) return;
+
+  saveEditPostcure(r.id, {
+    temperature: parseFloat(newTemp) || null,
+    duration_min: parseInt(newDur) || null,
+    input_qty: parseInt(newInput) || 0,
+    hardness: newHardness,
+    note: newNote,
+    updated_at: new Date().toISOString()
+  });
+}
+
+async function saveEditPostcure(id, updates) {
+  const { error } = await db.from('postcure_reports').update(updates).eq('id', id);
+  if (error) { alert('수정 실패: ' + error.message); return; }
+  try {
+    await db.from('audit_logs').insert({ table_name: 'postcure_reports', record_id: id, action: 'UPDATE', before_data: editingPostcureBefore, after_data: updates, performed_by: currentUser?.name || '-', performed_at: new Date().toISOString() });
+  } catch(e) {}
+  alert('수정 완료!');
+  loadData();
+}
+
+async function deletePostcure(id) {
+  if (!confirm('이 기록을 삭제할까요? (복구 가능)')) return;
+  const { error } = await db.from('postcure_reports').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+  if (error) { alert('삭제 실패: ' + error.message); return; }
+  try {
+    await db.from('audit_logs').insert({ table_name: 'postcure_reports', record_id: id, action: 'DELETE', performed_by: currentUser?.name || '-', performed_at: new Date().toISOString() });
+  } catch(e) {}
+  alert('삭제 완료!');
+  loadData();
+}
+
 // ── 엑셀 다운로드 ──────────────────────────────
 function downloadExcel() {
   const wb = XLSX.utils.book_new();
@@ -1806,6 +1941,30 @@ function downloadExcel() {
     const ws = XLSX.utils.json_to_sheet(coatRows);
     ws['!cols'] = [{wch:11},{wch:10},{wch:20},{wch:8},{wch:6},{wch:10},{wch:8},{wch:10},{wch:15},{wch:15},{wch:10},{wch:18}];
     XLSX.utils.book_append_sheet(wb, ws, '도포 작업일지');
+    added++;
+  }
+
+  // 2차가류 데이터
+  if ((currentProcess === 'all' || currentProcess === '2차가류') && cachedData['2차가류'].length > 0) {
+    const pcRows = cachedData['2차가류'].filter(r => !r.deleted_at).map(r => ({
+      '작업일': r.work_date,
+      '사번': r.worker_id || '',
+      '재질명': r.material_name || '',
+      '온도(℃)': r.temperature || '',
+      '시간(분)': r.duration_min || '',
+      '투입량': r.input_qty || 0,
+      '성형작업자': r.molding_worker || '',
+      '경도': r.hardness || '',
+      '생산LOT': r.lot_no || '',
+      '작업자': r.worker_name || '',
+      '비고': r.note || '',
+      '특이사항': r.remarks || '',
+      '입력자': r.created_by_name || '',
+      '제출일시': r.created_at ? new Date(r.created_at).toLocaleString('ko-KR') : ''
+    }));
+    const ws = XLSX.utils.json_to_sheet(pcRows);
+    ws['!cols'] = [{wch:11},{wch:10},{wch:12},{wch:8},{wch:8},{wch:8},{wch:10},{wch:8},{wch:12},{wch:10},{wch:15},{wch:15},{wch:10},{wch:18}];
+    XLSX.utils.book_append_sheet(wb, ws, '2차가류 작업일지');
     added++;
   }
 
