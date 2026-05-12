@@ -254,10 +254,14 @@ tr:hover td { background: #fafafa; }
 
       <!-- 행 추가 폼 -->
       <div class="form-row" id="form_worker">
-        <div class="form-grid form-grid-2">
+        <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
           <div class="form-group">
-            <span class="form-label">이름 *</span>
-            <input class="form-input" id="w_name" placeholder="예: 홍길동" />
+            <span class="form-label">이름 * (영문 또는 한글)</span>
+            <input class="form-input" id="w_name" placeholder="예: NGUYEN VAN A 또는 홍길동" />
+          </div>
+          <div class="form-group">
+            <span class="form-label">한국어명 (외국인만)</span>
+            <input class="form-input" id="w_name_local" placeholder="예: 응웬반아 (선택)" />
           </div>
           <div class="form-group">
             <span class="form-label">공정</span>
@@ -283,7 +287,7 @@ tr:hover td { background: #fafafa; }
       <div class="table-scroll-wrap">
         <table>
           <thead>
-            <tr><th>이름</th><th>공정</th><th>상태</th><th>등록일</th><th></th></tr>
+            <tr><th>이름</th><th>한국어명</th><th>공정</th><th>상태</th><th>등록일</th><th></th></tr>
           </thead>
           <tbody id="workerTable"></tbody>
         </table>
@@ -479,6 +483,7 @@ function filterWorkers() {
   const filtered = q
     ? allWorkers.filter(r =>
         r.name.toLowerCase().includes(q) ||
+        (r.name_local || '').toLowerCase().includes(q) ||
         r.process.toLowerCase().includes(q))
     : allWorkers;
   renderWorkers(filtered, true);
@@ -490,7 +495,7 @@ function renderWorkers(data, isSearch = false) {
   const moreBtn = document.getElementById('workerMoreBtn');
 
   if (!data.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">등록된 작업자가 없어요.</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">등록된 작업자가 없어요.</td></tr>';
     moreRow.style.display = 'none';
     return;
   }
@@ -501,6 +506,7 @@ function renderWorkers(data, isSearch = false) {
   tbody.innerHTML = displayed.map(r => `
     <tr>
       <td style="font-weight:500">${r.name}</td>
+      <td style="font-size:12px;color:${r.name_local?'#555':'#ccc'}">${r.name_local || '-'}</td>
       <td>${r.process}</td>
       <td><span class="active-badge ${r.active ? 'active-y' : 'active-n'}">${r.active ? '재직중' : '퇴직'}</span></td>
       <td style="color:#aaa;font-size:12px">${fmtDate(r.created_at)}</td>
@@ -523,11 +529,15 @@ function renderWorkers(data, isSearch = false) {
 
 async function saveWorker() {
   const name    = document.getElementById('w_name').value.trim();
+  const nameLocal = document.getElementById('w_name_local').value.trim();
   const process = document.getElementById('w_process').value;
   if (!name) { showToast('이름을 입력해주세요.'); return; }
-  const { error } = await db.from('workers').insert({ name, process });
+  const payload = { name, process };
+  if (nameLocal) payload.name_local = nameLocal;
+  const { error } = await db.from('workers').insert(payload);
   if (error) { showToast('저장 실패: ' + error.message); return; }
   document.getElementById('w_name').value = '';
+  document.getElementById('w_name_local').value = '';
   toggleForm('worker');
   showToast('작업자가 추가됐어요 ✓');
   loadWorkers();
