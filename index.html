@@ -154,14 +154,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         <div class="stat-num orange" id="todayCutting">- <span class="stat-unit">개</span></div>
       </div>
       <div class="stat-card">
+        <div class="stat-icon">🔧</div>
+        <div class="stat-label">성형 생산</div>
+        <div class="stat-num" style="color:#7c3aed" id="todayMolding">- <span class="stat-unit">EA</span></div>
+      </div>
+      <div class="stat-card">
         <div class="stat-icon">👥</div>
         <div class="stat-label">오늘 작업자</div>
         <div class="stat-num" id="todayWorkers">- <span class="stat-unit">명</span></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">📄</div>
-        <div class="stat-label">등록 문서</div>
-        <div class="stat-num" id="totalDocs">- <span class="stat-unit">건</span></div>
       </div>
     </div>
 
@@ -355,7 +355,7 @@ function renderHeader() {
 // 공정별 아이콘 매핑
 const PROCESS_ICONS = {
   '포장': '📦', '검사': '🔬', '혼련(CMB)': '🧪', '재단': '✂️',
-  '도포': '🎨', '성형': '🔧', '쇼트': '💥', '2차가류': '🔥'
+  '도포': '🎨', '성형': '🔧', '쇼트': '🪨', '2차가류': '🫕'
 };
 
 // ── 작업자 화면 ──────────────────────────────
@@ -509,14 +509,22 @@ async function loadStats() {
   const cutCount = cutReports ? cutReports.length : 0;
   const totalCutBox = cutReports ? cutReports.reduce((s,r) => s+(r.box_count||0), 0) : 0;
 
+  // 성형
+  const { data: moldReports } = await db.from('molding_reports')
+    .select('production_qty, worker_name')
+    .eq('work_date', todayStr);
+
+  const moldCount = moldReports ? moldReports.length : 0;
+  const totalMoldQty = moldReports ? moldReports.reduce((s,r) => s+(r.production_qty||0), 0) : 0;
+
   // 전체 작업자 수 (모든 공정 합산)
   const allWorkers = new Set();
-  [pkgReports, insReports, cmbReports, cutReports].forEach(arr => {
+  [pkgReports, insReports, cmbReports, cutReports, moldReports].forEach(arr => {
     if (arr) arr.forEach(r => { if (r.worker_name) allWorkers.add(r.worker_name); });
   });
 
   // 전체 건수
-  const totalCount = pkgCount + insCount + cmbCount + cutCount;
+  const totalCount = pkgCount + insCount + cmbCount + cutCount + moldCount;
 
   // 화면 업데이트
   document.getElementById('todayCount').innerHTML = totalCount + ' <span class="stat-unit">건</span>';
@@ -525,6 +533,7 @@ async function loadStats() {
   document.getElementById('todayPass').innerHTML = totalPass.toLocaleString() + ' <span class="stat-unit">EA</span>';
   document.getElementById('todayCmb').innerHTML = totalCmb.toFixed(1) + ' <span class="stat-unit">Kg</span>';
   document.getElementById('todayCutting').innerHTML = totalCutBox.toLocaleString() + ' <span class="stat-unit">개</span>';
+  document.getElementById('todayMolding').innerHTML = totalMoldQty.toLocaleString() + ' <span class="stat-unit">EA</span>';
   document.getElementById('todayWorkers').innerHTML = allWorkers.size + ' <span class="stat-unit">명</span>';
 
   const { data: docs } = await db.from('documents').select('id').eq('is_current', true);
