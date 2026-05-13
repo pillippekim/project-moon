@@ -28,6 +28,7 @@ const I18N = {
     selectWorker: { ko: '선택하세요...', id: 'Pilih...', en: 'Select...' },
     note:         { ko: '비고', id: 'Catatan', en: 'Note' },
     remarks:      { ko: '특이사항', id: 'Keterangan', en: 'Remarks' },
+    remarksPlaceholder: { ko: '오늘 작업 중 특이사항을 입력하세요', id: 'Masukkan keterangan hari ini', en: 'Enter today\'s remarks' },
     problem:      { ko: '문제점', id: 'Masalah', en: 'Problem' },
 
     // 수량
@@ -87,7 +88,7 @@ const I18N = {
 
   // ── 성형 전용 ──
   molding: {
-    title:        { ko: '성형 작업일지', id: 'Laporan Kerja Molding', en: 'Molding Work Report' },
+    title:        { ko: '🏭 성형 작업일지', id: '🏭 Laporan Kerja Molding', en: '🏭 Molding Work Report' },
     equipSelect:  { ko: '설비 선택', id: 'Pilih mesin', en: 'Select machine' },
     dormant:      { ko: '휴면설비', id: 'Mesin nonaktif', en: 'Dormant' },
     selected:     { ko: '✓ 선택됨', id: '✓ Terpilih', en: '✓ Selected' },
@@ -116,6 +117,7 @@ const I18N = {
     downtimeNone: { ko: '없음', id: 'Tidak ada', en: 'None' },
     downtimeMin:  { ko: '비가동 시간(분)', id: 'Waktu berhenti (menit)', en: 'Downtime (min)' },
     downtimeDetail:{ ko: '비가동 상세', id: 'Detail berhenti', en: 'Downtime detail' },
+    downtimeDetailPlaceholder:{ ko: '상세 사유 입력', id: 'Masukkan alasan detail', en: 'Enter detail reason' },
 
     // 비가동 코드 목록
     dtRawShort:   { ko: '생지부족', id: 'Kekurangan bahan baku', en: 'Raw material shortage' },
@@ -183,7 +185,7 @@ function applyI18N() {
     const [section, key] = el.dataset.i18n.split('.');
     const text = t(section, key);
     if (text) {
-      if (el.tagName === 'INPUT' && el.type !== 'button' && el.type !== 'submit') {
+      if ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && el.type !== 'button' && el.type !== 'submit') {
         el.placeholder = text;
       } else if (el.tagName === 'OPTION') {
         el.textContent = text;

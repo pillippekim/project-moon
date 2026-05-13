@@ -238,7 +238,7 @@
     opacity: 0.4;
   }
   .work-area-locked::before {
-    content: '🔒 설비 점검 완료 후 입력 가능';
+    content: '';
     position: absolute;
     top: 50%;
     left: 50%;
@@ -513,9 +513,9 @@
   <div class="top-bar">
     <a href="index.html" class="back-btn" data-i18n="common.back">← 메인</a>
     <h1 data-i18n="molding.title">🏭 성형 작업일지</h1>
-    <div style="display:flex;align-items:center;gap:10px">
-      <span id="langSelector"></span>
-      <span class="user-info" id="userInfo"></span>
+    <div style="text-align:right">
+      <div class="user-info" id="userInfo"></div>
+      <div id="langSelector" style="margin-top:6px"></div>
     </div>
   </div>
 
@@ -572,22 +572,23 @@
     <div class="section-body" id="safetyBody" style="padding-top:16px">
       <div style="overflow-x:auto">
         <table class="safety-table" id="safetyTable">
-          <thead><tr><th class="item-col-header">점검항목</th><th>판정</th></tr></thead>
+          <thead><tr><th class="item-col-header" data-i18n="safety.checkItem">점검항목</th><th data-i18n="safety.verdict">판정</th></tr></thead>
           <tbody id="safetyRows"></tbody>
         </table>
       </div>
       <div style="margin-top:12px">
-        <textarea id="safetyOverallRemarks" placeholder="설비점검 시 발견한 전체 특이사항을 입력하세요" style="width:100%;padding:10px;border:1px solid #e0e4ed;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px"></textarea>
+        <textarea id="safetyOverallRemarks" data-i18n="safety.remarksPlaceholder" placeholder="설비점검 시 발견한 전체 특이사항을 입력하세요" style="width:100%;padding:10px;border:1px solid #e0e4ed;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px"></textarea>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
-        <div id="safetyProgress" style="font-size:13px;color:#555">✓ 모든 항목 정상(○)으로 자동 설정됨</div>
-        <button onclick="completeSafetyCheck()" style="background:#dc2626;color:white;border:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">점검 완료 ✓</button>
+        <div id="safetyProgress" style="font-size:13px;color:#555" data-i18n="safety.allNormal">✓ 모든 항목 정상(○)으로 자동 설정됨</div>
+        <button onclick="completeSafetyCheck()" style="background:#dc2626;color:white;border:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer" data-i18n="safety.completeBtn">점검 완료 ✓</button>
       </div>
     </div>
   </div>
 
   <!-- 작업 영역 (점검 완료 전 잠금) -->
   <div id="workArea" class="work-area-locked">
+    <div id="lockMessage" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;font-weight:700;color:#dc2626;z-index:10;background:rgba(255,255,255,0.9);padding:16px 32px;border-radius:12px;pointer-events:none;white-space:nowrap" data-i18n="safety.lockedMsg">🔒 설비 점검 완료 후 입력 가능</div>
     <!-- 성형 조건 -->
     <div class="condition-area">
       <h2 data-i18n="molding.conditionTitle">🌡️ 성형 조건</h2>
@@ -619,22 +620,22 @@
             <thead>
               <tr>
                 <th class="col-no">NO</th>
-                <th class="col-sabun">사번</th>
-                <th class="col-product">제품명</th>
-                <th class="col-batch">Batch No.</th>
-                <th class="col-cv">C/V</th>
-                <th class="col-shot">실적판수</th>
-                <th class="col-qty">생산수량</th>
-                <th class="col-defect">불량수량</th>
-                <th class="col-type">작업유형</th>
-                <th class="col-note">비고</th>
+                <th class="col-sabun" data-i18n="common.sabun">사번</th>
+                <th class="col-product" data-i18n="common.productName">제품명</th>
+                <th class="col-batch" data-i18n="common.batchNo">Batch No.</th>
+                <th class="col-cv" data-i18n="molding.cavity">C/V</th>
+                <th class="col-shot" data-i18n="molding.shotCount">실적판수</th>
+                <th class="col-qty" data-i18n="common.productionQty">생산수량</th>
+                <th class="col-defect" data-i18n="common.defectQty">불량수량</th>
+                <th class="col-type" data-i18n="molding.workType">작업유형</th>
+                <th class="col-note" data-i18n="common.note">비고</th>
                 <th class="col-del"></th>
               </tr>
             </thead>
             <tbody id="mainRows"></tbody>
           </table>
         </div>
-        <button class="btn-add-row" onclick="addRow()">+ 행 추가</button>
+        <button class="btn-add-row" onclick="addRow()" data-i18n="common.addRow">+ 행 추가</button>
       </div>
     </div>
 
@@ -661,7 +662,7 @@
         </div>
         <div>
           <label data-i18n="molding.downtimeDetail">비가동 상세</label>
-          <input type="text" id="downtimeDetail" placeholder="상세 사유 입력" />
+          <input type="text" id="downtimeDetail" data-i18n="molding.downtimeDetailPlaceholder" placeholder="상세 사유 입력" />
         </div>
       </div>
     </div>
@@ -669,7 +670,7 @@
     <!-- 전체 비고 -->
     <div class="remarks-area">
       <label style="display:block;font-size:14px;font-weight:600;margin-bottom:8px" data-i18n="common.remarks">📝 특이사항</label>
-      <textarea id="remarks" placeholder="오늘 작업 중 특이사항을 입력하세요"></textarea>
+      <textarea id="remarks" data-i18n="common.remarksPlaceholder" placeholder="오늘 작업 중 특이사항을 입력하세요"></textarea>
     </div>
 
     <!-- 제출 -->
@@ -853,7 +854,7 @@ function selectTeam(team) {
   
   // 설비 바뀌면 점검 초기화
   safetyCheckCompleted = false;
-  document.getElementById('workArea').classList.add('work-area-locked');
+  document.getElementById('workArea').classList.add('work-area-locked'); document.getElementById('lockMessage').style.display='block';
   document.getElementById('safetyStatus').textContent = '점검 진행 중';
 }
 
@@ -936,7 +937,7 @@ function initSafetyTable() {
   
   // 상태 초기화
   safetyCheckCompleted = false;
-  document.getElementById('workArea').classList.add('work-area-locked');
+  document.getElementById('workArea').classList.add('work-area-locked'); document.getElementById('lockMessage').style.display='block';
   document.getElementById('safetyStatus').textContent = '점검 진행 중';
   document.getElementById('safetyProgress').textContent = '✓ 모든 항목 정상(○)으로 자동 설정됨';
 }
@@ -998,7 +999,7 @@ async function completeSafetyCheck() {
   }
   
   safetyCheckCompleted = true;
-  document.getElementById('workArea').classList.remove('work-area-locked');
+  document.getElementById('workArea').classList.remove('work-area-locked'); document.getElementById('lockMessage').style.display='none';
   document.getElementById('safetyStatus').textContent = '✓ 점검 완료';
   document.getElementById('safetyStatus').style.background = 'rgba(255,255,255,0.3)';
   showToast(t('safety','completed') + ' ' + t('molding','workDetail') + '을 입력하세요.');
@@ -1043,7 +1044,7 @@ async function checkTodaySafety() {
       if (data[0].overall_remarks) document.getElementById('safetyOverallRemarks').value = data[0].overall_remarks;
       
       safetyCheckCompleted = true;
-      document.getElementById('workArea').classList.remove('work-area-locked');
+      document.getElementById('workArea').classList.remove('work-area-locked'); document.getElementById('lockMessage').style.display='none';
       document.getElementById('safetyStatus').textContent = '✓ 점검 완료';
       showToast('오늘 점검 이력을 불러왔어요');
       
@@ -1053,13 +1054,13 @@ async function checkTodaySafety() {
     } else {
       existingSafetyId = null;
       safetyCheckCompleted = false;
-      document.getElementById('workArea').classList.add('work-area-locked');
+      document.getElementById('workArea').classList.add('work-area-locked'); document.getElementById('lockMessage').style.display='block';
       document.getElementById('safetyStatus').textContent = '점검 진행 중';
     }
   } catch(e) {
     console.log('molding_safety_check 테이블 없음 - 점검 단계 건너뜀');
     safetyCheckCompleted = true;
-    document.getElementById('workArea').classList.remove('work-area-locked');
+    document.getElementById('workArea').classList.remove('work-area-locked'); document.getElementById('lockMessage').style.display='none';
     if (document.querySelectorAll('#mainRows tr').length === 0) {
       for (let i = 0; i < 5; i++) addRow();
     }
