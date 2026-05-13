@@ -154,7 +154,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         <div class="stat-num orange" id="todayCutting">- <span class="stat-unit">개</span></div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon">🔧</div>
+        <div class="stat-icon">🏭</div>
         <div class="stat-label">성형 생산</div>
         <div class="stat-num" style="color:#7c3aed" id="todayMolding">- <span class="stat-unit">EA</span></div>
       </div>
@@ -169,21 +169,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <div id="dailyMenu" class="hidden">
       <div class="section-title"><span class="section-title-icon">⚡</span> 일상 업무</div>
       <div class="menu-grid">
+        <!-- 1열: 문서 -->
         <a href="docs_viewer.html" class="menu-card">
           <div class="menu-icon">🔍</div>
           <div class="menu-name">문서 조회</div>
           <div class="menu-desc">검사기준서, 작업표준서 등 PDF 조회</div>
         </a>
-        <a href="packaging.html" class="menu-card">
-          <div class="menu-icon">📦</div>
-          <div class="menu-name">포장 작업일지</div>
-          <div class="menu-desc">포장 작업일지 입력 및 수정</div>
-        </a>
-        <a href="inspection.html" class="menu-card">
-          <div class="menu-icon">🔬</div>
-          <div class="menu-name">검사 작업일지</div>
-          <div class="menu-desc">검사 작업일지 입력 및 수정</div>
-        </a>
+        <div></div><div></div>
+        <!-- 2열: 혼련 → 재단 → 도포 -->
         <a href="cmb.html" class="menu-card">
           <div class="menu-icon">🧪</div>
           <div class="menu-name">혼련(CMB) 작업일지</div>
@@ -199,6 +192,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
           <div class="menu-name">도포 작업일지</div>
           <div class="menu-desc">도포(약칠) 작업일지 입력 및 수정</div>
         </a>
+        <!-- 3열: 성형 → 2차가류 → 쇼트 -->
+        <a href="molding.html" class="menu-card">
+          <div class="menu-icon">🏭</div>
+          <div class="menu-name">성형 작업일지</div>
+          <div class="menu-desc">성형 작업일지 입력 및 수정</div>
+        </a>
         <a href="postcure.html" class="menu-card">
           <div class="menu-icon">🫕</div>
           <div class="menu-name">2차가류 작업일지</div>
@@ -209,10 +208,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
           <div class="menu-name">쇼트 작업일지</div>
           <div class="menu-desc">냉동쇼트/자동사상 작업일지 입력</div>
         </a>
-        <a href="molding.html" class="menu-card">
-          <div class="menu-icon">🔧</div>
-          <div class="menu-name">성형 작업일지</div>
-          <div class="menu-desc">성형 작업일지 입력 및 수정</div>
+        <!-- 4열: 조립(예정) → 검사 → 포장 -->
+        <div class="menu-card" style="opacity:0.4;pointer-events:none;border:2px dashed #ccc">
+          <div class="menu-icon">🔩</div>
+          <div class="menu-name">조립 작업일지</div>
+          <div class="menu-desc">준비 중</div>
+        </div>
+        <a href="inspection.html" class="menu-card">
+          <div class="menu-icon">🔬</div>
+          <div class="menu-name">검사 작업일지</div>
+          <div class="menu-desc">검사 작업일지 입력 및 수정</div>
+        </a>
+        <a href="packaging.html" class="menu-card">
+          <div class="menu-icon">📦</div>
+          <div class="menu-name">포장 작업일지</div>
+          <div class="menu-desc">포장 작업일지 입력 및 수정</div>
         </a>
       </div>
     </div>
@@ -360,7 +370,7 @@ function renderHeader() {
 // 공정별 아이콘 매핑
 const PROCESS_ICONS = {
   '포장': '📦', '검사': '🔬', '혼련(CMB)': '🧪', '재단': '✂️',
-  '도포': '🎨', '성형': '🔧', '쇼트': '🪨', '2차가류': '🫕'
+  '도포': '🎨', '성형': '🏭', '쇼트': '🪨', '2차가류': '🫕'
 };
 
 // ── 작업자 화면 ──────────────────────────────
