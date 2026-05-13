@@ -439,6 +439,17 @@
     <button class="btn-primary" id="submitBtn" onclick="submitForm()">제출하기</button>
   </div>
 
+  <!-- 오늘 내 제출 내역 -->
+  <div id="myHistorySection" style="margin-top:20px;background:white;border-radius:12px;box-shadow:0 2px 8px rgba(36,59,178,0.08);overflow:hidden">
+    <div style="padding:16px 24px;background:#243bb2;color:white;display:flex;justify-content:space-between;align-items:center">
+      <h2 style="font-size:15px;font-weight:700;margin:0">📋 오늘 내 제출 내역</h2>
+      <span id="myHistoryCount" style="font-size:12px;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:6px">0건</span>
+    </div>
+    <div id="myHistoryBody" style="padding:16px 24px">
+      <div style="text-align:center;color:#aaa;font-size:13px;padding:20px">로딩 중...</div>
+    </div>
+  </div>
+
 </div>
 
 <!-- 스캔 모달 -->
@@ -495,6 +506,7 @@ function onDateChange() {
   const parts = val.split('-');
   const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
   document.getElementById('dayDisplay').textContent = DAYS[d.getDay()] + '요일';
+  loadMyHistory();
 }
 
 async function loadMasterData() {
@@ -811,7 +823,7 @@ async function submitForm() {
     btn.disabled = false; btn.textContent = '제출하기';
   } else {
     showToast('✓ 저장 완료! DB에 정상 저장됐어요');
-    setTimeout(resetForm, 1800);
+    setTimeout(() => { resetForm(); loadMyHistory(); }, 1800);
   }
 }
 
@@ -842,7 +854,111 @@ function showToast(msg, type) {
   onDateChange();
   await loadMasterData();
   addRow(); addRow(); addRow();
+  loadMyHistory();
 })();
+
+// ── 오늘 내 제출 내역 ──────────────────────────────
+async function loadMyHistory() {
+  const workDate = document.getElementById('workDate').value;
+  if (!workDate || !MY_NAME) {
+    document.getElementById('myHistoryBody').innerHTML = '<div style="text-align:center;color:#aaa;font-size:13px;padding:20px">로그인 정보를 확인 중...</div>';
+    return;
+  }
+
+  const { data, error } = await db.from('packaging_reports')
+    .select('*')
+    .eq('work_date', workDate)
+    .eq('created_by_name', MY_NAME)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false });
+
+  const body = document.getElementById('myHistoryBody');
+  const countEl = document.getElementById('myHistoryCount');
+
+  if (error) {
+    body.innerHTML = '<div style="text-align:center;color:#dc2626;font-size:13px;padding:20px">조회 실패</div>';
+    countEl.textContent = '0건';
+    return;
+  }
+
+  const list = data || [];
+  countEl.textContent = list.length + '건';
+
+  if (list.length === 0) {
+    body.innerHTML = '<div style="text-align:center;color:#aaa;font-size:13px;padding:20px">오늘 제출한 내역이 없습니다.</div>';
+    return;
+  }
+
+  const totalQty = list.reduce((s, r) => s + (r.quantity || 0), 0);
+
+  body.innerHTML = `
+    <div style="margin-bottom:12px;font-size:13px;color:#555">
+      오늘 총 <strong style="color:#243bb2">${list.length}건</strong>, 
+      포장수량 합계 <strong style="color:#243bb2">${totalQty.toLocaleString()} EA</strong>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:#f0f3f9">
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">NO</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">사번</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">작업자</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">LOT No.</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">포장수량</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">비고</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">제출시간</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">작업</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${list.map((r, i) => {
+            const lots = (r.lot_nos || []).join(', ');
+            const time = r.created_at ? new Date(r.created_at).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) : '';
+            return `<tr>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center">${i+1}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed">${r.worker_id||''}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed">${r.worker_name||''}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">${lots}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;font-weight:600">${(r.quantity||0).toLocaleString()}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">${r.note||''}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;color:#888;font-size:11px">${time}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center">
+                <button onclick="deleteMyRecord('${r.id}')" style="background:#fef2f2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">삭제</button>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function deleteMyRecord(id) {
+  if (!confirm('이 제출 내역을 삭제할까요?')) return;
+  
+  const { error } = await db.from('packaging_reports')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('created_by_name', MY_NAME);
+  
+  if (error) {
+    showToast('삭제 실패: ' + error.message, 'error');
+    return;
+  }
+  
+  try {
+    await db.from('audit_logs').insert({
+      table_name: 'packaging_reports',
+      record_id: id,
+      action: 'DELETE',
+      performed_by: MY_NAME,
+      performed_at: new Date().toISOString()
+    });
+  } catch(e) {}
+  
+  showToast('✓ 삭제 완료');
+  loadMyHistory();
+}
 </script>
 </body>
 </html>
