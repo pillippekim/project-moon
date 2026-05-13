@@ -44,8 +44,8 @@ async function checkPageAccess(pageFile) {
     return null;
   }
 
-  // 사용자 언어 설정 저장
-  if (user.language) {
+  // 사용자 언어 설정 저장 (localStorage에 값이 없을 때만 DB에서 초기화)
+  if (user.language && !localStorage.getItem('hkht_lang')) {
     localStorage.setItem('hkht_lang', user.language);
   }
 

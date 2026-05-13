@@ -204,6 +204,20 @@ function applyI18N() {
 // 언어 변경 함수 (설정 페이지나 드롭다운에서 호출)
 function setLanguage(lang) {
   localStorage.setItem('hkht_lang', lang);
+  
+  // DB에도 저장 (로그인된 사용자)
+  try {
+    const dbI18n = window.supabase.createClient(
+      'https://vpaixxlhzkwtgcllimvn.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwYWl4eGxoemt3dGdjbGxpbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNzk4NjMsImV4cCI6MjA5MTk1NTg2M30.V8Bj0cMbM0E2TFhklYYa7TM-vO6Fi70ctACA7uUf4Ig'
+    );
+    dbI18n.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        dbI18n.from('users').update({ language: lang }).eq('auth_user_id', session.user.id).then(() => {});
+      }
+    });
+  } catch(e) { console.log('언어 DB 저장 스킵:', e); }
+  
   applyI18N();
 }
 
