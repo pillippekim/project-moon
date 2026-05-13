@@ -6,6 +6,7 @@
 <title>성형 작업일지 - HKHT</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth_guard.js"></script>
+<script src="i18n.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   
@@ -510,49 +511,50 @@
 <div class="container">
   <!-- 상단 바 -->
   <div class="top-bar">
-    <a href="index.html" class="back-btn">← 메인</a>
-    <h1>🔧 성형 작업일지</h1>
-    <span class="user-info" id="userInfo"></span>
+    <a href="index.html" class="back-btn" data-i18n="common.back">← 메인</a>
+    <h1 data-i18n="molding.title">🏭 성형 작업일지</h1>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span id="langSelector"></span>
+      <span class="user-info" id="userInfo"></span>
+    </div>
   </div>
 
   <!-- 기본 정보 -->
   <div class="header-info">
     <div class="info-block">
-      <label>작업 일자</label>
+      <label data-i18n="common.workDate">작업 일자</label>
       <input type="date" id="workDate" />
     </div>
     <div class="info-block">
-      <label>근무구분</label>
+      <label data-i18n="shift.title">근무구분</label>
       <select id="shiftType">
-        <option value="주간">주간 (08:00~17:00)</option>
-        <option value="잔업">잔업 (17:30~20:30)</option>
+        <option value="주간" data-i18n="shift.day">주간 (08:00~17:00)</option>
+        <option value="잔업" data-i18n="shift.overtime">잔업 (17:30~20:30)</option>
       </select>
     </div>
     <div class="info-block">
-      <label>작업자</label>
+      <label data-i18n="common.worker">작업자</label>
       <select id="workerSelect">
-        <option value="">선택하세요...</option>
+        <option value="" data-i18n="common.selectWorker">선택하세요...</option>
       </select>
     </div>
   </div>
   
   <div class="header-info info-row-2">
     <div class="info-block">
-      <label>시작시간</label>
+      <label data-i18n="common.startTime">시작시간</label>
       <input type="time" id="startTime" value="08:00" />
     </div>
     <div class="info-block">
-      <label>종료시간</label>
+      <label data-i18n="common.endTime">종료시간</label>
       <input type="time" id="endTime" value="17:00" />
     </div>
-    <div class="info-block" style="grid-column: span 2">
-      <!-- 공간 확보용 -->
-    </div>
+    <div class="info-block" style="grid-column: span 2"></div>
   </div>
 
   <!-- 설비 선택 -->
   <div class="equipment-selector">
-    <h2>🏭 설비 선택</h2>
+    <h2 data-i18n="molding.equipSelect">🏭 설비 선택</h2>
     <div class="team-tabs">
       <button class="team-tab active" data-team="A반" onclick="selectTeam('A반')">A반 (10대)</button>
       <button class="team-tab" data-team="B반" onclick="selectTeam('B반')">B반 (9대)</button>
@@ -564,8 +566,8 @@
   <!-- 일일 설비 점검 -->
   <div class="section" id="safetySection">
     <div class="section-header safety">
-      <h2>🔒 일일 설비 점검 (작업 전 필수)</h2>
-      <span id="safetyStatus" style="font-size:12px;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:6px">점검 진행 중</span>
+      <h2 data-i18n="safety.title">🔒 일일 설비 점검 (작업 전 필수)</h2>
+      <span id="safetyStatus" style="font-size:12px;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:6px" data-i18n="safety.inProgress">점검 진행 중</span>
     </div>
     <div class="section-body" id="safetyBody" style="padding-top:16px">
       <div style="overflow-x:auto">
@@ -588,18 +590,18 @@
   <div id="workArea" class="work-area-locked">
     <!-- 성형 조건 -->
     <div class="condition-area">
-      <h2>🌡️ 성형 조건</h2>
+      <h2 data-i18n="molding.conditionTitle">🌡️ 성형 조건</h2>
       <div class="condition-grid">
         <div>
-          <label>성형압력 (kgf/cm²)</label>
+          <label data-i18n="molding.pressure">성형압력 (kgf/cm²)</label>
           <input type="number" id="moldingPressure" step="1" placeholder="예: 150" />
         </div>
         <div>
-          <label>상판온도 (℃)</label>
+          <label data-i18n="molding.upperTemp">상판온도 (℃)</label>
           <input type="number" id="upperTemp" step="1" placeholder="예: 170" />
         </div>
         <div>
-          <label>하판온도 (℃)</label>
+          <label data-i18n="molding.lowerTemp">하판온도 (℃)</label>
           <input type="number" id="lowerTemp" step="1" placeholder="예: 170" />
         </div>
       </div>
@@ -608,7 +610,7 @@
     <!-- 작업 내역 테이블 -->
     <div class="section">
       <div class="section-header" style="background:#243bb2;color:white">
-        <h2>📋 작업 내역</h2>
+        <h2 data-i18n="molding.workDetail">📋 작업 내역</h2>
         <span id="rowCount" style="font-size:12px;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:6px">0건</span>
       </div>
       <div class="section-body" style="padding-top:16px">
@@ -638,27 +640,27 @@
 
     <!-- 비가동 -->
     <div class="downtime-area">
-      <h2>⏸️ 비가동 사유</h2>
+      <h2 data-i18n="molding.downtimeTitle">⏸️ 비가동 사유</h2>
       <div class="downtime-grid">
         <div>
-          <label>비가동 코드</label>
+          <label data-i18n="molding.downtimeCode">비가동 코드</label>
           <select id="downtimeCode">
-            <option value="">없음</option>
-            <option value="생지부족">생지부족</option>
-            <option value="금형교체">금형교체</option>
-            <option value="금형세척">금형세척</option>
-            <option value="설비이상">설비이상</option>
-            <option value="제품성형이상">제품성형이상</option>
-            <option value="금형수정">금형수정</option>
-            <option value="기타">기타</option>
+            <option value="" data-i18n="molding.downtimeNone">없음</option>
+            <option value="생지부족" data-i18n="molding.dtRawShort">생지부족</option>
+            <option value="금형교체" data-i18n="molding.dtMoldChange">금형교체</option>
+            <option value="금형세척" data-i18n="molding.dtMoldClean">금형세척</option>
+            <option value="설비이상" data-i18n="molding.dtMachineErr">설비이상</option>
+            <option value="제품성형이상" data-i18n="molding.dtProductErr">제품성형이상</option>
+            <option value="금형수정" data-i18n="molding.dtMoldFix">금형수정</option>
+            <option value="기타" data-i18n="molding.dtOther">기타</option>
           </select>
         </div>
         <div>
-          <label>비가동 시간(분)</label>
-          <input type="number" id="downtimeMinutes" placeholder="분" min="0" />
+          <label data-i18n="molding.downtimeMin">비가동 시간(분)</label>
+          <input type="number" id="downtimeMinutes" placeholder="" min="0" />
         </div>
         <div>
-          <label>비가동 상세</label>
+          <label data-i18n="molding.downtimeDetail">비가동 상세</label>
           <input type="text" id="downtimeDetail" placeholder="상세 사유 입력" />
         </div>
       </div>
@@ -666,14 +668,14 @@
 
     <!-- 전체 비고 -->
     <div class="remarks-area">
-      <label style="display:block;font-size:14px;font-weight:600;margin-bottom:8px">📝 특이사항</label>
+      <label style="display:block;font-size:14px;font-weight:600;margin-bottom:8px" data-i18n="common.remarks">📝 특이사항</label>
       <textarea id="remarks" placeholder="오늘 작업 중 특이사항을 입력하세요"></textarea>
     </div>
 
     <!-- 제출 -->
     <div class="btn-area">
-      <button class="btn-reset" onclick="resetForm()">↻ 초기화</button>
-      <button class="btn-submit" id="submitBtn" onclick="submitReport()">제출하기</button>
+      <button class="btn-reset" onclick="resetForm()" data-i18n="common.reset">↻ 초기화</button>
+      <button class="btn-submit" id="submitBtn" onclick="submitReport()" data-i18n="common.submit">제출하기</button>
     </div>
   </div>
 </div>
@@ -727,24 +729,29 @@ const EQUIPMENTS = {
 
 // 설비 점검 항목 (모든 설비 동일 8개)
 const SAFETY_CHECK_ITEMS = [
-  { num: 1, label: '스위치 작동 원활' },
-  { num: 2, label: '작동유 충만' },
-  { num: 3, label: '누유 여부' },
-  { num: 4, label: '이상음 발생' },
-  { num: 5, label: '열판온도 작동' },
-  { num: 6, label: '콘트롤 박스' },
-  { num: 7, label: '청결상태' },
-  { num: 8, label: '비상정지 버튼' }
+  { num: 1, i18nKey: 'item1' },
+  { num: 2, i18nKey: 'item2' },
+  { num: 3, i18nKey: 'item3' },
+  { num: 4, i18nKey: 'item4' },
+  { num: 5, i18nKey: 'item5' },
+  { num: 6, i18nKey: 'item6' },
+  { num: 7, i18nKey: 'item7' },
+  { num: 8, i18nKey: 'item8' }
 ];
 
 const SAFETY_OPTIONS = [
-  { value: '○', label: '○', class: 'normal' },
-  { value: '△', label: '△', class: 'repair' },
-  { value: '×', label: '×', class: 'unusable' },
-  { value: '│', label: '│', class: 'notuse' }
+  { value: '○', class: 'normal', i18nKey: 'normal' },
+  { value: '△', class: 'repair', i18nKey: 'repair' },
+  { value: '×', class: 'unusable', i18nKey: 'unusable' },
+  { value: '│', class: 'notuse', i18nKey: 'notuse' }
 ];
 
-const WORK_TYPES = ['표준', '초품', '중품', '종품'];
+const WORK_TYPE_KEYS = [
+  { value: '표준', i18nKey: 'typeStandard' },
+  { value: '초품', i18nKey: 'typeFirst' },
+  { value: '중품', i18nKey: 'typeMiddle' },
+  { value: '종품', i18nKey: 'typeLast' }
+];
 
 // ═══════════════════════════════════════════════
 // 초기화
@@ -755,8 +762,12 @@ async function init() {
     if (!myInfo) return;
   }
   
+  // 다국어 적용
+  applyI18N();
+  createLangSelector('langSelector');
+  
   document.getElementById('userInfo').textContent = 
-    myInfo ? `${myInfo.name} (입사코드: ${myInfo.emp_code})` : '';
+    myInfo ? `${myInfo.name} (${t('common','sabun')}: ${myInfo.emp_code})` : '';
   
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('workDate').value = today;
@@ -898,14 +909,16 @@ function initSafetyTable() {
   tbody.innerHTML = '';
   
   SAFETY_CHECK_ITEMS.forEach(item => {
+    const label = t('safetyItems', item.i18nKey);
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="item-cell"><span class="item-num">${item.num}</span>${item.label}</td>
+      <td class="item-cell"><span class="item-num">${item.num}</span>${label}</td>
       <td>
         <div class="check-select-safety" data-item="${item.num}">
           ${SAFETY_OPTIONS.map(opt => {
             const active = opt.value === '○' ? 'active' : '';
-            return `<button type="button" class="${opt.class} ${active}" data-value="${opt.value}" onclick="setSafetyCheck(${item.num},'${opt.value}',this)">${opt.label}</button>`;
+            const tooltip = t('safety', opt.i18nKey);
+            return `<button type="button" class="${opt.class} ${active}" data-value="${opt.value}" onclick="setSafetyCheck(${item.num},'${opt.value}',this)" title="${tooltip}">${opt.value}</button>`;
           }).join('')}
         </div>
       </td>
@@ -988,7 +1001,7 @@ async function completeSafetyCheck() {
   document.getElementById('workArea').classList.remove('work-area-locked');
   document.getElementById('safetyStatus').textContent = '✓ 점검 완료';
   document.getElementById('safetyStatus').style.background = 'rgba(255,255,255,0.3)';
-  showToast('✓ 설비 점검 완료! 작업 내역을 입력하세요.');
+  showToast(t('safety','completed') + ' ' + t('molding','workDetail') + '을 입력하세요.');
   
   if (document.querySelectorAll('#mainRows tr').length === 0) {
     for (let i = 0; i < 5; i++) addRow();
@@ -1073,7 +1086,7 @@ function addRow() {
     <td class="col-defect"><input type="number" class="defect-qty" placeholder="0" min="0" value="0" /></td>
     <td class="col-type">
       <select class="work-type">
-        ${WORK_TYPES.map(t => `<option value="${t}">${t}</option>`).join('')}
+        ${WORK_TYPE_KEYS.map(wt => `<option value="${wt.value}">${t('molding', wt.i18nKey)}</option>`).join('')}
       </select>
     </td>
     <td class="col-note"><input type="text" class="note" placeholder="" /></td>

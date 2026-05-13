@@ -44,6 +44,11 @@ async function checkPageAccess(pageFile) {
     return null;
   }
 
+  // 사용자 언어 설정 저장
+  if (user.language) {
+    localStorage.setItem('hkht_lang', user.language);
+  }
+
   // 비밀번호 변경 안 했으면 변경 화면으로
   if (!user.password_changed) {
     location.href = 'change_password.html';
