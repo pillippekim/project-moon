@@ -13,6 +13,7 @@ const PAGE_PERMISSIONS = {
   'coating.html':     { admin: ['all'], worker: ['도포'] },
   'postcure.html':    { admin: ['all'], worker: ['2차가류'] },
   'shot.html':        { admin: ['all'], worker: ['쇼트'] },
+  'molding.html':     { admin: ['all'], worker: ['성형'] },
   'admin.html':       { admin: ['all'], worker: [] },
   'master.html':      { admin: ['생산관리팀','경영지원팀'], worker: [] },
   'docs_admin.html':  { admin: ['연구개발팀','품질관리팀','생산관리팀'], worker: [] },
