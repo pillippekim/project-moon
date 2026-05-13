@@ -460,12 +460,21 @@
     <div class="scan-mode-btns">
       <button class="scan-mode-btn active" id="modeCamera" onclick="switchScanMode('camera')">📷 카메라 스캔</button>
       <button class="scan-mode-btn" id="modeManual" onclick="switchScanMode('manual')">⌨️ 직접 입력</button>
+      <button class="scan-mode-btn" id="modeContinuous" onclick="switchScanMode('continuous')" style="background:#059669;color:white;border-color:#059669">🔄 연속 스캔</button>
     </div>
     <div class="scan-camera-area" id="scanCameraArea">
       <video id="scanVideo" playsinline autoplay muted></video>
       <div class="scan-frame"></div>
       <div class="scan-status" id="scanStatus">바코드를 사각형 안에 맞춰주세요</div>
       <button class="camera-flip-btn" onclick="flipCamera()" title="카메라 전환">🔄</button>
+    </div>
+    <!-- 연속 스캔 목록 -->
+    <div id="continuousList" style="display:none;max-height:200px;overflow-y:auto;margin:8px 0;border:1px solid #e0e4ed;border-radius:8px;padding:8px">
+      <div style="font-size:12px;color:#888;margin-bottom:6px;display:flex;justify-content:space-between">
+        <span>📋 스캔된 바코드 (<span id="contScanCount">0</span>개)</span>
+        <button onclick="clearContinuousList()" style="background:none;border:none;color:#dc2626;font-size:11px;cursor:pointer;font-weight:600">전체 삭제</button>
+      </div>
+      <div id="contScanItems" style="font-size:12px"></div>
     </div>
     <div class="scan-error" id="scanError"></div>
     <input class="scan-input" id="scanInput" type="text" placeholder="" style="display:none"
@@ -669,6 +678,9 @@ let codeReader = null;
 let cameraDevices = [];
 let currentCameraIdx = 0;
 let activeStream = null;
+let continuousScans = []; // 연속 스캔 목록
+let lastScannedCode = ''; // 중복 방지
+let lastScannedTime = 0;  // 중복 방지 타이머
 
 function openModal(id, idx, type) {
   scanTarget = id;
@@ -695,19 +707,35 @@ function switchScanMode(mode) {
   scanMode = mode;
   document.getElementById('modeCamera').classList.toggle('active', mode === 'camera');
   document.getElementById('modeManual').classList.toggle('active', mode === 'manual');
+  document.getElementById('modeContinuous').classList.toggle('active', mode === 'continuous');
   const cameraArea = document.getElementById('scanCameraArea');
   const inputArea = document.getElementById('scanInput');
   const okBtn = document.getElementById('scanOkBtn');
+  const contList = document.getElementById('continuousList');
 
-  if (mode === 'camera') {
+  if (mode === 'camera' || mode === 'continuous') {
     cameraArea.classList.add('open');
     inputArea.style.display = 'none';
     okBtn.style.display = 'none';
+    contList.style.display = mode === 'continuous' ? 'block' : 'none';
+    if (mode === 'continuous') {
+      continuousScans = [];
+      renderContinuousList();
+      document.getElementById('scanTitle').textContent = '🔄 연속 스캔 모드';
+      document.getElementById('scanSub').textContent = '바코드를 계속 스캔하세요. 자동으로 추가됩니다.';
+      // 완료 버튼 표시
+      okBtn.style.display = 'block';
+      okBtn.textContent = '✓ 스캔 완료 (적용)';
+      okBtn.onclick = applyContinuousScans;
+    }
     startCamera();
   } else {
     cameraArea.classList.remove('open');
     inputArea.style.display = 'block';
     okBtn.style.display = 'block';
+    okBtn.textContent = '입력 완료';
+    okBtn.onclick = function() { confirmScan(); };
+    contList.style.display = 'none';
     stopCamera();
     setTimeout(() => inputArea.focus(), 100);
   }
@@ -734,6 +762,41 @@ async function startCamera() {
     codeReader.decodeFromVideoDevice(selectedDevice.deviceId, video, (result, err) => {
       if (result) {
         const text = result.getText();
+        const now = Date.now();
+        
+        if (scanMode === 'continuous') {
+          // 연속 스캔: 중복 방지 (같은 코드 2초 내 재스캔 무시)
+          if (text === lastScannedCode && now - lastScannedTime < 2000) return;
+          lastScannedCode = text;
+          lastScannedTime = now;
+          
+          // 이미 있는 코드인지 확인
+          if (continuousScans.includes(text)) {
+            document.getElementById('scanStatus').textContent = '⚠️ 이미 스캔됨: ' + text;
+            return;
+          }
+          
+          continuousScans.push(text);
+          renderContinuousList();
+          document.getElementById('scanStatus').textContent = `✓ ${continuousScans.length}번째 스캔: ${text}`;
+          
+          // 비프음 (진동 + 오디오)
+          try { navigator.vibrate && navigator.vibrate(100); } catch(e) {}
+          try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = 1200;
+            osc.connect(ctx.destination);
+            osc.start();
+            setTimeout(() => { osc.stop(); ctx.close(); }, 100);
+          } catch(e) {}
+          
+          // 카메라 계속 유지 (닫지 않음!)
+          return;
+        }
+        
+        // 단일 스캔 모드 (기존)
         document.getElementById('scanStatus').textContent = '✓ 인식 완료: ' + text;
         setTimeout(() => {
           if (scanType === 'lot') setLot(scanTarget, scanBadgeIdx, text);
@@ -778,6 +841,55 @@ function flipCamera() {
   setTimeout(() => startCamera(), 500);
 }
 
+// ── 연속 스캔 관련 ──
+function renderContinuousList() {
+  const items = document.getElementById('contScanItems');
+  const count = document.getElementById('contScanCount');
+  count.textContent = continuousScans.length;
+  
+  if (continuousScans.length === 0) {
+    items.innerHTML = '<div style="color:#aaa;text-align:center;padding:8px">스캔 대기 중...</div>';
+    return;
+  }
+  
+  items.innerHTML = continuousScans.map((code, i) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:${i%2===0?'#f9fafb':'white'};border-radius:4px;margin-bottom:2px">
+      <span><strong style="color:#243bb2">${i+1}.</strong> ${code}</span>
+      <button onclick="removeContinuousScan(${i})" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;padding:2px 6px">×</button>
+    </div>
+  `).join('');
+}
+
+function removeContinuousScan(idx) {
+  continuousScans.splice(idx, 1);
+  renderContinuousList();
+}
+
+function clearContinuousList() {
+  continuousScans = [];
+  renderContinuousList();
+}
+
+function applyContinuousScans() {
+  if (continuousScans.length === 0) {
+    showToast('스캔된 바코드가 없어요.', 'error');
+    return;
+  }
+  
+  // 현재 행의 LOT에 연속 스캔 결과 적용
+  const r = rows.find(r => r.id === scanTarget);
+  if (r) {
+    // 기존 빈 LOT 제거 후 스캔 결과로 채우기
+    const existingLots = r.lots.filter(l => l.trim() !== '');
+    r.lots = [...existingLots, ...continuousScans];
+  }
+  
+  closeModal();
+  renderRows();
+  showToast(`✓ ${continuousScans.length}개 바코드 일괄 적용!`);
+  continuousScans = [];
+}
+
 function closeModal() {
   document.getElementById('scanModal').classList.remove('open');
   document.getElementById('modeCamera').style.display = '';
@@ -802,8 +914,53 @@ async function submitForm() {
   if (valid.length === 0) { showToast('작업 내역을 1건 이상 입력해주세요.', 'error'); return; }
 
   const btn = document.getElementById('submitBtn');
-  btn.disabled = true; btn.textContent = '제출 중...';
+  btn.disabled = true; btn.textContent = editingRecordId ? '수정 중...' : '제출 중...';
 
+  // 수정 모드: update
+  if (editingRecordId) {
+    const r = valid[0];
+    const updateData = {
+      worker_id: r.sabun,
+      worker_name: r.worker,
+      lot_nos: r.lots.filter(l => l.trim() !== ''),
+      quantity: parseInt(r.qty)||0,
+      note: r.note,
+      remarks: remarks
+    };
+
+    const { error } = await db.from('packaging_reports')
+      .update(updateData)
+      .eq('id', editingRecordId)
+      .eq('created_by_name', MY_NAME);
+
+    if (error) {
+      showToast('수정 실패: ' + error.message, 'error');
+      btn.disabled = false; btn.textContent = '수정 저장';
+      return;
+    }
+
+    try {
+      await db.from('audit_logs').insert({
+        table_name: 'packaging_reports',
+        record_id: editingRecordId,
+        action: 'UPDATE',
+        performed_by: MY_NAME,
+        performed_at: new Date().toISOString()
+      });
+    } catch(e) {}
+
+    showToast('✓ 수정 완료!');
+    editingRecordId = null;
+    btn.textContent = '제출하기';
+    btn.style.background = '#243bb2';
+    btn.disabled = false;
+    const editBadge = document.getElementById('editModeBadge');
+    if (editBadge) editBadge.style.display = 'none';
+    setTimeout(() => { resetForm(); loadMyHistory(); }, 1200);
+    return;
+  }
+
+  // 신규 모드: insert
   const records = valid.map(r => ({
     work_date: workDate,
     worker_id: r.sabun,
@@ -829,9 +986,13 @@ async function submitForm() {
 
 function resetForm() {
   rows = []; uid = 0;
+  editingRecordId = null;
   document.getElementById('remarks').value = '';
   const btn = document.getElementById('submitBtn');
   btn.disabled = false; btn.textContent = '제출하기';
+  btn.style.background = '#243bb2';
+  const editBadge = document.getElementById('editModeBadge');
+  if (editBadge) editBadge.style.display = 'none';
   addRow(); addRow(); addRow();
 }
 
@@ -858,6 +1019,8 @@ function showToast(msg, type) {
 })();
 
 // ── 오늘 내 제출 내역 ──────────────────────────────
+let editingRecordId = null; // 수정 중인 레코드 ID
+
 async function loadMyHistory() {
   const workDate = document.getElementById('workDate').value;
   if (!workDate || !MY_NAME) {
@@ -914,7 +1077,8 @@ async function loadMyHistory() {
           ${list.map((r, i) => {
             const lots = (r.lot_nos || []).join(', ');
             const time = r.created_at ? new Date(r.created_at).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) : '';
-            return `<tr>
+            const isEditing = editingRecordId === r.id;
+            return `<tr style="${isEditing ? 'background:#fff7ed;' : ''}">
               <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center">${i+1}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed">${r.worker_id||''}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed">${r.worker_name||''}</td>
@@ -922,8 +1086,11 @@ async function loadMyHistory() {
               <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;font-weight:600">${(r.quantity||0).toLocaleString()}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">${r.note||''}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed;color:#888;font-size:11px">${time}</td>
-              <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center">
-                <button onclick="deleteMyRecord('${r.id}')" style="background:#fef2f2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">삭제</button>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center;white-space:nowrap">
+                ${isEditing 
+                  ? '<span style="color:#d97706;font-size:11px;font-weight:600">수정 중...</span>'
+                  : `<button onclick="editMyRecord('${r.id}')" style="background:#fff7ed;color:#d97706;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;margin-right:4px">수정</button><button onclick="deleteMyRecord('${r.id}')" style="background:#fef2f2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">삭제</button>`
+                }
               </td>
             </tr>`;
           }).join('')}
@@ -931,6 +1098,81 @@ async function loadMyHistory() {
       </table>
     </div>
   `;
+}
+
+// 수정 모드: 제출 내역 → 입력폼에 로드
+async function editMyRecord(id) {
+  const { data, error } = await db.from('packaging_reports')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
+  if (error || !data) {
+    showToast('데이터를 불러올 수 없습니다.', 'error');
+    return;
+  }
+  
+  // 수정 모드 설정
+  editingRecordId = id;
+  
+  // 폼 초기화 후 데이터 채우기
+  rows = [];
+  uid = 0;
+  uid++;
+  const lotNos = data.lot_nos || [''];
+  rows.push({
+    id: uid,
+    sabun: data.worker_id || '',
+    partNo: PRODUCTS[data.worker_id] ? PRODUCTS[data.worker_id].partNo : '',
+    partName: PRODUCTS[data.worker_id] ? PRODUCTS[data.worker_id].partName : '',
+    worker: data.worker_name || MY_NAME,
+    lots: lotNos.length > 0 ? lotNos : [''],
+    badges: [],
+    qty: data.quantity || '',
+    note: data.note || ''
+  });
+  
+  document.getElementById('remarks').value = data.remarks || '';
+  renderRows();
+  
+  // 수정 모드 UI 표시
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.textContent = '수정 저장';
+  submitBtn.style.background = '#d97706';
+  
+  // 수정 중 배지 표시
+  let editBadge = document.getElementById('editModeBadge');
+  if (!editBadge) {
+    editBadge = document.createElement('div');
+    editBadge.id = 'editModeBadge';
+    editBadge.style.cssText = 'background:#fff7ed;border:2px solid #d97706;color:#d97706;padding:10px 20px;border-radius:10px;text-align:center;font-size:14px;font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center';
+    const actionBar = document.querySelector('.action-bar');
+    actionBar.parentElement.insertBefore(editBadge, actionBar);
+  }
+  editBadge.innerHTML = '✏️ 수정 모드 — 기존 제출 내역을 수정하고 있습니다 <button onclick="cancelEdit()" style="background:white;color:#d97706;border:1px solid #d97706;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">수정 취소</button>';
+  editBadge.style.display = 'flex';
+  
+  // 내역 테이블 갱신 (수정 중 행 강조)
+  loadMyHistory();
+  
+  // 상단으로 스크롤
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  showToast('✏️ 수정할 내용을 변경 후 "수정 저장"을 눌러주세요');
+}
+
+function cancelEdit() {
+  editingRecordId = null;
+  
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.textContent = '제출하기';
+  submitBtn.style.background = '#243bb2';
+  
+  const editBadge = document.getElementById('editModeBadge');
+  if (editBadge) editBadge.style.display = 'none';
+  
+  resetForm();
+  loadMyHistory();
+  showToast('수정이 취소되었습니다.');
 }
 
 async function deleteMyRecord(id) {
