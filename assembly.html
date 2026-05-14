@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔩 조립 작업일지 - HKHT</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth_guard.js"></script>
+<script src="i18n.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans KR', -apple-system, sans-serif; background: #f5f7fb; color: #1a1a2e; min-height: 100vh; padding: 20px; }
+  .container { max-width: 1400px; margin: 0 auto; }
+
+  .top-bar { display: flex; justify-content: space-between; align-items: center; background: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(36,59,178,0.08); margin-bottom: 20px; position: sticky; top: 0; z-index: 50; }
+  .top-bar .back-btn { background: #f0f3f9; color: #243bb2; border: none; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; }
+  .top-bar h1 { font-size: 20px; font-weight: 700; color: #243bb2; }
+
+  .header-info { background: white; padding: 20px 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(36,59,178,0.08); margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; align-items: end; }
+  .info-row-2 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; }
+  .info-block label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; font-weight: 500; }
+  .info-block input, .info-block select { width: 100%; padding: 10px 12px; border: 1px solid #e0e4ed; border-radius: 8px; font-size: 14px; background: #fafbfd; }
+
+  /* 설비 선택 */
+  .equipment-selector { background: white; padding: 20px 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(36,59,178,0.08); margin-bottom: 20px; }
+  .equipment-selector h2 { font-size: 16px; font-weight: 700; color: #243bb2; margin-bottom: 16px; }
+  .equipment-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .eq-card { padding: 12px 14px; border: 2px solid #e0e4ed; border-radius: 10px; cursor: pointer; transition: all 0.2s; background: white; }
+  .eq-card:hover { border-color: #243bb2; transform: translateY(-1px); }
+  .eq-card.selected { background: #eef0ff; border-color: #243bb2; box-shadow: 0 2px 8px rgba(36,59,178,0.15); }
+  .eq-card .eq-name { font-size: 14px; font-weight: 700; }
+  .eq-card .eq-detail { font-size: 11px; color: #888; margin-top: 4px; }
+  .eq-card .eq-badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 4px; margin-top: 6px; font-weight: 600; }
+  .eq-badge.guide { background: #eef0ff; color: #243bb2; }
+  .eq-badge.washer { background: #f0fdf4; color: #166534; }
+  .eq-badge.rod { background: #fff7ed; color: #9a3412; }
+  .eq-badge.cutter { background: #fdf2f8; color: #9d174d; }
+  .eq-badge.sander { background: #f5f5f5; color: #666; }
+  .selected-equipment-display { margin-top: 12px; padding: 10px 16px; background: #eef0ff; border-radius: 8px; font-size: 14px; color: #243bb2; font-weight: 600; display: none; }
+
+  /* 섹션 */
+  .section { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(36,59,178,0.08); margin-bottom: 20px; overflow: hidden; }
+  .section-header { padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+  .section-header.safety { background: #dc2626; color: white; }
+  .section-body { padding: 0 24px 24px; }
+
+  /* 점검 테이블 */
+  .safety-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+  .safety-table th, .safety-table td { border: 1px solid #e0e4ed; padding: 10px 8px; text-align: center; vertical-align: middle; }
+  .safety-table thead th { background: #fef2f2; color: #991b1b; font-weight: 700; }
+  .safety-table .item-cell { background: #fef2f2; color: #991b1b; font-weight: 700; text-align: left; padding-left: 12px; font-size: 12px; white-space: nowrap; }
+  .safety-table .item-cell .item-num { display: inline-block; background: #dc2626; color: white; border-radius: 50%; width: 20px; height: 20px; line-height: 20px; text-align: center; margin-right: 6px; font-size: 10px; }
+  .check-select-safety { display: flex; gap: 4px; justify-content: center; }
+  .check-select-safety button { width: 36px; height: 36px; border: 2px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; font-size: 17px; font-weight: 700; transition: all 0.15s; padding: 0; line-height: 1; }
+  .check-select-safety button.active.normal { background: #10b981; color: white; border-color: #10b981; }
+  .check-select-safety button.active.repair { background: #f59e0b; color: white; border-color: #f59e0b; }
+  .check-select-safety button.active.unusable { background: #ef4444; color: white; border-color: #ef4444; }
+  .check-select-safety button.active.notuse { background: #6b7280; color: white; border-color: #6b7280; }
+
+  /* 잠금 */
+  .work-area-locked { position: relative; pointer-events: none; opacity: 0.4; }
+  .work-area-locked::before { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; }
+
+  /* 작업 테이블 */
+  .work-table-wrap { overflow-x: auto; }
+  .work-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+  .work-table th { background: #f0f3f9; color: #243bb2; font-weight: 700; padding: 12px 8px; border: 1px solid #e0e4ed; font-size: 12px; white-space: nowrap; }
+  .work-table td { padding: 6px 6px; border: 1px solid #e0e4ed; vertical-align: middle; }
+  .work-table input, .work-table select { width: 100%; padding: 8px 6px; border: 1px solid #e0e4ed; border-radius: 6px; font-size: 13px; background: #fafbfd; }
+  .work-table input:focus, .work-table select:focus { outline: none; border-color: #243bb2; box-shadow: 0 0 0 2px rgba(36,59,178,0.15); }
+
+  /* BOM 부자재 표시 */
+  .bom-display { font-size: 11px; color: #666; margin-top: 4px; }
+  .bom-tag { display: inline-block; background: #f0f3f9; padding: 1px 6px; border-radius: 3px; margin: 1px 2px; font-size: 10px; }
+  .method-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .method-auto { background: #dbeafe; color: #1e40af; }
+  .method-manual { background: #fef3c7; color: #92400e; }
+
+  /* 버튼 */
+  .btn-area { display: flex; gap: 12px; justify-content: center; padding: 20px; }
+  .btn-submit { background: #243bb2; color: white; border: none; padding: 14px 48px; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+  .btn-submit:hover { background: #1a2e8a; }
+  .btn-submit:disabled { background: #b0b8d6; cursor: not-allowed; }
+  .btn-reset { background: #f0f3f9; color: #243bb2; border: none; padding: 14px 32px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .btn-add-row { background: #f0f3f9; color: #243bb2; border: 2px dashed #c5cae0; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 10px; }
+  .btn-del-row { background: #fef2f2; color: #dc2626; border: none; width: 32px; height: 32px; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: 700; }
+
+  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: #243bb2; color: white; padding: 14px 28px; border-radius: 10px; font-size: 14px; font-weight: 600; opacity: 0; transition: all 0.3s; z-index: 999; }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  .toast.error { background: #dc2626; }
+
+  @media (max-width: 768px) {
+    body { padding: 10px; }
+    .header-info { grid-template-columns: 1fr 1fr; }
+    .info-row-2 { grid-template-columns: 1fr 1fr; }
+    .equipment-grid { grid-template-columns: repeat(2, 1fr); }
+    .top-bar { flex-wrap: wrap; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="top-bar">
+    <a href="index.html" class="back-btn">← 메인</a>
+    <h1>🔩 조립 작업일지</h1>
+    <div style="text-align:right">
+      <div class="user-info" id="userInfo"></div>
+      <div id="langSelector" style="margin-top:6px"></div>
+    </div>
+  </div>
+
+  <!-- 기본 정보 -->
+  <div class="header-info">
+    <div class="info-block"><label>작업 일자</label><input type="date" id="workDate" /></div>
+    <div class="info-block">
+      <label>근무구분</label>
+      <select id="shiftType">
+        <option value="주간">주간 (08:00~17:00)</option>
+        <option value="잔업">잔업 (17:30~20:30)</option>
+      </select>
+    </div>
+    <div class="info-block"><label>작업자</label><select id="workerSelect"><option value="">선택하세요...</option></select></div>
+  </div>
+  <div class="header-info info-row-2">
+    <div class="info-block"><label>시작시간</label><input type="time" id="startTime" value="08:00" /></div>
+    <div class="info-block"><label>종료시간</label><input type="time" id="endTime" value="17:00" /></div>
+    <div class="info-block" style="grid-column:span 2"></div>
+  </div>
+
+  <!-- 설비 선택 -->
+  <div class="equipment-selector">
+    <h2>🏗️ 설비 선택</h2>
+    <div class="equipment-grid" id="equipmentGrid"></div>
+    <div class="selected-equipment-display" id="selectedDisplay"></div>
+  </div>
+
+  <!-- 설비 점검 -->
+  <div class="section" id="safetySection">
+    <div class="section-header safety">
+      <h2>🔒 일일 설비 점검 (작업 전 필수)</h2>
+      <span id="safetyStatus" style="font-size:12px;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:6px">점검 진행 중</span>
+    </div>
+    <div class="section-body" id="safetyBody" style="padding-top:16px">
+      <div style="overflow-x:auto"><table class="safety-table" id="safetyTable"><thead><tr><th style="width:200px;background:#dc2626;color:white">점검항목</th><th>판정</th></tr></thead><tbody id="safetyRows"></tbody></table></div>
+      <div style="margin-top:12px"><textarea id="safetyOverallRemarks" placeholder="설비점검 시 발견한 특이사항을 입력하세요" style="width:100%;padding:10px;border:1px solid #e0e4ed;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px"></textarea></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
+        <div id="safetyProgress" style="font-size:13px;color:#555">✓ 모든 항목 정상(○)으로 자동 설정됨</div>
+        <button onclick="completeSafetyCheck()" style="background:#dc2626;color:white;border:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">점검 완료 ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 작업 영역 (점검 완료 전 잠금) -->
+  <div id="workArea" class="work-area-locked">
+    <div id="lockMessage" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;font-weight:700;color:#dc2626;z-index:10;background:rgba(255,255,255,0.9);padding:16px 32px;border-radius:12px;pointer-events:none;white-space:nowrap">🔒 설비 점검 완료 후 입력 가능</div>
+
+    <!-- 작업 내역 -->
+    <div class="section">
+      <div class="section-header" style="background:#243bb2;color:white">
+        <h2>📋 작업 내역</h2>
+        <span id="rowCount" style="font-size:12px;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:6px">0건</span>
+      </div>
+      <div class="section-body" style="padding-top:16px">
+        <div class="work-table-wrap">
+          <table class="work-table">
+            <thead><tr>
+              <th style="width:40px">NO</th>
+              <th style="width:100px">사번</th>
+              <th style="width:140px">제품명</th>
+              <th style="width:80px">구분</th>
+              <th style="width:80px">작업방식</th>
+              <th style="width:80px">조립수량</th>
+              <th style="width:70px">불량수량</th>
+              <th style="width:200px">부자재 소모 (BOM 자동)</th>
+              <th style="width:120px">비고</th>
+              <th style="width:40px"></th>
+            </tr></thead>
+            <tbody id="mainRows"></tbody>
+          </table>
+        </div>
+        <button class="btn-add-row" onclick="addRow()">+ 행 추가</button>
+      </div>
+    </div>
+
+    <!-- 비고 -->
+    <div style="background:white;padding:20px 24px;border-radius:12px;box-shadow:0 2px 8px rgba(36,59,178,0.08);margin-bottom:20px">
+      <label style="display:block;font-size:14px;font-weight:600;margin-bottom:8px">📝 특이사항</label>
+      <textarea id="remarks" placeholder="오늘 작업 중 특이사항을 입력하세요" style="width:100%;padding:12px;border:1px solid #e0e4ed;border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;min-height:60px;background:#fafbfd"></textarea>
+    </div>
+
+    <!-- 제출 -->
+    <div class="btn-area">
+      <button class="btn-reset" onclick="resetForm()">↻ 초기화</button>
+      <button class="btn-submit" id="submitBtn" onclick="submitReport()">제출하기</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://vpaixxlhzkwtgcllimvn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwYWl4eGxoemt3dGdjbGxpbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNzk4NjMsImV4cCI6MjA5MTk1NTg2M30.V8Bj0cMbM0E2TFhklYYa7TM-vO6Fi70ctACA7uUf4Ig';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let myInfo = null;
+let workersCache = [];
+let productsCache = [];
+let rowCounter = 0;
+let selectedEquipment = null;
+let safetyCheckCompleted = false;
+let existingSafetyId = null;
+
+// ═══════════════════════════════════════════════
+// 설비 마스터 (8대)
+// ═══════════════════════════════════════════════
+const EQUIPMENTS = [
+  { no: 'LM GUIDE 조립기', id: '검-A-02', items: [1,2,3,4,5,6], type: 'guide' },
+  { no: 'C200 GUIDE 조립기', id: '검-A-09', items: [1,2,3,4,5,6], type: 'guide' },
+  { no: 'AI3 GUIDE 조립기', id: '검-A-10', items: [1,2,3,4,5,6], type: 'guide' },
+  { no: 'YB GUIDE 조립기', id: '검-A-04', items: [1,2,3,4,5,6,7], type: 'guide' },
+  { no: 'IG/YG 와샤조립기', id: '생-B-21', items: [1,2,3,4,5], type: 'washer' },
+  { no: 'NE 부쉬 조립기', id: '검-A-09', items: [1,2,3,4,5], type: 'washer' },
+  { no: 'BOOT&ROD 조립기', id: '검-A-01', items: [1,2,3,4,5,6,7,8,9], type: 'rod' },
+  { no: 'LM 사상기', id: '생-B-36', items: [1,2,3,4,5], type: 'sander' },
+  { no: '호스 절단기', id: '검-A-11', items: [1,2,3,4,5,6], type: 'cutter' }
+];
+
+// 포괄적 점검항목 (전체 통합 — 설비별로 해당 항목만 표시)
+const SAFETY_ALL_ITEMS = {
+  1: '스위치 작동 원활',
+  2: '실린더/압입실린더 작동',
+  3: '에어공급/에어압력 정상',
+  4: '조명상태 정상',
+  5: '청결상태 (3정5S)',
+  6: '비상정지 버튼 작동',
+  7: 'Air Drain기 작동',
+  8: '부트안착핀 높이확인',
+  9: '컨트롤 박스 이상유무',
+  10: '압력게이지 정상 (0.4~0.8MPa)',
+  11: '양수버튼 작동',
+  12: '칼날/샤링칼날 상태',
+  13: '호스 거치 상태',
+  14: '클램프 작동'
+};
+
+// 설비별 점검항목 매핑
+const EQUIPMENT_SAFETY_MAP = {
+  'LM GUIDE 조립기':    [1,2,3,4,5,6],
+  'C200 GUIDE 조립기':  [1,2,3,4,5,6],
+  'AI3 GUIDE 조립기':   [1,2,3,4,5,6],
+  'YB GUIDE 조립기':    [1,2,3,7,4,5,6],
+  'IG/YG 와샤조립기':   [1,2,10,11,6],
+  'NE 부쉬 조립기':     [1,2,10,11,6],
+  'BOOT&ROD 조립기':    [1,9,2,7,3,4,8,5,6],
+  'LM 사상기':          [1,11,10,12,14],
+  '호스 절단기':         [1,10,12,13,5,6]
+};
+
+const SAFETY_OPTIONS = [
+  { value: '○', class: 'normal' },
+  { value: '△', class: 'repair' },
+  { value: '×', class: 'unusable' },
+  { value: '│', class: 'notuse' }
+];
+
+// ═══════════════════════════════════════════════
+// BOM 마스터 (조립품 → 부자재 구성)
+// ═══════════════════════════════════════════════
+const ASSEMBLY_BOM = {
+  '502209': { type:'STRIKER', method:'자동', parts:{ STEEL:'502209S:1', GUIDE:'502209G:2' }},
+  '502225': { type:'STRIKER', method:'자동', parts:{ STEEL:'502225S:1', GUIDE:'502294G:2' }},
+  '502270': { type:'PAD', method:'수작업', parts:{ PAD:'502270P:1' }},
+  '502287': { type:'STRIKER', method:'자동', parts:{ STEEL:'502287S:1', PLATE:'502287L:1', BUSH:'502287B:2' }},
+  '502293': { type:'STRIKER', method:'자동', parts:{ STEEL:'502293S:1', PLATE:'502293L:1', BUSH:'502287B:2', BOLT:'502297B:2', WASHER:'502297W:2' }},
+  '502294': { type:'STRIKER', method:'자동', parts:{ STEEL:'502294S:1', GUIDE:'502294G:2' }},
+  '502297': { type:'STRIKER', method:'자동', parts:{ BUSH:'502287B:2', BOLT:'502297B:2', WASHER:'502297W:2' }},
+  '502307': { type:'STRIKER', method:'자동', parts:{ GUIDE:'502307G:2' }},
+  '502313': { type:'STRIKER', method:'자동', parts:{ BUSH:'502287B:2' }},
+  '502333': { type:'STRIKER', method:'자동', parts:{ GUIDE:'502294G:2' }},
+  '502339': { type:'STRIKER', method:'자동', parts:{ STEEL:'502339S:1', GUIDE:'502294G:2' }},
+  '502346': { type:'STRIKER', method:'자동', parts:{ STEEL:'502346S:1', GUIDE:'502209G:2' }},
+  '601010': { type:'INSERT STEEL', method:'자동', parts:{ STEEL:'601010S:1', PLATE:'601010L:1', BUSH:'601010B:2' }},
+  '503A01': { type:'ROD', method:'자동', parts:{ ROD:'503A01R:1' }},
+  '503A02': { type:'ROD', method:'자동', parts:{ ROD:'503A02R:1' }},
+  '503A03': { type:'ROD', method:'자동', parts:{ ROD:'503A03R:1' }},
+  '503A05': { type:'ROD', method:'자동', parts:{ ROD:'503A05R:1' }},
+  '503A06': { type:'ROD', method:'자동', parts:{ ROD:'503A06R:1' }},
+  '503A07': { type:'ROD', method:'자동', parts:{ ROD:'503A07R:1' }},
+  '503A09': { type:'ROD', method:'자동', parts:{ ROD:'503A09R:1' }},
+  '503A10': { type:'ROD', method:'자동', parts:{ ROD:'503A10R:1' }},
+  '503A10(군수용)': { type:'ROD', method:'자동', parts:{ ROD:'503A10-1R:1' }},
+  '503A11': { type:'ROD', method:'자동', parts:{ ROD:'503A11R:1' }},
+  '503A13': { type:'ROD', method:'자동', parts:{ ROD:'503A09R:1' }},
+  '503A15': { type:'ROD', method:'자동', parts:{ ROD:'503A15R:1' }},
+  '503A16': { type:'ROD', method:'자동', parts:{ ROD:'503A16R:1' }},
+  '503A17': { type:'ROD', method:'자동', parts:{ ROD:'503A10R:1' }},
+  '503A18': { type:'ROD', method:'자동', parts:{ ROD:'503A18R:1' }},
+  '503A19': { type:'ROD', method:'자동', parts:{ ROD:'503A19R:1' }},
+  '503A20': { type:'ROD', method:'자동', parts:{ ROD:'503A20R:1' }},
+  '503A21': { type:'ROD', method:'자동', parts:{ ROD:'503A21R:1' }},
+  '503A22': { type:'ROD', method:'자동', parts:{ ROD:'503A22R:1' }},
+  '503A23': { type:'ROD', method:'자동', parts:{ ROD:'503A09R:1' }},
+  '503A24': { type:'ROD', method:'자동', parts:{ ROD:'503A24R:1' }},
+  '503A25': { type:'ROD', method:'자동', parts:{ ROD:'503A25R:1' }},
+  '503A26': { type:'ROD', method:'자동', parts:{ ROD:'503A26R:1' }},
+  '503A27': { type:'ROD', method:'자동', parts:{ ROD:'503A27R:1' }},
+  '503A28': { type:'ROD', method:'자동', parts:{ ROD:'503A28R:1' }},
+  '503A29': { type:'ROD', method:'자동', parts:{ ROD:'503A29R:1' }}
+};
+
+// ═══════════════════════════════════════════════
+// 초기화
+// ═══════════════════════════════════════════════
+async function init() {
+  if (typeof checkPageAccess === 'function') {
+    myInfo = await checkPageAccess('assembly.html');
+    if (!myInfo) return;
+  }
+  if (typeof applyI18N === 'function') applyI18N();
+  if (typeof createLangSelector === 'function') createLangSelector('langSelector');
+
+  document.getElementById('userInfo').textContent = myInfo ? `${myInfo.name} (${myInfo.emp_code})` : '';
+  document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
+  
+  await loadWorkers();
+  await loadProducts();
+  renderEquipmentGrid();
+
+  document.getElementById('shiftType').addEventListener('change', function() {
+    document.getElementById('startTime').value = this.value === '주간' ? '08:00' : '17:30';
+    document.getElementById('endTime').value = this.value === '주간' ? '17:00' : '20:30';
+  });
+  document.getElementById('workDate').addEventListener('change', () => { if (selectedEquipment) checkTodaySafety(); });
+}
+
+async function loadWorkers() {
+  const { data } = await db.from('workers').select('name, name_local').eq('process', '조립').eq('active', true).order('name');
+  workersCache = (data || []).map(w => ({ name: w.name, nameLocal: w.name_local }));
+  if (myInfo && myInfo.name && !workersCache.find(w => w.name === myInfo.name)) workersCache.unshift({ name: myInfo.name, nameLocal: null });
+  const sel = document.getElementById('workerSelect');
+  sel.innerHTML = '<option value="">선택하세요...</option>';
+  workersCache.forEach(w => {
+    const display = w.nameLocal ? `${w.name} (${w.nameLocal})` : w.name;
+    sel.innerHTML += `<option value="${w.name}" ${myInfo && myInfo.name === w.name ? 'selected' : ''}>${display}</option>`;
+  });
+}
+
+async function loadProducts() {
+  productsCache = [];
+  let from = 0;
+  while (true) {
+    const { data } = await db.from('products').select('sabun, part_no, part_name').range(from, from + 999);
+    if (!data || data.length === 0) break;
+    productsCache = productsCache.concat(data);
+    if (data.length < 1000) break;
+    from += 1000;
+  }
+}
+
+// ═══════════════════════════════════════════════
+// 설비 선택
+// ═══════════════════════════════════════════════
+function renderEquipmentGrid() {
+  const grid = document.getElementById('equipmentGrid');
+  const typeLabels = { guide:'GUIDE 조립', washer:'와샤/부쉬', rod:'ROD 조립', sander:'사상기', cutter:'절단기' };
+  grid.innerHTML = EQUIPMENTS.map(eq => `
+    <div class="eq-card" data-no="${eq.no}" onclick="selectEquipment('${eq.no}')">
+      <div class="eq-name">${eq.no}</div>
+      <div class="eq-detail">${eq.id}</div>
+      <span class="eq-badge ${eq.type}">${typeLabels[eq.type]}</span>
+    </div>
+  `).join('');
+}
+
+function selectEquipment(eqNo) {
+  selectedEquipment = EQUIPMENTS.find(e => e.no === eqNo);
+  if (!selectedEquipment) return;
+  document.querySelectorAll('.eq-card').forEach(c => c.classList.remove('selected'));
+  document.querySelector(`.eq-card[data-no="${eqNo}"]`).classList.add('selected');
+  const display = document.getElementById('selectedDisplay');
+  display.textContent = `✓ 선택됨: ${selectedEquipment.no} (${selectedEquipment.id})`;
+  display.style.display = 'block';
+  initSafetyTable();
+  checkTodaySafety();
+}
+
+// ═══════════════════════════════════════════════
+// 설비 점검 (선택된 설비의 항목만 표시)
+// ═══════════════════════════════════════════════
+function initSafetyTable() {
+  if (!selectedEquipment) return;
+  const tbody = document.getElementById('safetyRows');
+  tbody.innerHTML = '';
+  const itemNums = EQUIPMENT_SAFETY_MAP[selectedEquipment.no] || [];
+  
+  itemNums.forEach((num, idx) => {
+    const label = SAFETY_ALL_ITEMS[num] || `항목 ${num}`;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="item-cell"><span class="item-num">${idx+1}</span>${label}</td>
+      <td>
+        <div class="check-select-safety" data-item="${num}">
+          ${SAFETY_OPTIONS.map(opt => `<button type="button" class="${opt.class} ${opt.value==='○'?'active':''}" data-value="${opt.value}" onclick="setSafetyCheck(${num},'${opt.value}',this)" title="${opt.value === '○' ? 'OK' : opt.value === '△' ? 'Need repair' : opt.value === '×' ? 'Unusable' : 'Not running'}">${opt.value}</button>`).join('')}
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  safetyCheckCompleted = false;
+  document.getElementById('workArea').classList.add('work-area-locked');
+  document.getElementById('lockMessage').style.display = 'block';
+  document.getElementById('safetyStatus').textContent = '점검 진행 중';
+}
+
+function setSafetyCheck(itemNum, value, btn) {
+  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function collectSafetyData() {
+  const result = {};
+  const itemNums = EQUIPMENT_SAFETY_MAP[selectedEquipment.no] || [];
+  itemNums.forEach(num => {
+    const active = document.querySelector(`.check-select-safety[data-item="${num}"] button.active`);
+    result[num] = active ? active.dataset.value : '○';
+  });
+  return result;
+}
+
+async function completeSafetyCheck() {
+  if (!selectedEquipment) { showToast('설비를 먼저 선택하세요.', 'error'); return; }
+  const checkData = collectSafetyData();
+  const workDate = document.getElementById('workDate').value;
+  if (!workDate) { showToast('작업 일자를 선택하세요.', 'error'); return; }
+
+  try {
+    const payload = { check_date: workDate, equipment_no: selectedEquipment.no, equipment_id: selectedEquipment.id, check_data: checkData, overall_remarks: document.getElementById('safetyOverallRemarks').value || null, checked_by_emp_code: myInfo?.emp_code, checked_by_name: myInfo?.name, checked_at: new Date().toISOString() };
+    if (existingSafetyId) await db.from('assembly_safety_check').update(payload).eq('id', existingSafetyId);
+    else await db.from('assembly_safety_check').insert(payload);
+  } catch(e) { console.log('assembly_safety_check 저장 스킵:', e); }
+
+  safetyCheckCompleted = true;
+  document.getElementById('workArea').classList.remove('work-area-locked');
+  document.getElementById('lockMessage').style.display = 'none';
+  document.getElementById('safetyStatus').textContent = '✓ 점검 완료';
+  showToast('✓ 설비 점검 완료! 작업 내역을 입력하세요.');
+  if (document.querySelectorAll('#mainRows tr').length === 0) { for (let i = 0; i < 3; i++) addRow(); }
+}
+
+async function checkTodaySafety() {
+  if (!selectedEquipment) return;
+  const workDate = document.getElementById('workDate').value;
+  if (!workDate) return;
+  try {
+    const { data } = await db.from('assembly_safety_check').select('*').eq('check_date', workDate).eq('equipment_no', selectedEquipment.no).order('checked_at', { ascending: false }).limit(1);
+    if (data && data.length > 0) {
+      existingSafetyId = data[0].id;
+      const cd = data[0].check_data;
+      if (cd) { Object.keys(cd).forEach(num => { const btn = document.querySelector(`.check-select-safety[data-item="${num}"] button[data-value="${cd[num]}"]`); if (btn) { btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active')); btn.classList.add('active'); } }); }
+      if (data[0].overall_remarks) document.getElementById('safetyOverallRemarks').value = data[0].overall_remarks;
+      safetyCheckCompleted = true;
+      document.getElementById('workArea').classList.remove('work-area-locked');
+      document.getElementById('lockMessage').style.display = 'none';
+      document.getElementById('safetyStatus').textContent = '✓ 점검 완료';
+      if (document.querySelectorAll('#mainRows tr').length === 0) { for (let i = 0; i < 3; i++) addRow(); }
+    } else { existingSafetyId = null; }
+  } catch(e) {
+    safetyCheckCompleted = true;
+    document.getElementById('workArea').classList.remove('work-area-locked');
+    document.getElementById('lockMessage').style.display = 'none';
+    if (document.querySelectorAll('#mainRows tr').length === 0) { for (let i = 0; i < 3; i++) addRow(); }
+  }
+}
+
+// ═══════════════════════════════════════════════
+// 작업 행 추가/삭제 + BOM 자동계산
+// ═══════════════════════════════════════════════
+function addRow() {
+  rowCounter++;
+  const rowId = `row_${rowCounter}`;
+  const tr = document.createElement('tr');
+  tr.id = rowId;
+  tr.innerHTML = `
+    <td style="text-align:center"><strong>${document.querySelectorAll('#mainRows tr').length + 1}</strong></td>
+    <td><input type="text" class="sabun" placeholder="제품코드" oninput="onSabunChange('${rowId}')" /></td>
+    <td><input type="text" class="product-name" placeholder="자동" readonly style="color:#999;background:#f5f5f5" /></td>
+    <td><span class="assembly-type" style="font-size:12px;color:#888">-</span></td>
+    <td><span class="work-method">-</span></td>
+    <td><input type="number" class="prod-qty" placeholder="수량" min="0" oninput="calcBom('${rowId}')" /></td>
+    <td><input type="number" class="defect-qty" placeholder="0" min="0" value="0" /></td>
+    <td><div class="bom-display" id="bom_${rowId}">사번 입력 시 자동 표시</div></td>
+    <td><input type="text" class="note" placeholder="" /></td>
+    <td><button class="btn-del-row" onclick="deleteRow('${rowId}')">×</button></td>
+  `;
+  document.getElementById('mainRows').appendChild(tr);
+  renumberRows();
+}
+
+function deleteRow(rowId) {
+  if (document.querySelectorAll('#mainRows tr').length <= 1) { showToast('최소 1개 행은 있어야 해요.', 'error'); return; }
+  document.getElementById(rowId).remove();
+  renumberRows();
+}
+
+function renumberRows() {
+  document.querySelectorAll('#mainRows tr').forEach((tr, i) => { tr.querySelector('td:first-child strong').textContent = i + 1; });
+  document.getElementById('rowCount').textContent = document.querySelectorAll('#mainRows tr').length + '건';
+}
+
+function onSabunChange(rowId) {
+  const tr = document.getElementById(rowId);
+  const sabun = tr.querySelector('.sabun').value.trim();
+  const prodInput = tr.querySelector('.product-name');
+  const typeSpan = tr.querySelector('.assembly-type');
+  const methodSpan = tr.querySelector('.work-method');
+
+  if (!sabun) { prodInput.value = ''; typeSpan.textContent = '-'; methodSpan.innerHTML = '-'; document.getElementById('bom_' + rowId).innerHTML = '사번 입력 시 자동 표시'; return; }
+
+  // 제품명 자동
+  const product = productsCache.find(p => String(p.sabun).trim() === sabun);
+  if (product) { prodInput.value = product.part_name || product.part_no || ''; prodInput.style.color = '#333'; prodInput.style.background = '#d4edda'; setTimeout(() => prodInput.style.background = '#f5f5f5', 600); }
+  else { prodInput.value = ''; }
+
+  // BOM 정보 자동
+  const bom = ASSEMBLY_BOM[sabun];
+  if (bom) {
+    typeSpan.textContent = bom.type;
+    typeSpan.style.color = bom.type === 'ROD' ? '#9a3412' : bom.type === 'STRIKER' ? '#243bb2' : '#666';
+    methodSpan.innerHTML = `<span class="method-badge ${bom.method === '수작업' ? 'method-manual' : 'method-auto'}">${bom.method}</span>`;
+    calcBom(rowId);
+  } else {
+    typeSpan.textContent = '-';
+    methodSpan.innerHTML = '-';
+    document.getElementById('bom_' + rowId).innerHTML = '<span style="color:#f59e0b;font-size:11px">⚠️ BOM 미등록</span>';
+  }
+}
+
+function calcBom(rowId) {
+  const tr = document.getElementById(rowId);
+  const sabun = tr.querySelector('.sabun').value.trim();
+  const qty = parseInt(tr.querySelector('.prod-qty').value) || 0;
+  const bomDiv = document.getElementById('bom_' + rowId);
+  const bom = ASSEMBLY_BOM[sabun];
+
+  if (!bom || !bom.parts) { return; }
+
+  if (qty === 0) {
+    bomDiv.innerHTML = Object.entries(bom.parts).map(([type, val]) => {
+      const [code, us] = val.split(':');
+      return `<span class="bom-tag">${type}: ${code} ×${us}</span>`;
+    }).join(' ');
+    return;
+  }
+
+  bomDiv.innerHTML = Object.entries(bom.parts).map(([type, val]) => {
+    const [code, us] = val.split(':');
+    const total = qty * parseInt(us);
+    return `<span class="bom-tag" style="background:#d4edda;color:#166534">${type}: ${code} <strong>×${total}</strong></span>`;
+  }).join(' ');
+}
+
+// ═══════════════════════════════════════════════
+// 제출
+// ═══════════════════════════════════════════════
+async function submitReport() {
+  const workDate = document.getElementById('workDate').value;
+  const shiftType = document.getElementById('shiftType').value;
+  const workerName = document.getElementById('workerSelect').value;
+  const startTime = document.getElementById('startTime').value;
+  const endTime = document.getElementById('endTime').value;
+
+  if (!workDate) { showToast('작업 일자를 선택하세요.', 'error'); return; }
+  if (!workerName) { showToast('작업자를 선택하세요.', 'error'); return; }
+  if (!selectedEquipment) { showToast('설비를 선택하세요.', 'error'); return; }
+
+  const remarks = document.getElementById('remarks').value.trim() || null;
+  const rows = document.querySelectorAll('#mainRows tr');
+  const reportRows = [];
+
+  for (const tr of rows) {
+    const sabun = tr.querySelector('.sabun').value.trim();
+    const productName = tr.querySelector('.product-name').value.trim();
+    const prodQty = parseInt(tr.querySelector('.prod-qty').value) || null;
+    const defectQty = parseInt(tr.querySelector('.defect-qty').value) || 0;
+    const note = tr.querySelector('.note').value.trim();
+    if (!sabun && !prodQty) continue;
+    if (!sabun) { showToast('사번(제품코드) 필수', 'error'); return; }
+
+    const bom = ASSEMBLY_BOM[sabun];
+    let materialUsage = {};
+    if (bom && bom.parts && prodQty) {
+      Object.entries(bom.parts).forEach(([type, val]) => {
+        const [code, us] = val.split(':');
+        materialUsage[code] = prodQty * parseInt(us);
+      });
+    }
+
+    reportRows.push({
+      work_date: workDate, shift_type: shiftType,
+      equipment_no: selectedEquipment.no, equipment_id: selectedEquipment.id,
+      start_time: startTime, end_time: endTime, worker_name: workerName,
+      sabun, product_name: productName || null,
+      assembly_type: bom ? bom.type : null, work_method: bom ? bom.method : '자동',
+      production_qty: prodQty, defect_qty: defectQty,
+      material_usage: materialUsage,
+      note: note || remarks, created_by_emp_code: myInfo?.emp_code, created_by_name: myInfo?.name
+    });
+  }
+
+  if (reportRows.length === 0) { showToast('입력된 작업 내역이 없어요.', 'error'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = '제출 중...';
+  const { error } = await db.from('assembly_reports').insert(reportRows);
+  btn.disabled = false; btn.textContent = '제출하기';
+
+  if (error) { showToast('제출 실패: ' + error.message, 'error'); return; }
+  showToast(`✓ ${reportRows.length}건 제출 완료!`);
+  setTimeout(() => resetForm(false), 1500);
+}
+
+function resetForm(askConfirm = true) {
+  if (askConfirm && !confirm('입력한 내용을 모두 초기화할까요?')) return;
+  document.getElementById('mainRows').innerHTML = '';
+  rowCounter = 0;
+  document.getElementById('remarks').value = '';
+  document.getElementById('rowCount').textContent = '0건';
+  if (safetyCheckCompleted) { for (let i = 0; i < 3; i++) addRow(); }
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type === 'error' ? ' error' : '');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+init();
+</script>
+</body>
+</html>
