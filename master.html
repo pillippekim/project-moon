@@ -318,7 +318,7 @@ tr:hover td { background: #fafafa; }
       </div>
 
       <div class="form-row" id="form_bom">
-        <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr 2fr">
+        <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr 3fr">
           <div><span class="form-label">사번 (완제품)</span><input class="form-input" id="bom_sabun" placeholder="예: 502209" /></div>
           <div><span class="form-label">구분</span>
             <select class="form-input" id="bom_type"><option value="STRIKER">STRIKER</option><option value="ROD">ROD</option><option value="PAD">PAD</option><option value="INSERT STEEL">INSERT STEEL</option><option value="기타">기타</option></select>
@@ -326,10 +326,13 @@ tr:hover td { background: #fafafa; }
           <div><span class="form-label">작업방식</span>
             <select class="form-input" id="bom_method"><option value="자동">자동</option><option value="수작업">수작업</option></select>
           </div>
-          <div><span class="form-label">비고</span><input class="form-input" id="bom_note" placeholder="선택" /></div>
           <div><span class="form-label">부자재 (유형:코드:수량, 여러개는 쉼표 구분)</span><input class="form-input" id="bom_parts" placeholder="예: STEEL:502209S:1, GUIDE:502209G:2" /></div>
         </div>
-        <button class="btn-save" onclick="saveBom()">등록</button>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+          <input class="form-input" id="bom_note" placeholder="비고 (선택)" style="max-width:300px" />
+          <button class="btn-save" id="bomSaveBtn" onclick="saveBom()">등록</button>
+          <button class="btn-cancel-form" id="bomCancelBtn" onclick="cancelEditBom()" style="display:none">수정 취소</button>
+        </div>
       </div>
 
       <div class="table-wrap">
@@ -362,13 +365,16 @@ tr:hover td { background: #fafafa; }
       </div>
 
       <div class="form-row" id="form_fmb">
-        <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr 2fr">
+        <div class="form-grid" style="grid-template-columns: 1fr 1fr 3fr">
           <div><span class="form-label">FMB 코드</span><input class="form-input" id="fmb_code" placeholder="예: C502-A0C" /></div>
           <div><span class="form-label">FMB 명칭</span><input class="form-input" id="fmb_name" placeholder="예: C502-A0C(구)" /></div>
-          <div><span class="form-label">비고</span><input class="form-input" id="fmb_note" placeholder="선택" /></div>
           <div><span class="form-label">구성 (원재료명:중량g, 쉼표 구분)</span><input class="form-input" id="fmb_components" placeholder="예: C50PA-CMB:60000, ZNO:1648, NA22-75%:351" /></div>
         </div>
-        <button class="btn-save" onclick="saveFmb()">등록</button>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+          <input class="form-input" id="fmb_note" placeholder="비고 (선택)" style="max-width:300px" />
+          <button class="btn-save" id="fmbSaveBtn" onclick="saveFmb()">등록</button>
+          <button class="btn-cancel-form" id="fmbCancelBtn" onclick="cancelEditFmb()" style="display:none">수정 취소</button>
+        </div>
       </div>
 
       <div class="table-wrap">
@@ -781,7 +787,7 @@ function renderBom(filtered) {
       <td style="font-size:11px">${partsHtml || '-'}</td>
       <td style="font-size:11px">${r.note || '-'}</td>
       <td style="font-size:11px;color:#999">${r.created_at ? new Date(r.created_at).toLocaleDateString('ko-KR') : '-'}</td>
-      <td><button onclick="deleteBom('${r.id}')" style="background:#fef2f2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">삭제</button></td>
+      <td><button onclick="editBom('${r.id}')" style="background:#fff7ed;color:#d97706;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;margin-right:4px">수정</button><button onclick="deleteBom('${r.id}')" style="background:#fef2f2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">삭제</button></td>
     </tr>`;
   }).join('');
   
@@ -798,6 +804,8 @@ function filterBom() {
   renderBom(bomData.filter(r => (r.sabun||'').toLowerCase().includes(q) || (r.assembly_type||'').toLowerCase().includes(q) || (r.product_name||'').toLowerCase().includes(q)));
 }
 
+let editingBomId = null;
+
 async function saveBom() {
   const sabun = document.getElementById('bom_sabun').value.trim();
   const type = document.getElementById('bom_type').value;
@@ -807,7 +815,6 @@ async function saveBom() {
   
   if (!sabun) { showToast('사번을 입력하세요.', 'error'); return; }
   
-  // 부자재 파싱: "STEEL:502209S:1, GUIDE:502209G:2" → {STEEL:"502209S:1", GUIDE:"502209G:2"}
   const parts = {};
   if (partsStr) {
     partsStr.split(',').forEach(p => {
@@ -817,14 +824,44 @@ async function saveBom() {
     });
   }
   
-  const { error } = await db.from('assembly_bom').upsert({ sabun, assembly_type: type, work_method: method, parts, note: note || null, updated_at: new Date().toISOString() }, { onConflict: 'sabun' });
+  const { error } = await db.from('assembly_bom').upsert({ ...(editingBomId ? { id: editingBomId } : {}), sabun, assembly_type: type, work_method: method, parts, note: note || null, updated_at: new Date().toISOString() }, { onConflict: 'sabun' });
   if (error) { showToast('등록 실패: ' + error.message, 'error'); return; }
   
-  showToast('✓ BOM 등록 완료');
+  showToast(editingBomId ? '✓ BOM 수정 완료' : '✓ BOM 등록 완료');
+  cancelEditBom();
+  loadBom();
+}
+
+function editBom(id) {
+  const r = bomData.find(b => b.id === id);
+  if (!r) return;
+  editingBomId = id;
+  
+  // 폼 열기 + 데이터 채우기
+  document.getElementById('form_bom').classList.add('open');
+  document.getElementById('bom_sabun').value = r.sabun || '';
+  document.getElementById('bom_type').value = r.assembly_type || 'STRIKER';
+  document.getElementById('bom_method').value = r.work_method || '자동';
+  document.getElementById('bom_note').value = r.note || '';
+  
+  const partsStr = Object.entries(r.parts || {}).map(([type, val]) => `${type}:${val}`).join(', ');
+  document.getElementById('bom_parts').value = partsStr;
+  
+  document.getElementById('bomSaveBtn').textContent = '수정 저장';
+  document.getElementById('bomSaveBtn').style.background = '#d97706';
+  document.getElementById('bomCancelBtn').style.display = 'inline-block';
+  
+  window.scrollTo({ top: document.getElementById('form_bom').offsetTop - 100, behavior: 'smooth' });
+}
+
+function cancelEditBom() {
+  editingBomId = null;
   document.getElementById('bom_sabun').value = '';
   document.getElementById('bom_parts').value = '';
   document.getElementById('bom_note').value = '';
-  loadBom();
+  document.getElementById('bomSaveBtn').textContent = '등록';
+  document.getElementById('bomSaveBtn').style.background = '';
+  document.getElementById('bomCancelBtn').style.display = 'none';
 }
 
 async function deleteBom(id) {
@@ -863,7 +900,7 @@ function renderFmb(filtered) {
       <td style="font-weight:600;text-align:right">${r.total_weight ? Number(r.total_weight).toLocaleString() : '-'}</td>
       <td style="font-size:11px">${r.note || '-'}</td>
       <td style="font-size:11px;color:#999">${r.created_at ? new Date(r.created_at).toLocaleDateString('ko-KR') : '-'}</td>
-      <td><button onclick="deleteFmb('${r.id}')" style="background:#fef2f2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">삭제</button></td>
+      <td><button onclick="editFmb('${r.id}')" style="background:#fff7ed;color:#d97706;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;margin-right:4px">수정</button><button onclick="deleteFmb('${r.id}')" style="background:#fef2f2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">삭제</button></td>
     </tr>`;
   }).join('');
   
@@ -880,6 +917,8 @@ function filterFmb() {
   renderFmb(fmbData.filter(r => (r.fmb_code||'').toLowerCase().includes(q) || (r.fmb_name||'').toLowerCase().includes(q)));
 }
 
+let editingFmbId = null;
+
 async function saveFmb() {
   const code = document.getElementById('fmb_code').value.trim();
   const name = document.getElementById('fmb_name').value.trim();
@@ -888,7 +927,6 @@ async function saveFmb() {
   
   if (!code) { showToast('FMB 코드를 입력하세요.', 'error'); return; }
   
-  // 구성 파싱: "C50PA-CMB:60000, ZNO:1648" → [{name:"C50PA-CMB", weight:60000}, ...]
   const components = [];
   let totalWeight = 0;
   if (compStr) {
@@ -902,15 +940,43 @@ async function saveFmb() {
     });
   }
   
-  const { error } = await db.from('fmb_bom').upsert({ fmb_code: code, fmb_name: name || null, components, total_weight: totalWeight, note: note || null, updated_at: new Date().toISOString() }, { onConflict: 'fmb_code' });
+  const { error } = await db.from('fmb_bom').upsert({ ...(editingFmbId ? { id: editingFmbId } : {}), fmb_code: code, fmb_name: name || null, components, total_weight: totalWeight, note: note || null, updated_at: new Date().toISOString() }, { onConflict: 'fmb_code' });
   if (error) { showToast('등록 실패: ' + error.message, 'error'); return; }
   
-  showToast('✓ FMB-BOM 등록 완료');
+  showToast(editingFmbId ? '✓ FMB-BOM 수정 완료' : '✓ FMB-BOM 등록 완료');
+  cancelEditFmb();
+  loadFmb();
+}
+
+function editFmb(id) {
+  const r = fmbData.find(f => f.id === id);
+  if (!r) return;
+  editingFmbId = id;
+  
+  document.getElementById('form_fmb').classList.add('open');
+  document.getElementById('fmb_code').value = r.fmb_code || '';
+  document.getElementById('fmb_name').value = r.fmb_name || '';
+  document.getElementById('fmb_note').value = r.note || '';
+  
+  const compStr = (r.components || []).map(c => `${c.name}:${c.weight}`).join(', ');
+  document.getElementById('fmb_components').value = compStr;
+  
+  document.getElementById('fmbSaveBtn').textContent = '수정 저장';
+  document.getElementById('fmbSaveBtn').style.background = '#d97706';
+  document.getElementById('fmbCancelBtn').style.display = 'inline-block';
+  
+  window.scrollTo({ top: document.getElementById('form_fmb').offsetTop - 100, behavior: 'smooth' });
+}
+
+function cancelEditFmb() {
+  editingFmbId = null;
   document.getElementById('fmb_code').value = '';
   document.getElementById('fmb_name').value = '';
   document.getElementById('fmb_components').value = '';
   document.getElementById('fmb_note').value = '';
-  loadFmb();
+  document.getElementById('fmbSaveBtn').textContent = '등록';
+  document.getElementById('fmbSaveBtn').style.background = '';
+  document.getElementById('fmbCancelBtn').style.display = 'none';
 }
 
 async function deleteFmb(id) {

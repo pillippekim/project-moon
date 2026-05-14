@@ -355,7 +355,7 @@
 
   <!-- 상단 바 -->
   <div class="top-bar">
-    <a href="index.html" class="back-btn">← 메인으로</a>
+    <a href="#" class="back-btn" onclick="confirmLeave(event)">← 메인으로</a>
     <h1>📦 포장 작업일지</h1>
     <div class="user-info" id="userInfo">로딩 중...</div>
   </div>
@@ -1001,6 +1001,20 @@ function showToast(msg, type) {
   t.textContent = msg;
   t.className = 'toast show' + (type === 'error' ? ' error' : '');
   setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function confirmLeave(e) {
+  e.preventDefault();
+  const hasInput = rows.some(r => r.sabun || r.lots.some(l=>l.trim()) || r.qty);
+  if (!hasInput) { location.href = 'index.html'; return; }
+  
+  if (confirm('작성 중인 내용이 있어요.\n\n제출하시겠어요?\n\n[확인] → 제출 후 이동\n[취소] → 제출 없이 이동')) {
+    submitForm().then(() => { setTimeout(() => location.href = 'index.html', 2000); });
+  } else {
+    if (confirm('제출하지 않고 메인으로 이동할까요?\n(작성 내용은 저장되지 않습니다)')) {
+      location.href = 'index.html';
+    }
+  }
 }
 
 // 초기화

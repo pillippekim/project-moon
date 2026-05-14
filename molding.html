@@ -511,7 +511,7 @@
 <div class="container">
   <!-- 상단 바 -->
   <div class="top-bar">
-    <a href="index.html" class="back-btn" data-i18n="common.back">← 메인</a>
+    <a href="#" class="back-btn" onclick="confirmLeave(event)" data-i18n="common.back">← 메인</a>
     <h1 data-i18n="molding.title">🏭 성형 작업일지</h1>
     <div style="text-align:right">
       <div class="user-info" id="userInfo"></div>
@@ -1268,6 +1268,13 @@ function showToast(msg, type) {
 }
 
 // 시작
+function confirmLeave(e) {
+  e.preventDefault();
+  const hasInput = document.querySelectorAll('#mainRows tr').length > 0 && Array.from(document.querySelectorAll('#mainRows .sabun')).some(i => i.value.trim());
+  if (!hasInput) { location.href = 'index.html'; return; }
+  if (confirm('작성 중인 내용이 있어요.\n제출하지 않고 메인으로 이동할까요?')) { location.href = 'index.html'; }
+}
+
 init();
 </script>
 

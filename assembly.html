@@ -101,7 +101,7 @@
 <body>
 <div class="container">
   <div class="top-bar">
-    <a href="index.html" class="back-btn">← 메인</a>
+    <a href="#" class="back-btn" onclick="confirmLeave(event)">← 메인</a>
     <h1>🔩 조립 작업일지</h1>
     <div style="text-align:right">
       <div class="user-info" id="userInfo"></div>
@@ -613,6 +613,13 @@ function showToast(msg, type) {
   t.textContent = msg;
   t.className = 'toast show' + (type === 'error' ? ' error' : '');
   setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function confirmLeave(e) {
+  e.preventDefault();
+  const hasInput = document.querySelectorAll('#mainRows tr').length > 0 && Array.from(document.querySelectorAll('#mainRows .sabun')).some(i => i.value.trim());
+  if (!hasInput) { location.href = 'index.html'; return; }
+  if (confirm('작성 중인 내용이 있어요.\n제출하지 않고 메인으로 이동할까요?')) { location.href = 'index.html'; }
 }
 
 init();
