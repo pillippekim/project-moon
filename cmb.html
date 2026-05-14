@@ -603,7 +603,7 @@
 
   <!-- 상단 바 -->
   <div class="top-bar">
-    <a href="index.html" class="back-btn">← 메인으로</a>
+    <a href="#" class="back-btn" onclick="confirmLeave(event)">← 메인으로</a>
     <h1>🧪 혼련(CMB) 작업일지</h1>
     <div class="user-info" id="userInfo">로딩 중...</div>
   </div>
@@ -1412,6 +1412,14 @@ async function checkTodaySafety() {
 
 // 시작
 init();
+
+function confirmLeave(e) {
+  e.preventDefault();
+  var hasInput = document.querySelectorAll("#mainRows tr").length > 0 && Array.from(document.querySelectorAll("#mainRows .sabun")).some(function(i) { return i.value.trim(); });
+  if (!hasInput) { location.href = "index.html"; return; }
+  if (confirm("작성 중인 내용이 있어요.\n제출하지 않고 메인으로 이동할까요?")) { location.href = "index.html"; }
+}
+
 </script>
 
 </body>

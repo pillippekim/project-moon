@@ -216,7 +216,7 @@
 
 <div class="container">
   <div class="top-bar">
-    <a href="index.html" class="back-btn">← 메인으로</a>
+    <a href="#" class="back-btn" onclick="confirmLeave(event)">← 메인으로</a>
     <h1>🔥 2차가류 작업일지</h1>
     <div class="user-info" id="userInfo">로딩 중...</div>
   </div>
@@ -697,6 +697,14 @@ function showToast(msg, type) {
 }
 
 init();
+
+function confirmLeave(e) {
+  e.preventDefault();
+  var hasInput = typeof rows !== "undefined" && rows.some(function(r) { return r.sabun || r.qty; });
+  if (!hasInput) { location.href = "index.html"; return; }
+  if (confirm("작성 중인 내용이 있어요.\n제출하지 않고 메인으로 이동할까요?")) { location.href = "index.html"; }
+}
+
 </script>
 </body>
 </html>

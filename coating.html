@@ -260,7 +260,7 @@
 
   <!-- 상단 바 -->
   <div class="top-bar">
-    <a href="index.html" class="back-btn">← 메인으로</a>
+    <a href="#" class="back-btn" onclick="confirmLeave(event)">← 메인으로</a>
     <h1>🎨 도포 작업일지</h1>
     <div class="user-info" id="userInfo">로딩 중...</div>
   </div>
@@ -826,6 +826,14 @@ async function checkTodaySafety() {
   // 점검 완료 시에만 행 추가
   if (safetyCheckCompleted) { addRow(); addRow(); addRow(); }
 })();
+
+function confirmLeave(e) {
+  e.preventDefault();
+  var hasInput = typeof rows !== "undefined" && rows.some(function(r) { return r.sabun || r.qty; });
+  if (!hasInput) { location.href = "index.html"; return; }
+  if (confirm("작성 중인 내용이 있어요.\n제출하지 않고 메인으로 이동할까요?")) { location.href = "index.html"; }
+}
+
 </script>
 </body>
 </html>
