@@ -140,6 +140,8 @@ tr:hover td { background: #fafafa; }
   <div class="main-tabs">
     <button class="main-tab active" onclick="switchTab('product')" id="tabBtn_product">🔧 제품 기준정보</button>
     <button class="main-tab" onclick="switchTab('worker')" id="tabBtn_worker">👤 작업자 기준정보</button>
+    <button class="main-tab" onclick="switchTab('bom')" id="tabBtn_bom">🔩 조립 BOM</button>
+    <button class="main-tab" onclick="switchTab('fmb')" id="tabBtn_fmb">🧪 FMB-BOM</button>
   </div>
 
   <!-- 제품 섹션 -->
@@ -297,9 +299,90 @@ tr:hover td { background: #fafafa; }
       </div>
     </div>
   </div>
-</div>
 
-<!-- 수정 모달 (제품) -->
+  <!-- 조립 BOM 섹션 -->
+  <div class="section" id="section_bom">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">🔩 조립 BOM 관리</div>
+          <div class="card-sub">완제품 → 부자재 구성 관리 (조립 작업일지에서 자동 참조)</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn-add" onclick="toggleForm('bom')">+ BOM 등록</button>
+        </div>
+      </div>
+
+      <div class="search-bar">
+        <input class="search-input" id="searchBom" placeholder="🔍 사번 또는 구분 검색" oninput="filterBom()" />
+      </div>
+
+      <div class="form-area" id="form_bom">
+        <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr 2fr">
+          <div><span class="form-label">사번 (완제품)</span><input class="form-input" id="bom_sabun" placeholder="예: 502209" /></div>
+          <div><span class="form-label">구분</span>
+            <select class="form-input" id="bom_type"><option value="STRIKER">STRIKER</option><option value="ROD">ROD</option><option value="PAD">PAD</option><option value="INSERT STEEL">INSERT STEEL</option><option value="기타">기타</option></select>
+          </div>
+          <div><span class="form-label">작업방식</span>
+            <select class="form-input" id="bom_method"><option value="자동">자동</option><option value="수작업">수작업</option></select>
+          </div>
+          <div><span class="form-label">비고</span><input class="form-input" id="bom_note" placeholder="선택" /></div>
+          <div><span class="form-label">부자재 (유형:코드:수량, 여러개는 쉼표 구분)</span><input class="form-input" id="bom_parts" placeholder="예: STEEL:502209S:1, GUIDE:502209G:2" /></div>
+        </div>
+        <button class="btn-save" onclick="saveBom()">등록</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>사번</th><th>제품명</th><th>구분</th><th>작업방식</th><th>부자재 구성</th><th>비고</th><th>등록일</th><th></th></tr></thead>
+          <tbody id="bomTableBody"></tbody>
+        </table>
+      </div>
+      <div class="show-more-row" id="bomMoreRow" style="display:none">
+        <button class="btn-show-more" id="bomMoreBtn" onclick="toggleShowAll('bom')"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FMB-BOM 섹션 -->
+  <div class="section" id="section_fmb">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">🧪 FMB-BOM 관리</div>
+          <div class="card-sub">FMB 배합 구성 관리 (CMB + 촉진제)</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn-add" onclick="toggleForm('fmb')">+ FMB 등록</button>
+        </div>
+      </div>
+
+      <div class="search-bar">
+        <input class="search-input" id="searchFmb" placeholder="🔍 FMB 코드 검색" oninput="filterFmb()" />
+      </div>
+
+      <div class="form-area" id="form_fmb">
+        <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr 2fr">
+          <div><span class="form-label">FMB 코드</span><input class="form-input" id="fmb_code" placeholder="예: C502-A0C" /></div>
+          <div><span class="form-label">FMB 명칭</span><input class="form-input" id="fmb_name" placeholder="예: C502-A0C(구)" /></div>
+          <div><span class="form-label">비고</span><input class="form-input" id="fmb_note" placeholder="선택" /></div>
+          <div><span class="form-label">구성 (원재료명:중량g, 쉼표 구분)</span><input class="form-input" id="fmb_components" placeholder="예: C50PA-CMB:60000, ZNO:1648, NA22-75%:351" /></div>
+        </div>
+        <button class="btn-save" onclick="saveFmb()">등록</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>FMB 코드</th><th>명칭</th><th>구성 원재료</th><th>총 중량(g)</th><th>비고</th><th>등록일</th><th></th></tr></thead>
+          <tbody id="fmbTableBody"></tbody>
+        </table>
+      </div>
+      <div class="show-more-row" id="fmbMoreRow" style="display:none">
+        <button class="btn-show-more" id="fmbMoreBtn" onclick="toggleShowAll('fmb')"></button>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="editProductModal">
   <div class="modal-box">
     <div class="modal-title">✏️ 제품 수정</div>
@@ -667,8 +750,180 @@ function downloadTemplate() {
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
+// ═══════════════════════════════════════════════
+// 조립 BOM 관리
+// ═══════════════════════════════════════════════
+let bomData = [];
+let bomShowAll = false;
+
+async function loadBom() {
+  const { data } = await db.from('assembly_bom').select('*').order('sabun');
+  bomData = data || [];
+  renderBom();
+}
+
+function renderBom(filtered) {
+  const list = filtered || bomData;
+  const show = bomShowAll ? list : list.slice(0, 20);
+  const tbody = document.getElementById('bomTableBody');
+  
+  tbody.innerHTML = show.map(r => {
+    const parts = r.parts || {};
+    const partsHtml = Object.entries(parts).map(([type, val]) => 
+      `<span style="display:inline-block;background:#f0f3f9;padding:1px 6px;border-radius:3px;margin:1px 2px;font-size:10px">${type}: ${val}</span>`
+    ).join(' ');
+    const methodColor = r.work_method === '수작업' ? 'background:#fef3c7;color:#92400e' : 'background:#dbeafe;color:#1e40af';
+    return `<tr>
+      <td style="font-weight:600">${r.sabun}</td>
+      <td style="font-size:12px">${r.product_name || '-'}</td>
+      <td><span style="font-size:11px;font-weight:600">${r.assembly_type || '-'}</span></td>
+      <td><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;${methodColor}">${r.work_method}</span></td>
+      <td style="font-size:11px">${partsHtml || '-'}</td>
+      <td style="font-size:11px">${r.note || '-'}</td>
+      <td style="font-size:11px;color:#999">${r.created_at ? new Date(r.created_at).toLocaleDateString('ko-KR') : '-'}</td>
+      <td><button onclick="deleteBom('${r.id}')" style="background:#fef2f2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">삭제</button></td>
+    </tr>`;
+  }).join('');
+  
+  const moreRow = document.getElementById('bomMoreRow');
+  if (list.length > 20) {
+    moreRow.style.display = 'block';
+    document.getElementById('bomMoreBtn').textContent = bomShowAll ? `간략히 보기 (${list.length}건)` : `전체 ${list.length}건 보기`;
+  } else { moreRow.style.display = 'none'; }
+}
+
+function filterBom() {
+  const q = document.getElementById('searchBom').value.toLowerCase();
+  if (!q) { renderBom(); return; }
+  renderBom(bomData.filter(r => (r.sabun||'').toLowerCase().includes(q) || (r.assembly_type||'').toLowerCase().includes(q) || (r.product_name||'').toLowerCase().includes(q)));
+}
+
+async function saveBom() {
+  const sabun = document.getElementById('bom_sabun').value.trim();
+  const type = document.getElementById('bom_type').value;
+  const method = document.getElementById('bom_method').value;
+  const note = document.getElementById('bom_note').value.trim();
+  const partsStr = document.getElementById('bom_parts').value.trim();
+  
+  if (!sabun) { showToast('사번을 입력하세요.', 'error'); return; }
+  
+  // 부자재 파싱: "STEEL:502209S:1, GUIDE:502209G:2" → {STEEL:"502209S:1", GUIDE:"502209G:2"}
+  const parts = {};
+  if (partsStr) {
+    partsStr.split(',').forEach(p => {
+      const t = p.trim().split(':');
+      if (t.length >= 3) parts[t[0].trim()] = t[1].trim() + ':' + t[2].trim();
+      else if (t.length === 2) parts[t[0].trim()] = t[1].trim() + ':1';
+    });
+  }
+  
+  const { error } = await db.from('assembly_bom').upsert({ sabun, assembly_type: type, work_method: method, parts, note: note || null, updated_at: new Date().toISOString() }, { onConflict: 'sabun' });
+  if (error) { showToast('등록 실패: ' + error.message, 'error'); return; }
+  
+  showToast('✓ BOM 등록 완료');
+  document.getElementById('bom_sabun').value = '';
+  document.getElementById('bom_parts').value = '';
+  document.getElementById('bom_note').value = '';
+  loadBom();
+}
+
+async function deleteBom(id) {
+  if (!confirm('이 BOM을 삭제할까요?')) return;
+  await db.from('assembly_bom').delete().eq('id', id);
+  showToast('✓ 삭제 완료');
+  loadBom();
+}
+
+// ═══════════════════════════════════════════════
+// FMB-BOM 관리
+// ═══════════════════════════════════════════════
+let fmbData = [];
+let fmbShowAll = false;
+
+async function loadFmb() {
+  const { data } = await db.from('fmb_bom').select('*').order('fmb_code');
+  fmbData = data || [];
+  renderFmb();
+}
+
+function renderFmb(filtered) {
+  const list = filtered || fmbData;
+  const show = fmbShowAll ? list : list.slice(0, 20);
+  const tbody = document.getElementById('fmbTableBody');
+  
+  tbody.innerHTML = show.map(r => {
+    const comps = r.components || [];
+    const compsHtml = comps.map(c => 
+      `<span style="display:inline-block;background:#f0fdf4;padding:1px 6px;border-radius:3px;margin:1px 2px;font-size:10px">${c.name}: ${Number(c.weight).toLocaleString()}g</span>`
+    ).join(' ');
+    return `<tr>
+      <td style="font-weight:600">${r.fmb_code}</td>
+      <td style="font-size:12px">${r.fmb_name || '-'}</td>
+      <td style="font-size:11px">${compsHtml || '-'}</td>
+      <td style="font-weight:600;text-align:right">${r.total_weight ? Number(r.total_weight).toLocaleString() : '-'}</td>
+      <td style="font-size:11px">${r.note || '-'}</td>
+      <td style="font-size:11px;color:#999">${r.created_at ? new Date(r.created_at).toLocaleDateString('ko-KR') : '-'}</td>
+      <td><button onclick="deleteFmb('${r.id}')" style="background:#fef2f2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">삭제</button></td>
+    </tr>`;
+  }).join('');
+  
+  const moreRow = document.getElementById('fmbMoreRow');
+  if (list.length > 20) {
+    moreRow.style.display = 'block';
+    document.getElementById('fmbMoreBtn').textContent = fmbShowAll ? `간략히 보기 (${list.length}건)` : `전체 ${list.length}건 보기`;
+  } else { moreRow.style.display = 'none'; }
+}
+
+function filterFmb() {
+  const q = document.getElementById('searchFmb').value.toLowerCase();
+  if (!q) { renderFmb(); return; }
+  renderFmb(fmbData.filter(r => (r.fmb_code||'').toLowerCase().includes(q) || (r.fmb_name||'').toLowerCase().includes(q)));
+}
+
+async function saveFmb() {
+  const code = document.getElementById('fmb_code').value.trim();
+  const name = document.getElementById('fmb_name').value.trim();
+  const note = document.getElementById('fmb_note').value.trim();
+  const compStr = document.getElementById('fmb_components').value.trim();
+  
+  if (!code) { showToast('FMB 코드를 입력하세요.', 'error'); return; }
+  
+  // 구성 파싱: "C50PA-CMB:60000, ZNO:1648" → [{name:"C50PA-CMB", weight:60000}, ...]
+  const components = [];
+  let totalWeight = 0;
+  if (compStr) {
+    compStr.split(',').forEach(p => {
+      const t = p.trim().split(':');
+      if (t.length >= 2) {
+        const w = parseFloat(t[1].trim()) || 0;
+        components.push({ name: t[0].trim(), weight: w });
+        totalWeight += w;
+      }
+    });
+  }
+  
+  const { error } = await db.from('fmb_bom').upsert({ fmb_code: code, fmb_name: name || null, components, total_weight: totalWeight, note: note || null, updated_at: new Date().toISOString() }, { onConflict: 'fmb_code' });
+  if (error) { showToast('등록 실패: ' + error.message, 'error'); return; }
+  
+  showToast('✓ FMB-BOM 등록 완료');
+  document.getElementById('fmb_code').value = '';
+  document.getElementById('fmb_name').value = '';
+  document.getElementById('fmb_components').value = '';
+  document.getElementById('fmb_note').value = '';
+  loadFmb();
+}
+
+async function deleteFmb(id) {
+  if (!confirm('이 FMB-BOM을 삭제할까요?')) return;
+  await db.from('fmb_bom').delete().eq('id', id);
+  showToast('✓ 삭제 완료');
+  loadFmb();
+}
+
 loadProducts();
 loadWorkers();
+loadBom();
+loadFmb();
 </script>
 </body>
 </html>

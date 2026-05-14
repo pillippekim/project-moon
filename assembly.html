@@ -267,47 +267,8 @@ const SAFETY_OPTIONS = [
 // ═══════════════════════════════════════════════
 // BOM 마스터 (조립품 → 부자재 구성)
 // ═══════════════════════════════════════════════
-const ASSEMBLY_BOM = {
-  '502209': { type:'STRIKER', method:'자동', parts:{ STEEL:'502209S:1', GUIDE:'502209G:2' }},
-  '502225': { type:'STRIKER', method:'자동', parts:{ STEEL:'502225S:1', GUIDE:'502294G:2' }},
-  '502270': { type:'PAD', method:'수작업', parts:{ PAD:'502270P:1' }},
-  '502287': { type:'STRIKER', method:'자동', parts:{ STEEL:'502287S:1', PLATE:'502287L:1', BUSH:'502287B:2' }},
-  '502293': { type:'STRIKER', method:'자동', parts:{ STEEL:'502293S:1', PLATE:'502293L:1', BUSH:'502287B:2', BOLT:'502297B:2', WASHER:'502297W:2' }},
-  '502294': { type:'STRIKER', method:'자동', parts:{ STEEL:'502294S:1', GUIDE:'502294G:2' }},
-  '502297': { type:'STRIKER', method:'자동', parts:{ BUSH:'502287B:2', BOLT:'502297B:2', WASHER:'502297W:2' }},
-  '502307': { type:'STRIKER', method:'자동', parts:{ GUIDE:'502307G:2' }},
-  '502313': { type:'STRIKER', method:'자동', parts:{ BUSH:'502287B:2' }},
-  '502333': { type:'STRIKER', method:'자동', parts:{ GUIDE:'502294G:2' }},
-  '502339': { type:'STRIKER', method:'자동', parts:{ STEEL:'502339S:1', GUIDE:'502294G:2' }},
-  '502346': { type:'STRIKER', method:'자동', parts:{ STEEL:'502346S:1', GUIDE:'502209G:2' }},
-  '601010': { type:'INSERT STEEL', method:'자동', parts:{ STEEL:'601010S:1', PLATE:'601010L:1', BUSH:'601010B:2' }},
-  '503A01': { type:'ROD', method:'자동', parts:{ ROD:'503A01R:1' }},
-  '503A02': { type:'ROD', method:'자동', parts:{ ROD:'503A02R:1' }},
-  '503A03': { type:'ROD', method:'자동', parts:{ ROD:'503A03R:1' }},
-  '503A05': { type:'ROD', method:'자동', parts:{ ROD:'503A05R:1' }},
-  '503A06': { type:'ROD', method:'자동', parts:{ ROD:'503A06R:1' }},
-  '503A07': { type:'ROD', method:'자동', parts:{ ROD:'503A07R:1' }},
-  '503A09': { type:'ROD', method:'자동', parts:{ ROD:'503A09R:1' }},
-  '503A10': { type:'ROD', method:'자동', parts:{ ROD:'503A10R:1' }},
-  '503A10(군수용)': { type:'ROD', method:'자동', parts:{ ROD:'503A10-1R:1' }},
-  '503A11': { type:'ROD', method:'자동', parts:{ ROD:'503A11R:1' }},
-  '503A13': { type:'ROD', method:'자동', parts:{ ROD:'503A09R:1' }},
-  '503A15': { type:'ROD', method:'자동', parts:{ ROD:'503A15R:1' }},
-  '503A16': { type:'ROD', method:'자동', parts:{ ROD:'503A16R:1' }},
-  '503A17': { type:'ROD', method:'자동', parts:{ ROD:'503A10R:1' }},
-  '503A18': { type:'ROD', method:'자동', parts:{ ROD:'503A18R:1' }},
-  '503A19': { type:'ROD', method:'자동', parts:{ ROD:'503A19R:1' }},
-  '503A20': { type:'ROD', method:'자동', parts:{ ROD:'503A20R:1' }},
-  '503A21': { type:'ROD', method:'자동', parts:{ ROD:'503A21R:1' }},
-  '503A22': { type:'ROD', method:'자동', parts:{ ROD:'503A22R:1' }},
-  '503A23': { type:'ROD', method:'자동', parts:{ ROD:'503A09R:1' }},
-  '503A24': { type:'ROD', method:'자동', parts:{ ROD:'503A24R:1' }},
-  '503A25': { type:'ROD', method:'자동', parts:{ ROD:'503A25R:1' }},
-  '503A26': { type:'ROD', method:'자동', parts:{ ROD:'503A26R:1' }},
-  '503A27': { type:'ROD', method:'자동', parts:{ ROD:'503A27R:1' }},
-  '503A28': { type:'ROD', method:'자동', parts:{ ROD:'503A28R:1' }},
-  '503A29': { type:'ROD', method:'자동', parts:{ ROD:'503A29R:1' }}
-};
+// BOM 데이터 (DB에서 로드)
+let ASSEMBLY_BOM = {};
 
 // ═══════════════════════════════════════════════
 // 초기화
@@ -325,6 +286,7 @@ async function init() {
   
   await loadWorkers();
   await loadProducts();
+  await loadBomData();
   renderEquipmentGrid();
 
   document.getElementById('shiftType').addEventListener('change', function() {
@@ -356,6 +318,17 @@ async function loadProducts() {
     if (data.length < 1000) break;
     from += 1000;
   }
+}
+
+async function loadBomData() {
+  const { data } = await db.from('assembly_bom').select('*');
+  ASSEMBLY_BOM = {};
+  if (data) {
+    data.forEach(r => {
+      ASSEMBLY_BOM[r.sabun] = { type: r.assembly_type, method: r.work_method, parts: r.parts || {} };
+    });
+  }
+  console.log('✅ BOM 로딩 완료:', Object.keys(ASSEMBLY_BOM).length, '건');
 }
 
 // ═══════════════════════════════════════════════
@@ -528,11 +501,17 @@ function onSabunChange(rowId) {
     typeSpan.textContent = bom.type;
     typeSpan.style.color = bom.type === 'ROD' ? '#9a3412' : bom.type === 'STRIKER' ? '#243bb2' : '#666';
     methodSpan.innerHTML = `<span class="method-badge ${bom.method === '수작업' ? 'method-manual' : 'method-auto'}">${bom.method}</span>`;
+    tr.querySelector('.prod-qty').disabled = false;
+    tr.querySelector('.prod-qty').style.background = '#fafbfd';
     calcBom(rowId);
   } else {
     typeSpan.textContent = '-';
     methodSpan.innerHTML = '-';
-    document.getElementById('bom_' + rowId).innerHTML = '<span style="color:#f59e0b;font-size:11px">⚠️ BOM 미등록</span>';
+    document.getElementById('bom_' + rowId).innerHTML = '<span style="color:#dc2626;font-size:11px">🚫 BOM 미등록 — 기준정보에서 등록 후 사용하세요</span>';
+    // 수량 입력 차단
+    tr.querySelector('.prod-qty').disabled = true;
+    tr.querySelector('.prod-qty').value = '';
+    tr.querySelector('.prod-qty').style.background = '#fef2f2';
   }
 }
 
