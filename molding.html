@@ -225,6 +225,10 @@
   
   .check-select-safety { display: flex; gap: 4px; justify-content: center; }
   .check-select-safety button { width: 48px; height: 48px; border: 2px solid #d1d5db; background: white; border-radius: 8px; cursor: pointer; font-size: 22px; font-weight: 700; transition: all 0.15s; padding: 0; line-height: 1; }
+  .check-select-safety button.normal { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+  .check-select-safety button.repair { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+  .check-select-safety button.unusable { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+  .check-select-safety button.notuse { background: #f3f4f6; color: #374151; border-color: #d1d5db; }
   .check-select-safety button:hover { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
   .check-select-safety button.active.normal { background: #10b981; color: white; border-color: #10b981; }
   .check-select-safety button.active.repair { background: #f59e0b; color: white; border-color: #f59e0b; }
@@ -627,33 +631,8 @@
     <!-- 비가동 -->
     <div class="downtime-area">
       <h2 data-i18n="molding.downtimeTitle">⏸️ 비가동 사유</h2>
-      <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 2fr;gap:12px;align-items:end">
-        <div>
-          <label data-i18n="molding.downtimeCode">비가동 코드</label>
-          <select id="downtimeCode">
-            <option value="" data-i18n="molding.downtimeNone">없음</option>
-            <option value="생지부족" data-i18n="molding.dtRawShort">생지부족</option>
-            <option value="금형교체" data-i18n="molding.dtMoldChange">금형교체</option>
-            <option value="금형세척" data-i18n="molding.dtMoldClean">금형세척</option>
-            <option value="설비이상" data-i18n="molding.dtMachineErr">설비이상</option>
-            <option value="제품성형이상" data-i18n="molding.dtProductErr">제품성형이상</option>
-            <option value="금형수정" data-i18n="molding.dtMoldFix">금형수정</option>
-            <option value="기타" data-i18n="molding.dtOther">기타</option>
-          </select>
-        </div>
-        <div>
-          <label>비가동 시작</label>
-          <input type="time" id="downtimeStart" />
-        </div>
-        <div>
-          <label>비가동 종료</label>
-          <input type="time" id="downtimeEnd" />
-        </div>
-        <div>
-          <label data-i18n="molding.downtimeDetail">비가동 상세</label>
-          <input type="text" id="downtimeDetail" data-i18n="molding.downtimeDetailPlaceholder" placeholder="상세 사유 입력" />
-        </div>
-      </div>
+      <div id="downtimeRows"></div>
+      <button onclick="addDowntimeRow()" style="width:100%;margin-top:8px;padding:8px;border:2px dashed #e0e4ed;background:#fafbfd;border-radius:8px;color:#243bb2;font-size:13px;font-weight:600;cursor:pointer">+ 비가동 추가</button>
     </div>
 
     <!-- 전체 비고 -->
@@ -1316,6 +1295,51 @@ function renumberRows(faceKey) {
   updateTotalRowCount();
 }
 
+// ═══════════════════════════════════════════════
+// 비가동 사유 (면별 + 행 추가)
+// ═══════════════════════════════════════════════
+let downtimeCounter = 0;
+
+function addDowntimeRow() {
+  downtimeCounter++;
+  const rowId = `dt_${downtimeCounter}`;
+  const faceOptions = currentFaces === 3
+    ? '<option value="가면">가면</option><option value="나면">나면</option><option value="다면">다면</option><option value="전체">전체</option>'
+    : '<option value="전체">전체</option>';
+  
+  const div = document.createElement('div');
+  div.id = rowId;
+  div.style.cssText = 'display:grid;grid-template-columns:' + (currentFaces===3?'80px ':'') + '1.2fr 1fr 1fr 1.5fr 40px;gap:8px;align-items:end;margin-bottom:8px;padding:10px;background:#fafbfd;border-radius:8px;border:1px solid #e0e4ed';
+  
+  div.innerHTML = `
+    ${currentFaces===3 ? `<div><label style="font-size:11px;color:#888">면</label><select class="dt-face" style="width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:6px;font-size:13px">${faceOptions}</select></div>` : ''}
+    <div><label style="font-size:11px;color:#888">비가동 코드</label><select class="dt-code" style="width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:6px;font-size:13px"><option value="">없음</option><option value="생지부족">생지부족</option><option value="금형교체">금형교체</option><option value="금형세척">금형세척</option><option value="설비이상">설비이상</option><option value="제품성형이상">제품성형이상</option><option value="금형수정">금형수정</option><option value="기타">기타</option></select></div>
+    <div><label style="font-size:11px;color:#888">시작</label><input type="time" class="dt-start" style="width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:6px;font-size:13px" /></div>
+    <div><label style="font-size:11px;color:#888">종료</label><input type="time" class="dt-end" style="width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:6px;font-size:13px" /></div>
+    <div><label style="font-size:11px;color:#888">상세</label><input type="text" class="dt-detail" placeholder="상세 사유" style="width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:6px;font-size:13px" /></div>
+    <div><button onclick="removeDowntimeRow('${rowId}')" style="background:#fef2f2;color:#dc2626;border:none;width:36px;height:36px;border-radius:6px;font-size:16px;cursor:pointer;font-weight:700">×</button></div>
+  `;
+  document.getElementById('downtimeRows').appendChild(div);
+}
+
+function removeDowntimeRow(rowId) {
+  document.getElementById(rowId)?.remove();
+}
+
+function collectDowntimeData() {
+  const rows = document.getElementById('downtimeRows').children;
+  const result = [];
+  for (const row of rows) {
+    const face = row.querySelector('.dt-face')?.value || '전체';
+    const code = row.querySelector('.dt-code')?.value;
+    const start = row.querySelector('.dt-start')?.value;
+    const end = row.querySelector('.dt-end')?.value;
+    const detail = row.querySelector('.dt-detail')?.value;
+    if (code) result.push({ face, code, start, end, detail });
+  }
+  return result;
+}
+
 // 생산수량 자동 계산: C/V × Shot - 불량수량
 function calcProdQty(rowId) {
   const tr = document.getElementById(rowId);
@@ -1372,10 +1396,7 @@ async function submitReport() {
   if (!selectedEquipment) { showToast('설비를 선택하세요.', 'error'); return; }
   
   const allConditions = collectAllConditions();
-  const downtimeCode = document.getElementById('downtimeCode').value || null;
-  const downtimeStart = document.getElementById('downtimeStart').value || null;
-  const downtimeEnd = document.getElementById('downtimeEnd').value || null;
-  const downtimeDetail = document.getElementById('downtimeDetail').value.trim() || null;
+  const downtimeList = collectDowntimeData();
   const remarks = document.getElementById('remarks').value.trim() || null;
   
   // 면별 행 수집
@@ -1413,9 +1434,10 @@ async function submitReport() {
         production_qty: prodQty, defect_qty: defectQty,
         work_type: faceLabels[faceKey] || null,
         molding_pressure: null, upper_temp: null, lower_temp: null,
-        downtime_code: downtimeCode, downtime_minutes: null,
-        problem: downtimeDetail,
-        note: JSON.stringify({ text: note || remarks, face: faceKey, conditions: allConditions, downtime_start: downtimeStart, downtime_end: downtimeEnd }),
+        downtime_code: downtimeList.length > 0 ? downtimeList[0].code : null,
+        downtime_minutes: null,
+        problem: downtimeList.length > 0 ? downtimeList[0].detail : null,
+        note: JSON.stringify({ text: note || remarks, face: faceKey, conditions: allConditions, downtime: downtimeList }),
         created_by_emp_code: myInfo?.emp_code || null,
         created_by_name: myInfo?.name || null
       });
@@ -1453,10 +1475,8 @@ function resetForm(askConfirm = true) {
   
   document.getElementById('mainRows').innerHTML = '';
   rowCounters = {};
-  document.getElementById('downtimeCode').value = '';
-  document.getElementById('downtimeStart').value = '';
-  document.getElementById('downtimeEnd').value = '';
-  document.getElementById('downtimeDetail').value = '';
+  downtimeCounter = 0;
+  document.getElementById('downtimeRows').innerHTML = '';
   document.getElementById('remarks').value = '';
   document.getElementById('moldChangeCheck').checked = false;
   
