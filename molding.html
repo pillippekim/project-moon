@@ -761,63 +761,36 @@ function renderConditionArea() {
     { key:'middle', label:'중품', bg:'#fce4ec', border:'#e91e63' },
     { key:'last', label:'종품', bg:'#e8f5e9', border:'#4caf50' }
   ];
+
+  const fieldInfo = [
+    { field:'pressure', label:'성형압력', unit:'kgf/cm²', placeholder:'150' },
+    { field:'upper', label:'상판온도', unit:'℃', placeholder:'170' },
+    { field:'lower', label:'하판온도', unit:'℃', placeholder:'170' }
+  ];
+  
+  const inputStyle = 'width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:4px;font-size:16px;font-weight:600;text-align:center';
   
   let html = '';
   
-  if (currentFaces === 3) {
-    // 3면: 면별로 구분, 각 면에 기준/초품/중품/종품 가로 배열
-    faces.forEach(face => {
-      html += `<div style="margin-bottom:16px">
-        <span class="face-label" style="background:${face.color}">${face.label}</span>
-        <div style="overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:6px">
-            <thead><tr style="background:#f5f5f5">
-              <th style="border:1px solid #e0e4ed;padding:6px 8px;width:90px"></th>
-              ${types.map(t => `<th style="border:1px solid #e0e4ed;padding:6px 8px;background:${t.bg};font-weight:600">${t.label}</th>`).join('')}
-            </tr></thead>
-            <tbody>
-              <tr>
-                <td style="border:1px solid #e0e4ed;padding:6px;font-weight:600;font-size:11px">성형압력</td>
-                ${types.map(t => `<td style="border:1px solid #e0e4ed;padding:4px"><input type="number" class="cond-val" data-face="${face.key}" data-type="${t.key}" data-field="pressure" step="1" placeholder="-" style="width:100%;padding:6px;border:1px solid #e0e4ed;border-radius:4px;font-size:12px;text-align:center" /></td>`).join('')}
-              </tr>
-              <tr>
-                <td style="border:1px solid #e0e4ed;padding:6px;font-weight:600;font-size:11px">상판온도</td>
-                ${types.map(t => `<td style="border:1px solid #e0e4ed;padding:4px"><input type="number" class="cond-val" data-face="${face.key}" data-type="${t.key}" data-field="upper" step="1" placeholder="-" style="width:100%;padding:6px;border:1px solid #e0e4ed;border-radius:4px;font-size:12px;text-align:center" /></td>`).join('')}
-              </tr>
-              <tr>
-                <td style="border:1px solid #e0e4ed;padding:6px;font-weight:600;font-size:11px">하판온도</td>
-                ${types.map(t => `<td style="border:1px solid #e0e4ed;padding:4px"><input type="number" class="cond-val" data-face="${face.key}" data-type="${t.key}" data-field="lower" step="1" placeholder="-" style="width:100%;padding:6px;border:1px solid #e0e4ed;border-radius:4px;font-size:12px;text-align:center" /></td>`).join('')}
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>`;
-    });
-  } else {
-    // 1면: 기준/초품/중품/종품 한 줄 테이블
-    html += `<div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr style="background:#f5f5f5">
-          <th style="border:1px solid #e0e4ed;padding:6px 8px;width:90px"></th>
-          ${types.map(t => `<th style="border:1px solid #e0e4ed;padding:6px 8px;background:${t.bg};font-weight:600">${t.label}</th>`).join('')}
-        </tr></thead>
-        <tbody>
-          <tr>
-            <td style="border:1px solid #e0e4ed;padding:6px;font-weight:600;font-size:11px">성형압력</td>
-            ${types.map(t => `<td style="border:1px solid #e0e4ed;padding:4px"><input type="number" class="cond-val" data-face="single" data-type="${t.key}" data-field="pressure" step="1" placeholder="-" style="width:100%;padding:6px;border:1px solid #e0e4ed;border-radius:4px;font-size:12px;text-align:center" /></td>`).join('')}
-          </tr>
-          <tr>
-            <td style="border:1px solid #e0e4ed;padding:6px;font-weight:600;font-size:11px">상판온도</td>
-            ${types.map(t => `<td style="border:1px solid #e0e4ed;padding:4px"><input type="number" class="cond-val" data-face="single" data-type="${t.key}" data-field="upper" step="1" placeholder="-" style="width:100%;padding:6px;border:1px solid #e0e4ed;border-radius:4px;font-size:12px;text-align:center" /></td>`).join('')}
-          </tr>
-          <tr>
-            <td style="border:1px solid #e0e4ed;padding:6px;font-weight:600;font-size:11px">하판온도</td>
-            ${types.map(t => `<td style="border:1px solid #e0e4ed;padding:4px"><input type="number" class="cond-val" data-face="single" data-type="${t.key}" data-field="lower" step="1" placeholder="-" style="width:100%;padding:6px;border:1px solid #e0e4ed;border-radius:4px;font-size:12px;text-align:center" /></td>`).join('')}
-          </tr>
-        </tbody>
-      </table>
+  faces.forEach(face => {
+    const faceLabel = face.label ? `<span class="face-label" style="background:${face.color}">${face.label}</span>` : '';
+    html += `<div style="margin-bottom:14px">${faceLabel}
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:4px">
+          <thead><tr style="background:#f5f5f5">
+            <th style="border:1px solid #e0e4ed;padding:8px;width:100px"></th>
+            ${types.map(t => `<th style="border:1px solid #e0e4ed;padding:8px;background:${t.bg};font-weight:700;font-size:13px">${t.label}</th>`).join('')}
+          </tr></thead>
+          <tbody>
+            ${fieldInfo.map(fi => `<tr>
+              <td style="border:1px solid #e0e4ed;padding:6px 8px;font-weight:700;font-size:12px;white-space:nowrap">${fi.label}<br><span style="font-size:10px;color:#999;font-weight:400">(${fi.unit})</span></td>
+              ${types.map(t => `<td style="border:1px solid #e0e4ed;padding:4px"><input type="number" class="cond-val" data-face="${face.key}" data-type="${t.key}" data-field="${fi.field}" step="1" placeholder="${fi.placeholder}" style="${inputStyle}" /></td>`).join('')}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
     </div>`;
-  }
+  });
   
   // 교체 영역 (숨김)
   html += `<div id="changeCondArea" style="display:none;margin-top:16px;border-top:2px dashed #d97706;padding-top:12px">
@@ -844,23 +817,27 @@ function toggleMoldChange() {
       { key:'middle_c', label:'중품', bg:'#fce4ec' },
       { key:'last_c', label:'종품', bg:'#e8f5e9' }
     ];
+    const fieldInfo = [
+      { field:'pressure', label:'성형압력', unit:'kgf/cm²', placeholder:'150' },
+      { field:'upper', label:'상판온도', unit:'℃', placeholder:'170' },
+      { field:'lower', label:'하판온도', unit:'℃', placeholder:'170' }
+    ];
+    const inputStyle = 'width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:4px;font-size:16px;font-weight:600;text-align:center';
     
     let html = '';
     faces.forEach(face => {
       const faceLabel = face.label ? `<span class="face-label" style="background:${face.color}">${face.label}</span>` : '';
       html += `<div style="margin-bottom:12px">${faceLabel}
-        <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:4px">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:4px">
           <thead><tr style="background:#f5f5f5">
-            <th style="border:1px solid #e0e4ed;padding:5px;width:90px"></th>
-            ${types.map(t => `<th style="border:1px solid #e0e4ed;padding:5px;background:${t.bg};font-weight:600">${t.label}</th>`).join('')}
+            <th style="border:1px solid #e0e4ed;padding:8px;width:100px"></th>
+            ${types.map(t => `<th style="border:1px solid #e0e4ed;padding:8px;background:${t.bg};font-weight:700;font-size:13px">${t.label}</th>`).join('')}
           </tr></thead>
           <tbody>
-            ${['pressure','upper','lower'].map(field => {
-              const label = field==='pressure'?'성형압력':field==='upper'?'상판온도':'하판온도';
-              return `<tr><td style="border:1px solid #e0e4ed;padding:5px;font-weight:600;font-size:11px">${label}</td>
-                ${types.map(t => `<td style="border:1px solid #e0e4ed;padding:3px"><input type="number" class="cond-val" data-face="${face.key}" data-type="${t.key}" data-field="${field}" step="1" placeholder="-" style="width:100%;padding:5px;border:1px solid #e0e4ed;border-radius:4px;font-size:12px;text-align:center" /></td>`).join('')}
-              </tr>`;
-            }).join('')}
+            ${fieldInfo.map(fi => `<tr>
+              <td style="border:1px solid #e0e4ed;padding:6px 8px;font-weight:700;font-size:12px;white-space:nowrap">${fi.label}<br><span style="font-size:10px;color:#999;font-weight:400">(${fi.unit})</span></td>
+              ${types.map(t => `<td style="border:1px solid #e0e4ed;padding:4px"><input type="number" class="cond-val" data-face="${face.key}" data-type="${t.key}" data-field="${fi.field}" step="1" placeholder="${fi.placeholder}" style="${inputStyle}" /></td>`).join('')}
+            </tr>`).join('')}
           </tbody>
         </table>
       </div>`;
@@ -1206,8 +1183,8 @@ async function completeSafetyCheck() {
   document.getElementById('safetyStatus').style.background = 'rgba(255,255,255,0.3)';
   showToast(t('safety','completed') + ' ' + t('molding','workDetail') + '을 입력하세요.');
   
-  if (document.querySelectorAll('#mainRows tr').length === 0) {
-    for (let i = 0; i < 5; i++) addRow();
+  if (!document.getElementById('workDetailArea').innerHTML.trim() || document.getElementById('workDetailArea').querySelectorAll('tbody tr').length === 0) {
+    renderConditionInputs();
   }
 }
 
@@ -1250,8 +1227,8 @@ async function checkTodaySafety() {
       document.getElementById('safetyStatus').textContent = '✓ 점검 완료';
       showToast('오늘 점검 이력을 불러왔어요');
       
-      if (document.querySelectorAll('#mainRows tr').length === 0) {
-        for (let i = 0; i < 5; i++) addRow();
+      if (document.getElementById('workDetailArea').querySelectorAll('tbody tr').length === 0) {
+        renderConditionInputs();
       }
     } else {
       existingSafetyId = null;
@@ -1263,8 +1240,8 @@ async function checkTodaySafety() {
     console.log('molding_safety_check 테이블 없음 - 점검 단계 건너뜀');
     safetyCheckCompleted = true;
     document.getElementById('workArea').classList.remove('work-area-locked'); document.getElementById('lockMessage').style.display='none';
-    if (document.querySelectorAll('#mainRows tr').length === 0) {
-      for (let i = 0; i < 5; i++) addRow();
+    if (document.getElementById('workDetailArea').querySelectorAll('tbody tr').length === 0) {
+      renderConditionInputs();
     }
   }
 }
