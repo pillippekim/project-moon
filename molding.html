@@ -599,61 +599,22 @@
   <!-- 작업 영역 (점검 완료 전 잠금) -->
   <div id="workArea" class="work-area-locked">
     <div id="lockMessage" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;font-weight:700;color:#dc2626;z-index:10;background:rgba(255,255,255,0.9);padding:16px 32px;border-radius:12px;pointer-events:none;white-space:nowrap" data-i18n="safety.lockedMsg">🔒 설비 점검 완료 후 입력 가능</div>
-    <!-- 성형 조건 (탭형: 기준/초품/중품/종품 + 교체) -->
+    <!-- 성형 조건 (원페이퍼 — 기준/초품/중품/종품 한 화면) -->
     <div class="condition-area">
-      <h2 data-i18n="molding.conditionTitle">🌡️ 성형 조건</h2>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-        <div class="condition-tabs" id="conditionTabs">
-          <button class="cond-tab active" onclick="switchCondTab('standard')">기준</button>
-          <button class="cond-tab" onclick="switchCondTab('first')">초품</button>
-          <button class="cond-tab" onclick="switchCondTab('middle')">중품</button>
-          <button class="cond-tab" onclick="switchCondTab('last')">종품</button>
-        </div>
-        <label style="font-size:12px;color:#888;display:flex;align-items:center;gap:4px;cursor:pointer;margin-left:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <h2 data-i18n="molding.conditionTitle">🌡️ 성형 조건</h2>
+        <label style="font-size:12px;color:#888;display:flex;align-items:center;gap:4px;cursor:pointer">
           <input type="checkbox" id="moldChangeCheck" onchange="toggleMoldChange()"> 금형 교체 있음
         </label>
       </div>
-      <!-- 교체 탭 (숨김) -->
-      <div class="condition-tabs" id="conditionTabsChange" style="display:none;margin-bottom:12px">
-        <span style="font-size:11px;color:#d97706;font-weight:600;margin-right:8px">교체 후 →</span>
-        <button class="cond-tab cond-change" onclick="switchCondTab('standard_c')">기준</button>
-        <button class="cond-tab cond-change" onclick="switchCondTab('first_c')">초품</button>
-        <button class="cond-tab cond-change" onclick="switchCondTab('middle_c')">중품</button>
-        <button class="cond-tab cond-change" onclick="switchCondTab('last_c')">종품</button>
-      </div>
       <div id="conditionInputArea">
-        <!-- JS에서 동적 생성 (작업면 수에 따라) -->
+        <!-- JS에서 동적 생성 -->
       </div>
     </div>
 
-    <!-- 작업 내역 테이블 -->
-    <div class="section">
-      <div class="section-header" style="background:#243bb2;color:white">
-        <h2 data-i18n="molding.workDetail">📋 작업 내역</h2>
-        <span id="rowCount" style="font-size:12px;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:6px">0건</span>
-      </div>
-      <div class="section-body" style="padding-top:16px">
-        <div class="work-table-wrap">
-          <table class="work-table">
-            <thead>
-              <tr>
-                <th class="col-no">NO</th>
-                <th class="col-sabun" data-i18n="common.sabun">사번</th>
-                <th class="col-product" data-i18n="common.productName">제품명</th>
-                <th class="col-batch" data-i18n="common.batchNo">Batch No.</th>
-                <th class="col-cv" data-i18n="molding.cavity">C/V</th>
-                <th class="col-shot" data-i18n="molding.shotCount">실적판수</th>
-                <th class="col-qty" data-i18n="common.productionQty">생산수량</th>
-                <th class="col-defect" data-i18n="common.defectQty">불량수량</th>
-                <th class="col-note" data-i18n="common.note">비고</th>
-                <th class="col-del"></th>
-              </tr>
-            </thead>
-            <tbody id="mainRows"></tbody>
-          </table>
-        </div>
-        <button class="btn-add-row" onclick="addRow()" data-i18n="common.addRow">+ 행 추가</button>
-      </div>
+    <!-- 작업 내역 (면별 분리) -->
+    <div id="workDetailArea">
+      <!-- JS에서 동적 생성 -->
     </div>
 
     <!-- 비가동 -->
@@ -769,99 +730,201 @@ const SAFETY_OPTIONS = [
 ];
 
 // ═══════════════════════════════════════════════
-// 성형 조건 (탭형 + 작업면)
+// 성형 조건 (원페이퍼) + 작업내역 (면별 분리)
 // ═══════════════════════════════════════════════
-let currentCondTab = 'standard';
-const COND_TABS = ['standard','first','middle','last','standard_c','first_c','middle_c','last_c'];
-const COND_LABELS = { standard:'기준', first:'초품', middle:'중품', last:'종품', standard_c:'기준(교체)', first_c:'초품(교체)', middle_c:'중품(교체)', last_c:'종품(교체)' };
-let conditionData = {}; // { standard: { ga: {pressure,upper,lower}, na:{...}, da:{...} }, ... }
-let currentFaces = 1; // 1면 or 3면
-
-function initConditionData() {
-  COND_TABS.forEach(tab => {
-    conditionData[tab] = {};
-    if (currentFaces === 3) {
-      ['ga','na','da'].forEach(face => { conditionData[tab][face] = { pressure:'', upper:'', lower:'' }; });
-    } else {
-      conditionData[tab]['single'] = { pressure:'', upper:'', lower:'' };
-    }
-  });
-}
+let currentFaces = 1;
+let rowCounters = { ga: 0, na: 0, da: 0, single: 0 };
 
 function detectFaces() {
   if (!selectedEquipment) return 1;
   const type = selectedEquipment.type || '';
-  // injection, inj-vacuum = 1면 / transfer, vacuum, general = 3면(Press)
   if (type === 'injection' || type === 'inj-vacuum') return 1;
   return 3;
 }
 
 function renderConditionInputs() {
   currentFaces = detectFaces();
-  initConditionData();
-  renderCondTab();
+  renderConditionArea();
+  renderWorkDetailArea();
 }
 
-function switchCondTab(tab) {
-  // 현재 탭 데이터 저장
-  saveCurrentCondData();
-  currentCondTab = tab;
-  
-  // 탭 활성화
-  document.querySelectorAll('.cond-tab').forEach(b => b.classList.remove('active'));
-  const isChange = tab.endsWith('_c');
-  const btns = document.querySelectorAll(isChange ? '.cond-tab.cond-change' : '.cond-tab:not(.cond-change)');
-  const baseTab = tab.replace('_c','');
-  btns.forEach(b => { if (b.textContent.trim() === COND_LABELS[baseTab] || b.textContent.trim() === COND_LABELS[tab]) b.classList.add('active'); });
-  
-  renderCondTab();
-}
-
-function renderCondTab() {
+// 성형조건 원페이퍼 렌더링
+function renderConditionArea() {
   const area = document.getElementById('conditionInputArea');
-  const data = conditionData[currentCondTab] || {};
-  const faces = currentFaces === 3 ? [
-    { key:'ga', label:'가면', color:'#fff3cd' },
-    { key:'na', label:'나면', color:'#dbeafe' },
-    { key:'da', label:'다면', color:'#d4edda' }
-  ] : [
-    { key:'single', label:'', color:'' }
-  ];
-
-  const tabLabel = COND_LABELS[currentCondTab] || '';
+  const faces = currentFaces === 3
+    ? [{ key:'ga', label:'가면', color:'#fff3cd' }, { key:'na', label:'나면', color:'#dbeafe' }, { key:'da', label:'다면', color:'#d4edda' }]
+    : [{ key:'single', label:'', color:'' }];
   
-  area.innerHTML = faces.map(face => {
-    const d = data[face.key] || { pressure:'', upper:'', lower:'' };
-    const faceHeader = face.label ? `<span class="face-label" style="background:${face.color}">${face.label}</span>` : '';
-    return `
-      ${faceHeader}
-      <div class="condition-grid" style="margin-bottom:12px">
-        <div><label>성형압력 (kgf/cm²)</label><input type="number" class="cond-input" data-face="${face.key}" data-field="pressure" value="${d.pressure}" step="1" placeholder="예: 150" /></div>
-        <div><label>상판온도 (℃)</label><input type="number" class="cond-input" data-face="${face.key}" data-field="upper" value="${d.upper}" step="1" placeholder="예: 170" /></div>
-        <div><label>하판온도 (℃)</label><input type="number" class="cond-input" data-face="${face.key}" data-field="lower" value="${d.lower}" step="1" placeholder="예: 170" /></div>
-      </div>
-    `;
-  }).join('');
-}
-
-function saveCurrentCondData() {
-  document.querySelectorAll('.cond-input').forEach(input => {
-    const face = input.dataset.face;
-    const field = input.dataset.field;
-    if (conditionData[currentCondTab] && conditionData[currentCondTab][face]) {
-      conditionData[currentCondTab][face][field] = input.value;
-    }
-  });
+  const types = [
+    { key:'standard', label:'기준', bg:'#fff3cd', border:'#f59e0b' },
+    { key:'first', label:'초품', bg:'#d4edda', border:'#10b981' },
+    { key:'middle', label:'중품', bg:'#fce4ec', border:'#e91e63' },
+    { key:'last', label:'종품', bg:'#e8f5e9', border:'#4caf50' }
+  ];
+  
+  let html = '';
+  
+  if (currentFaces === 3) {
+    // 3면: 면별로 구분, 각 면에 기준/초품/중품/종품 가로 배열
+    faces.forEach(face => {
+      html += `<div style="margin-bottom:16px">
+        <span class="face-label" style="background:${face.color}">${face.label}</span>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:6px">
+            <thead><tr style="background:#f5f5f5">
+              <th style="border:1px solid #e0e4ed;padding:6px 8px;width:90px"></th>
+              ${types.map(t => `<th style="border:1px solid #e0e4ed;padding:6px 8px;background:${t.bg};font-weight:600">${t.label}</th>`).join('')}
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td style="border:1px solid #e0e4ed;padding:6px;font-weight:600;font-size:11px">성형압력</td>
+                ${types.map(t => `<td style="border:1px solid #e0e4ed;padding:4px"><input type="number" class="cond-val" data-face="${face.key}" data-type="${t.key}" data-field="pressure" step="1" placeholder="-" style="width:100%;padding:6px;border:1px solid #e0e4ed;border-radius:4px;font-size:12px;text-align:center" /></td>`).join('')}
+              </tr>
+              <tr>
+                <td style="border:1px solid #e0e4ed;padding:6px;font-weight:600;font-size:11px">상판온도</td>
+                ${types.map(t => `<td style="border:1px solid #e0e4ed;padding:4px"><input type="number" class="cond-val" data-face="${face.key}" data-type="${t.key}" data-field="upper" step="1" placeholder="-" style="width:100%;padding:6px;border:1px solid #e0e4ed;border-radius:4px;font-size:12px;text-align:center" /></td>`).join('')}
+              </tr>
+              <tr>
+                <td style="border:1px solid #e0e4ed;padding:6px;font-weight:600;font-size:11px">하판온도</td>
+                ${types.map(t => `<td style="border:1px solid #e0e4ed;padding:4px"><input type="number" class="cond-val" data-face="${face.key}" data-type="${t.key}" data-field="lower" step="1" placeholder="-" style="width:100%;padding:6px;border:1px solid #e0e4ed;border-radius:4px;font-size:12px;text-align:center" /></td>`).join('')}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+    });
+  } else {
+    // 1면: 기준/초품/중품/종품 한 줄 테이블
+    html += `<div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#f5f5f5">
+          <th style="border:1px solid #e0e4ed;padding:6px 8px;width:90px"></th>
+          ${types.map(t => `<th style="border:1px solid #e0e4ed;padding:6px 8px;background:${t.bg};font-weight:600">${t.label}</th>`).join('')}
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td style="border:1px solid #e0e4ed;padding:6px;font-weight:600;font-size:11px">성형압력</td>
+            ${types.map(t => `<td style="border:1px solid #e0e4ed;padding:4px"><input type="number" class="cond-val" data-face="single" data-type="${t.key}" data-field="pressure" step="1" placeholder="-" style="width:100%;padding:6px;border:1px solid #e0e4ed;border-radius:4px;font-size:12px;text-align:center" /></td>`).join('')}
+          </tr>
+          <tr>
+            <td style="border:1px solid #e0e4ed;padding:6px;font-weight:600;font-size:11px">상판온도</td>
+            ${types.map(t => `<td style="border:1px solid #e0e4ed;padding:4px"><input type="number" class="cond-val" data-face="single" data-type="${t.key}" data-field="upper" step="1" placeholder="-" style="width:100%;padding:6px;border:1px solid #e0e4ed;border-radius:4px;font-size:12px;text-align:center" /></td>`).join('')}
+          </tr>
+          <tr>
+            <td style="border:1px solid #e0e4ed;padding:6px;font-weight:600;font-size:11px">하판온도</td>
+            ${types.map(t => `<td style="border:1px solid #e0e4ed;padding:4px"><input type="number" class="cond-val" data-face="single" data-type="${t.key}" data-field="lower" step="1" placeholder="-" style="width:100%;padding:6px;border:1px solid #e0e4ed;border-radius:4px;font-size:12px;text-align:center" /></td>`).join('')}
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+  }
+  
+  // 교체 영역 (숨김)
+  html += `<div id="changeCondArea" style="display:none;margin-top:16px;border-top:2px dashed #d97706;padding-top:12px">
+    <div style="font-size:13px;font-weight:600;color:#d97706;margin-bottom:8px">🔄 금형 교체 후</div>
+    <div id="changeCondInputs"></div>
+  </div>`;
+  
+  area.innerHTML = html;
 }
 
 function toggleMoldChange() {
   const checked = document.getElementById('moldChangeCheck').checked;
-  document.getElementById('conditionTabsChange').style.display = checked ? 'flex' : 'none';
+  const changeArea = document.getElementById('changeCondArea');
+  changeArea.style.display = checked ? 'block' : 'none';
+  
+  if (checked && !document.getElementById('changeCondInputs').innerHTML.trim()) {
+    // 교체 후 조건 입력 영역 생성 (원본과 동일 구조)
+    const faces = currentFaces === 3
+      ? [{ key:'ga', label:'가면', color:'#fff3cd' }, { key:'na', label:'나면', color:'#dbeafe' }, { key:'da', label:'다면', color:'#d4edda' }]
+      : [{ key:'single', label:'', color:'' }];
+    const types = [
+      { key:'standard_c', label:'기준', bg:'#fff3cd' },
+      { key:'first_c', label:'초품', bg:'#d4edda' },
+      { key:'middle_c', label:'중품', bg:'#fce4ec' },
+      { key:'last_c', label:'종품', bg:'#e8f5e9' }
+    ];
+    
+    let html = '';
+    faces.forEach(face => {
+      const faceLabel = face.label ? `<span class="face-label" style="background:${face.color}">${face.label}</span>` : '';
+      html += `<div style="margin-bottom:12px">${faceLabel}
+        <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:4px">
+          <thead><tr style="background:#f5f5f5">
+            <th style="border:1px solid #e0e4ed;padding:5px;width:90px"></th>
+            ${types.map(t => `<th style="border:1px solid #e0e4ed;padding:5px;background:${t.bg};font-weight:600">${t.label}</th>`).join('')}
+          </tr></thead>
+          <tbody>
+            ${['pressure','upper','lower'].map(field => {
+              const label = field==='pressure'?'성형압력':field==='upper'?'상판온도':'하판온도';
+              return `<tr><td style="border:1px solid #e0e4ed;padding:5px;font-weight:600;font-size:11px">${label}</td>
+                ${types.map(t => `<td style="border:1px solid #e0e4ed;padding:3px"><input type="number" class="cond-val" data-face="${face.key}" data-type="${t.key}" data-field="${field}" step="1" placeholder="-" style="width:100%;padding:5px;border:1px solid #e0e4ed;border-radius:4px;font-size:12px;text-align:center" /></td>`).join('')}
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+    });
+    document.getElementById('changeCondInputs').innerHTML = html;
+  }
 }
 
 function collectAllConditions() {
-  saveCurrentCondData();
-  return JSON.parse(JSON.stringify(conditionData));
+  const result = {};
+  document.querySelectorAll('.cond-val').forEach(input => {
+    const face = input.dataset.face;
+    const type = input.dataset.type;
+    const field = input.dataset.field;
+    if (!result[type]) result[type] = {};
+    if (!result[type][face]) result[type][face] = {};
+    result[type][face][field] = input.value || '';
+  });
+  return result;
+}
+
+// 작업내역 면별 분리 렌더링
+function renderWorkDetailArea() {
+  const area = document.getElementById('workDetailArea');
+  const faces = currentFaces === 3
+    ? [{ key:'ga', label:'가면', color:'#fff3cd' }, { key:'na', label:'나면', color:'#dbeafe' }, { key:'da', label:'다면', color:'#d4edda' }]
+    : [{ key:'single', label:'', color:'' }];
+  
+  rowCounters = {};
+  faces.forEach(f => rowCounters[f.key] = 0);
+  
+  area.innerHTML = faces.map(face => `
+    <div class="section" style="margin-bottom:16px">
+      <div class="section-header" style="background:${currentFaces===3?'#243bb2':'#243bb2'};color:white">
+        <h2>📋 작업 내역 ${face.label ? '— '+face.label : ''}</h2>
+        <span class="face-row-count" id="rowCount_${face.key}" style="font-size:12px;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:6px">0건</span>
+      </div>
+      <div class="section-body" style="padding-top:16px">
+        <div class="work-table-wrap">
+          <table class="work-table">
+            <thead><tr>
+              <th style="width:40px">NO</th>
+              <th style="width:110px">사번</th>
+              <th style="width:130px">제품명</th>
+              <th style="width:120px">Batch No.</th>
+              <th style="width:60px">C/V</th>
+              <th style="width:70px">Shot</th>
+              <th style="width:80px">생산수량</th>
+              <th style="width:70px">불량수량</th>
+              <th style="width:120px">비고</th>
+              <th style="width:40px"></th>
+            </tr></thead>
+            <tbody id="mainRows_${face.key}"></tbody>
+          </table>
+        </div>
+        <button class="btn-add-row" onclick="addRow('${face.key}')">+ 행 추가</button>
+      </div>
+    </div>
+  `).join('');
+  
+  // 초기 행 추가
+  faces.forEach(face => {
+    for (let i = 0; i < 2; i++) addRow(face.key);
+  });
 }
 
 // ═══════════════════════════════════════════════
@@ -1181,43 +1244,54 @@ async function checkTodaySafety() {
 // ═══════════════════════════════════════════════
 // 작업 내역 행 추가/삭제
 // ═══════════════════════════════════════════════
-function addRow() {
-  rowCounter++;
-  const rowId = `row_${rowCounter}`;
+function addRow(faceKey) {
+  faceKey = faceKey || 'single';
+  rowCounters[faceKey] = (rowCounters[faceKey] || 0) + 1;
+  const rowId = `row_${faceKey}_${rowCounters[faceKey]}`;
+  const tbody = document.getElementById('mainRows_' + faceKey);
+  if (!tbody) return;
   
   const tr = document.createElement('tr');
   tr.id = rowId;
+  tr.dataset.face = faceKey;
   tr.innerHTML = `
-    <td class="col-no"><strong>${document.querySelectorAll('#mainRows tr').length + 1}</strong></td>
-    <td class="col-sabun"><input type="text" class="sabun" placeholder="제품코드" oninput="onSabunChange('${rowId}')" /></td>
-    <td class="col-product"><input type="text" class="product-name" placeholder="자동" readonly style="color:#999;background:#f5f5f5" /></td>
-    <td class="col-batch"><input type="text" class="batch-no" placeholder="Batch No." /></td>
-    <td class="col-cv"><input type="number" class="cavity" placeholder="C/V" min="1" /></td>
-    <td class="col-shot"><input type="number" class="shot-count" placeholder="Shot" min="0" /></td>
-    <td class="col-qty"><input type="number" class="prod-qty" placeholder="수량" min="0" /></td>
-    <td class="col-defect"><input type="number" class="defect-qty" placeholder="0" min="0" value="0" /></td>
-    <td class="col-note"><input type="text" class="note" placeholder="" /></td>
-    <td class="col-del"><button class="btn-del-row" onclick="deleteRow('${rowId}')">×</button></td>
+    <td style="text-align:center"><strong>${tbody.querySelectorAll('tr').length + 1}</strong></td>
+    <td><input type="text" class="sabun" placeholder="제품코드" oninput="onSabunChange('${rowId}')" /></td>
+    <td><input type="text" class="product-name" placeholder="자동" readonly style="color:#999;background:#f5f5f5" /></td>
+    <td><input type="text" class="batch-no" placeholder="Batch No." /></td>
+    <td><input type="number" class="cavity" placeholder="C/V" min="1" /></td>
+    <td><input type="number" class="shot-count" placeholder="Shot" min="0" /></td>
+    <td><input type="number" class="prod-qty" placeholder="수량" min="0" /></td>
+    <td><input type="number" class="defect-qty" placeholder="0" min="0" value="0" /></td>
+    <td><input type="text" class="note" placeholder="" /></td>
+    <td><button class="btn-del-row" onclick="deleteRow('${rowId}','${faceKey}')">×</button></td>
   `;
-  document.getElementById('mainRows').appendChild(tr);
-  renumberRows();
+  tbody.appendChild(tr);
+  renumberRows(faceKey);
 }
 
-function deleteRow(rowId) {
-  if (document.querySelectorAll('#mainRows tr').length <= 1) {
+function deleteRow(rowId, faceKey) {
+  faceKey = faceKey || 'single';
+  const tbody = document.getElementById('mainRows_' + faceKey);
+  if (tbody && tbody.querySelectorAll('tr').length <= 1) {
     showToast('최소 1개 행은 있어야 해요.', 'error');
     return;
   }
   document.getElementById(rowId).remove();
-  renumberRows();
+  renumberRows(faceKey);
 }
 
-function renumberRows() {
-  const rows = document.querySelectorAll('#mainRows tr');
+function renumberRows(faceKey) {
+  faceKey = faceKey || 'single';
+  const tbody = document.getElementById('mainRows_' + faceKey);
+  if (!tbody) return;
+  const rows = tbody.querySelectorAll('tr');
   rows.forEach((tr, i) => {
-    tr.querySelector('td:first-child strong').textContent = i + 1;
+    const strong = tr.querySelector('td:first-child strong');
+    if (strong) strong.textContent = i + 1;
   });
-  document.getElementById('rowCount').textContent = `${rows.length}건`;
+  const countEl = document.getElementById('rowCount_' + faceKey);
+  if (countEl) countEl.textContent = rows.length + '건';
 }
 
 // 사번 입력 시 제품명 자동 채움
@@ -1267,56 +1341,48 @@ async function submitReport() {
   const downtimeDetail = document.getElementById('downtimeDetail').value.trim() || null;
   const remarks = document.getElementById('remarks').value.trim() || null;
   
-  const rows = document.querySelectorAll('#mainRows tr');
-  if (rows.length === 0) { showToast('최소 1건의 작업 내역이 필요해요.', 'error'); return; }
-  
+  // 면별 행 수집
+  const faces = currentFaces === 3 ? ['ga','na','da'] : ['single'];
+  const faceLabels = { ga:'가면', na:'나면', da:'다면', single:'' };
   const reportRows = [];
-  for (const tr of rows) {
-    const sabun = tr.querySelector('.sabun').value.trim();
-    const productName = tr.querySelector('.product-name').value.trim();
-    const batchNo = tr.querySelector('.batch-no').value.trim();
-    const cavity = parseInt(tr.querySelector('.cavity').value) || null;
-    const shotCount = parseInt(tr.querySelector('.shot-count').value) || null;
-    const prodQty = parseInt(tr.querySelector('.prod-qty').value) || null;
-    const defectQty = parseInt(tr.querySelector('.defect-qty').value) || 0;
-    const note = tr.querySelector('.note').value.trim();
+  
+  for (const faceKey of faces) {
+    const tbody = document.getElementById('mainRows_' + faceKey);
+    if (!tbody) continue;
+    const faceRows = tbody.querySelectorAll('tr');
     
-    // 빈 행 건너뛰기
-    if (!sabun && !batchNo && !prodQty) continue;
-    
-    // 필수값 확인
-    if (!sabun) {
-      showToast(`행 ${tr.querySelector('td:first-child').textContent}: 사번(제품코드) 필수`, 'error');
-      return;
+    for (const tr of faceRows) {
+      const sabun = tr.querySelector('.sabun').value.trim();
+      const productName = tr.querySelector('.product-name').value.trim();
+      const batchNo = tr.querySelector('.batch-no').value.trim();
+      const cavity = parseInt(tr.querySelector('.cavity').value) || null;
+      const shotCount = parseInt(tr.querySelector('.shot-count').value) || null;
+      const prodQty = parseInt(tr.querySelector('.prod-qty').value) || null;
+      const defectQty = parseInt(tr.querySelector('.defect-qty').value) || 0;
+      const note = tr.querySelector('.note').value.trim();
+      
+      if (!sabun && !batchNo && !prodQty) continue;
+      if (!sabun) {
+        showToast(`${faceLabels[faceKey]?faceLabels[faceKey]+' ':''}행: 사번 필수`, 'error');
+        return;
+      }
+      
+      reportRows.push({
+        work_date: workDate, shift_type: shiftType, team: selectedTeam,
+        equipment_no: selectedEquipment.no, equipment_id: selectedEquipment.id,
+        start_time: startTime || null, end_time: endTime || null,
+        worker_name: workerName, sabun, product_name: productName || null,
+        batch_no: batchNo || null, cavity, shot_count: shotCount,
+        production_qty: prodQty, defect_qty: defectQty,
+        work_type: faceLabels[faceKey] || null,
+        molding_pressure: null, upper_temp: null, lower_temp: null,
+        downtime_code: downtimeCode, downtime_minutes: null,
+        problem: downtimeDetail,
+        note: JSON.stringify({ text: note || remarks, face: faceKey, conditions: allConditions, downtime_start: downtimeStart, downtime_end: downtimeEnd }),
+        created_by_emp_code: myInfo?.emp_code || null,
+        created_by_name: myInfo?.name || null
+      });
     }
-    
-    reportRows.push({
-      work_date: workDate,
-      shift_type: shiftType,
-      team: selectedTeam,
-      equipment_no: selectedEquipment.no,
-      equipment_id: selectedEquipment.id,
-      start_time: startTime || null,
-      end_time: endTime || null,
-      worker_name: workerName,
-      sabun: sabun,
-      product_name: productName || null,
-      batch_no: batchNo || null,
-      cavity: cavity,
-      shot_count: shotCount,
-      production_qty: prodQty,
-      defect_qty: defectQty,
-      work_type: null,
-      molding_pressure: null,
-      upper_temp: null,
-      lower_temp: null,
-      downtime_code: downtimeCode,
-      downtime_minutes: null,
-      problem: downtimeDetail,
-      note: JSON.stringify({ text: note || remarks, conditions: allConditions, downtime_start: downtimeStart, downtime_end: downtimeEnd }),
-      created_by_emp_code: myInfo?.emp_code || null,
-      created_by_name: myInfo?.name || null
-    });
   }
   
   if (reportRows.length === 0) {
@@ -1349,18 +1415,16 @@ function resetForm(askConfirm = true) {
   }
   
   document.getElementById('mainRows').innerHTML = '';
-  rowCounter = 0;
-  document.getElementById('moldingPressure').value = '';
-  document.getElementById('upperTemp').value = '';
-  document.getElementById('lowerTemp').value = '';
+  rowCounters = {};
   document.getElementById('downtimeCode').value = '';
-  document.getElementById('downtimeMinutes').value = '';
+  document.getElementById('downtimeStart').value = '';
+  document.getElementById('downtimeEnd').value = '';
   document.getElementById('downtimeDetail').value = '';
   document.getElementById('remarks').value = '';
-  document.getElementById('rowCount').textContent = '0건';
+  document.getElementById('moldChangeCheck').checked = false;
   
-  if (safetyCheckCompleted) {
-    for (let i = 0; i < 5; i++) addRow();
+  if (safetyCheckCompleted && selectedEquipment) {
+    renderConditionInputs();
   }
 }
 
@@ -1371,10 +1435,10 @@ function showToast(msg, type) {
   setTimeout(() => toast.classList.remove('show'), 2800);
 }
 
-// 시작
 function confirmLeave(e) {
   e.preventDefault();
-  const hasInput = document.querySelectorAll('#mainRows tr').length > 0 && Array.from(document.querySelectorAll('#mainRows .sabun')).some(i => i.value.trim());
+  const allSabuns = document.querySelectorAll('[id^="mainRows_"] .sabun');
+  const hasInput = Array.from(allSabuns).some(i => i.value.trim());
   if (!hasInput) { location.href = 'index.html'; return; }
   if (confirm('작성 중인 내용이 있어요.\n제출하지 않고 메인으로 이동할까요?')) { location.href = 'index.html'; }
 }
