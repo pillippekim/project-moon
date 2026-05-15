@@ -882,21 +882,37 @@ function collectAllConditions() {
   return result;
 }
 
-// 작업내역 면별 분리 렌더링
+// 작업내역 면별 분리 렌더링 (컴팩트: 테이블 헤더 1개 + 면 구분선)
 function renderWorkDetailArea() {
   const area = document.getElementById('workDetailArea');
   const faces = currentFaces === 3
-    ? [{ key:'ga', label:'가면', color:'#fff3cd' }, { key:'na', label:'나면', color:'#dbeafe' }, { key:'da', label:'다면', color:'#d4edda' }]
+    ? [{ key:'ga', label:'가면', color:'#f59e0b' }, { key:'na', label:'나면', color:'#3b82f6' }, { key:'da', label:'다면', color:'#10b981' }]
     : [{ key:'single', label:'', color:'' }];
   
   rowCounters = {};
   faces.forEach(f => rowCounters[f.key] = 0);
   
-  area.innerHTML = faces.map(face => `
-    <div class="section" style="margin-bottom:16px">
-      <div class="section-header" style="background:${currentFaces===3?'#243bb2':'#243bb2'};color:white">
-        <h2>📋 작업 내역 ${face.label ? '— '+face.label : ''}</h2>
-        <span class="face-row-count" id="rowCount_${face.key}" style="font-size:12px;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:6px">0건</span>
+  let tbodyHtml = '';
+  faces.forEach((face, idx) => {
+    if (currentFaces === 3) {
+      tbodyHtml += `<tr class="face-divider" id="faceDivider_${face.key}">
+        <td colspan="10" style="background:${face.color}10;padding:8px 12px;border:none;border-top:${idx>0?'3px solid '+face.color:'none'}">
+          <span style="display:inline-block;background:${face.color};color:white;padding:3px 12px;border-radius:4px;font-size:12px;font-weight:700">${face.label}</span>
+          <span class="face-row-count" id="rowCount_${face.key}" style="font-size:11px;color:#888;margin-left:8px">0건</span>
+        </td>
+      </tr>`;
+    }
+    tbodyHtml += `<tbody id="mainRows_${face.key}"></tbody>`;
+    if (currentFaces === 3) {
+      tbodyHtml += `<tr><td colspan="10" style="border:none;padding:4px 0"><button class="btn-add-row" onclick="addRow('${face.key}')" style="font-size:12px;padding:6px;border-width:1px">+ ${face.label} 행 추가</button></td></tr>`;
+    }
+  });
+  
+  area.innerHTML = `
+    <div class="section">
+      <div class="section-header" style="background:#243bb2;color:white">
+        <h2>📋 작업 내역</h2>
+        <span id="totalRowCount" style="font-size:12px;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:6px">0건</span>
       </div>
       <div class="section-body" style="padding-top:16px">
         <div class="work-table-wrap">
@@ -913,18 +929,30 @@ function renderWorkDetailArea() {
               <th style="width:120px">비고</th>
               <th style="width:40px"></th>
             </tr></thead>
-            <tbody id="mainRows_${face.key}"></tbody>
+            ${tbodyHtml}
           </table>
         </div>
-        <button class="btn-add-row" onclick="addRow('${face.key}')">+ 행 추가</button>
+        ${currentFaces === 1 ? '<button class="btn-add-row" onclick="addRow(\'single\')">+ 행 추가</button>' : ''}
       </div>
-    </div>
-  `).join('');
+    </div>`;
   
   // 초기 행 추가
+  const initRows = currentFaces === 1 ? 2 : 2;
   faces.forEach(face => {
-    for (let i = 0; i < 2; i++) addRow(face.key);
+    for (let i = 0; i < initRows; i++) addRow(face.key);
   });
+  updateTotalRowCount();
+}
+
+function updateTotalRowCount() {
+  let total = 0;
+  const faces = currentFaces === 3 ? ['ga','na','da'] : ['single'];
+  faces.forEach(fk => {
+    const tbody = document.getElementById('mainRows_' + fk);
+    if (tbody) total += tbody.querySelectorAll('tr').length;
+  });
+  const el = document.getElementById('totalRowCount');
+  if (el) el.textContent = total + '건';
 }
 
 // ═══════════════════════════════════════════════
@@ -1292,6 +1320,7 @@ function renumberRows(faceKey) {
   });
   const countEl = document.getElementById('rowCount_' + faceKey);
   if (countEl) countEl.textContent = rows.length + '건';
+  updateTotalRowCount();
 }
 
 // 사번 입력 시 제품명 자동 채움
