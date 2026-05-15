@@ -138,7 +138,8 @@ tr:hover td { background: #fafafa; }
     <button class="process-tab" data-process="도포" onclick="switchProcess('도포')">🎨 도포</button>
     <button class="process-tab" data-process="2차가류" onclick="switchProcess('2차가류')">🔥 2차가류</button>
     <button class="process-tab" data-process="쇼트" onclick="switchProcess('쇼트')">💥 쇼트</button>
-    <button class="process-tab" data-process="성형" onclick="switchProcess('성형')">🔧 성형</button>
+    <button class="process-tab" data-process="성형" onclick="switchProcess('성형')">🏭 성형</button>
+    <button class="process-tab" data-process="조립" onclick="switchProcess('조립')">🔩 조립</button>
   </div>
 
   <!-- 필터 -->
@@ -151,6 +152,12 @@ tr:hover td { background: #fafafa; }
       <div class="filter-group">
         <label class="filter-label">종료일</label>
         <input class="filter-input" type="date" id="endDate" />
+      </div>
+      <div class="filter-group" style="display:flex;gap:4px;align-items:end;flex-wrap:wrap">
+        <button class="btn-period" onclick="setPeriod('today')" style="padding:6px 12px;border:1px solid #243bb2;background:#eef0ff;color:#243bb2;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">당일</button>
+        <button class="btn-period" onclick="setPeriod('yesterday')" style="padding:6px 12px;border:1px solid #e0e4ed;background:white;color:#555;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">전일</button>
+        <button class="btn-period" onclick="setPeriod('thisMonth')" style="padding:6px 12px;border:1px solid #e0e4ed;background:white;color:#555;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">당월</button>
+        <button class="btn-period" onclick="setPeriod('lastMonth')" style="padding:6px 12px;border:1px solid #e0e4ed;background:white;color:#555;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">전월</button>
       </div>
       <div class="filter-group">
         <label class="filter-label">사번</label>
@@ -733,6 +740,29 @@ function toggleUnifiedView() {
   render();
 }
 
+function setPeriod(type) {
+  const now = new Date();
+  let start, end;
+  if (type === 'today') {
+    start = end = now.toISOString().split('T')[0];
+  } else if (type === 'yesterday') {
+    const y = new Date(now); y.setDate(y.getDate() - 1);
+    start = end = y.toISOString().split('T')[0];
+  } else if (type === 'thisMonth') {
+    start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    end = now.toISOString().split('T')[0];
+  } else if (type === 'lastMonth') {
+    start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+    end = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+  }
+  document.getElementById('startDate').value = start;
+  document.getElementById('endDate').value = end;
+  // 버튼 스타일
+  document.querySelectorAll('.btn-period').forEach(b => { b.style.background = 'white'; b.style.color = '#555'; b.style.borderColor = '#e0e4ed'; });
+  event.target.style.background = '#eef0ff'; event.target.style.color = '#243bb2'; event.target.style.borderColor = '#243bb2';
+  loadData();
+}
+
 async function loadData() {
   const start = document.getElementById('startDate').value;
   const end   = document.getElementById('endDate').value;
@@ -833,6 +863,16 @@ async function loadData() {
     cachedData.성형 = data || [];
   }
 
+  // 조립
+  if (currentProcess === 'all' || currentProcess === '조립') {
+    let q = db.from('assembly_reports').select('*').gte('work_date', start).lte('work_date', end);
+    if (!showDeleted) q = q.is('deleted_at', null);
+    if (fSabun)  q = q.ilike('sabun', `%${fSabun}%`);
+    if (fWorker) q = q.ilike('worker_name', `%${fWorker}%`);
+    const { data } = await q.order('work_date', { ascending: false });
+    cachedData.조립 = data || [];
+  }
+
   render();
 }
 
@@ -857,6 +897,8 @@ function render() {
     renderShotTable(cachedData.쇼트);
   } else if (currentProcess === '성형') {
     renderMoldingTable(cachedData.성형);
+  } else if (currentProcess === '조립') {
+    renderAssemblyTable(cachedData.조립);
   }
 }
 
@@ -870,9 +912,10 @@ function renderStats() {
   const pc = cachedData['2차가류'] || [];
   const shot = cachedData.쇼트 || [];
   const mold = cachedData.성형 || [];
+  const asm = cachedData.조립 || [];
 
   if (currentProcess === 'all') {
-    const totalCount = pkg.length + ins.length + cmb.length + cut.length + coat.length + pc.length + shot.length + mold.length;
+    const totalCount = pkg.length + ins.length + cmb.length + cut.length + coat.length + pc.length + shot.length + mold.length + asm.length;
     const totalQty = pkg.reduce((s,r)=>s+(r.quantity||0),0);
     const totalInspect = ins.reduce((s,r)=>s+(r.inspect_qty||0),0);
     const totalCmbWeight = cmb.filter(r => !r.is_remix).reduce((s,r)=>s+(parseFloat(r.weight)||0),0);
@@ -984,6 +1027,16 @@ function renderStats() {
       <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-label">총 불량수량</div><div class="stat-num" style="color:#dc2626">${totalDefect.toLocaleString()} <span class="stat-unit">EA</span></div></div>
       <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-label">작업자 / 반</div><div class="stat-num orange">${workers} <span class="stat-unit">명</span><span style="font-size:12px;color:#888"> (${teamStr})</span></div></div>
     `;
+  } else if (currentProcess === '조립') {
+    const totalQty = asm.reduce((s,r)=>s+(r.production_qty||0),0);
+    const totalDefect = asm.reduce((s,r)=>s+(r.defect_qty||0),0);
+    const workers = new Set(asm.map(r=>r.worker_name).filter(Boolean)).size;
+    statsEl.innerHTML = `
+      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">조립 건수</div><div class="stat-num blue">${asm.length} <span class="stat-unit">건</span></div></div>
+      <div class="stat-card"><div class="stat-icon">🔩</div><div class="stat-label">총 생산수량</div><div class="stat-num green">${totalQty.toLocaleString()} <span class="stat-unit">EA</span></div></div>
+      <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-label">총 불량수량</div><div class="stat-num" style="color:#dc2626">${totalDefect.toLocaleString()} <span class="stat-unit">EA</span></div></div>
+      <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-label">작업자 수</div><div class="stat-num orange">${workers} <span class="stat-unit">명</span></div></div>
+    `;
   }
 }
 
@@ -996,6 +1049,7 @@ function renderAllSections() {
   const pc = cachedData['2차가류'] || [];
   const shot = cachedData.쇼트 || [];
   const mold = cachedData.성형 || [];
+  const asm = cachedData.조립 || [];
   const html = `
     <div class="process-section">
       <div class="section-header">
@@ -1897,6 +1951,42 @@ async function deleteMolding(id) {
   alert('삭제 완료!'); loadData();
 }
 
+// ── 조립 ──────────────────────────────
+function renderAssemblyTable(data) {
+  if (!data.length) { document.getElementById('resultArea').innerHTML = '<div class="card"><div style="padding:2rem;text-align:center;color:#aaa;font-size:13px">데이터가 없어요.</div></div>'; return; }
+  document.getElementById('resultArea').innerHTML = `
+    <div class="card" style="padding:0"><div class="table-wrap"><table><thead><tr>
+      <th>NO</th><th>작업일</th><th>근무</th><th>설비</th><th>사번</th><th>제품명</th>
+      <th>구분</th><th>방식</th><th style="text-align:right">생산</th><th style="text-align:right">불량</th>
+      <th>작업자</th><th>비고</th><th>제출일시</th><th>작업</th>
+    </tr></thead><tbody>
+    ${data.map((r,i) => {
+      const del = r.deleted_at;
+      const st = del ? 'background:#f9f9f9;opacity:0.5;text-decoration:line-through' : '';
+      const methodColor = r.work_method === '수작업' ? 'background:#fef3c7;color:#92400e' : 'background:#dbeafe;color:#1e40af';
+      return `<tr style="${st}">
+        <td>${i+1}</td><td>${r.work_date||''}</td><td>${r.shift_type||''}</td>
+        <td style="font-size:11px">${r.equipment_no||''}</td>
+        <td>${r.sabun||''}</td><td style="font-size:11px">${r.product_name||''}</td>
+        <td style="font-size:11px">${r.assembly_type||''}</td>
+        <td><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;${methodColor}">${r.work_method||''}</span></td>
+        <td style="text-align:right;font-weight:600">${(r.production_qty||0).toLocaleString()}</td>
+        <td style="text-align:right;color:${(r.defect_qty||0)>0?'#dc2626':'#666'}">${r.defect_qty||0}</td>
+        <td>${r.worker_name||''}</td><td style="font-size:11px">${r.note||''}</td>
+        <td style="font-size:11px;color:#999">${fmtDatetime(r.created_at)}</td>
+        <td>${del ? '<span style="color:#aaa;font-size:11px">삭제됨</span>' : `<button class="btn-del" onclick="deleteAssembly('${r.id}')">🗑️</button>`}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table></div></div>`;
+}
+
+async function deleteAssembly(id) {
+  if (!confirm('이 기록을 삭제할까요?')) return;
+  await db.from('assembly_reports').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+  try { await db.from('audit_logs').insert({ table_name:'assembly_reports', record_id:id, action:'DELETE', performed_by:currentUser?.name||'-', performed_at:new Date().toISOString() }); } catch(e){}
+  alert('삭제 완료!'); loadData();
+}
+
 // ── 엑셀 다운로드 ──────────────────────────────
 function downloadExcel() {
   const wb = XLSX.utils.book_new();
@@ -2167,6 +2257,26 @@ function downloadExcel() {
     }));
     const ws = XLSX.utils.json_to_sheet(moldRows);
     XLSX.utils.book_append_sheet(wb, ws, '성형 작업일지');
+    added++;
+  }
+
+  // 조립
+  if ((currentProcess === 'all' || currentProcess === '조립') && (cachedData.조립||[]).length > 0) {
+    const asmRows = cachedData.조립.filter(r => !r.deleted_at).map(r => ({
+      '작업일': r.work_date,
+      '근무': r.shift_type || '',
+      '설비': r.equipment_no || '',
+      '사번': r.sabun || '',
+      '제품명': r.product_name || '',
+      '구분': r.assembly_type || '',
+      '작업방식': r.work_method || '',
+      '생산수량': r.production_qty || 0,
+      '불량수량': r.defect_qty || 0,
+      '작업자': r.worker_name || '',
+      '비고': r.note || '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(asmRows);
+    XLSX.utils.book_append_sheet(wb, ws, '조립 작업일지');
     added++;
   }
 

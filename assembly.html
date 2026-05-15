@@ -215,15 +215,16 @@ let existingSafetyId = null;
 // 설비 마스터 (8대)
 // ═══════════════════════════════════════════════
 const EQUIPMENTS = [
-  { no: 'LM GUIDE 조립기', id: '검-A-02', items: [1,2,3,4,5,6], type: 'guide' },
-  { no: 'C200 GUIDE 조립기', id: '검-A-09', items: [1,2,3,4,5,6], type: 'guide' },
-  { no: 'AI3 GUIDE 조립기', id: '검-A-10', items: [1,2,3,4,5,6], type: 'guide' },
-  { no: 'YB GUIDE 조립기', id: '검-A-04', items: [1,2,3,4,5,6,7], type: 'guide' },
-  { no: 'IG/YG 와샤조립기', id: '생-B-21', items: [1,2,3,4,5], type: 'washer' },
-  { no: 'NE 부쉬 조립기', id: '검-A-09', items: [1,2,3,4,5], type: 'washer' },
-  { no: 'BOOT&ROD 조립기', id: '검-A-01', items: [1,2,3,4,5,6,7,8,9], type: 'rod' },
-  { no: 'LM 사상기', id: '생-B-36', items: [1,2,3,4,5], type: 'sander' },
-  { no: '호스 절단기', id: '검-A-11', items: [1,2,3,4,5,6], type: 'cutter' }
+  { no: 'LM GUIDE 조립기', id: '검-A-02', type: 'guide' },
+  { no: 'C200 GUIDE 조립기', id: '검-A-09', type: 'guide' },
+  { no: 'AI3 GUIDE 조립기', id: '검-A-10', type: 'guide' },
+  { no: 'YB GUIDE 조립기', id: '검-A-04', type: 'guide' },
+  { no: 'IG/YG 와샤조립기', id: '생-B-21', type: 'washer' },
+  { no: 'NE 부쉬 조립기', id: '검-A-09', type: 'washer' },
+  { no: 'BOOT&ROD 조립기', id: '검-A-01', type: 'rod' },
+  { no: 'LM 사상기', id: '생-B-36', type: 'sander' },
+  { no: '호스 절단기', id: '검-A-11', type: 'cutter' },
+  { no: '수작업', id: '-', type: 'manual' }
 ];
 
 // 포괄적 점검항목 (전체 통합 — 설비별로 해당 항목만 표시)
@@ -336,12 +337,12 @@ async function loadBomData() {
 // ═══════════════════════════════════════════════
 function renderEquipmentGrid() {
   const grid = document.getElementById('equipmentGrid');
-  const typeLabels = { guide:'GUIDE 조립', washer:'와샤/부쉬', rod:'ROD 조립', sander:'사상기', cutter:'절단기' };
+  const typeLabels = { guide:'GUIDE 조립', washer:'와샤/부쉬', rod:'ROD 조립', sander:'사상기', cutter:'절단기', manual:'수작업' };
   grid.innerHTML = EQUIPMENTS.map(eq => `
-    <div class="eq-card" data-no="${eq.no}" onclick="selectEquipment('${eq.no}')">
+    <div class="eq-card" data-no="${eq.no}" onclick="selectEquipment('${eq.no}')" ${eq.type==='manual'?'style="border-style:dashed;border-color:#d97706"':''}>
       <div class="eq-name">${eq.no}</div>
       <div class="eq-detail">${eq.id}</div>
-      <span class="eq-badge ${eq.type}">${typeLabels[eq.type]}</span>
+      <span class="eq-badge ${eq.type}" ${eq.type==='manual'?'style="background:#fef3c7;color:#92400e"':''}>${typeLabels[eq.type]}</span>
     </div>
   `).join('');
 }
@@ -354,8 +355,20 @@ function selectEquipment(eqNo) {
   const display = document.getElementById('selectedDisplay');
   display.textContent = `✓ 선택됨: ${selectedEquipment.no} (${selectedEquipment.id})`;
   display.style.display = 'block';
-  initSafetyTable();
-  checkTodaySafety();
+  
+  // 수작업이면 점검 패스
+  if (selectedEquipment.type === 'manual') {
+    document.getElementById('safetySection').style.display = 'none';
+    safetyCheckCompleted = true;
+    document.getElementById('workArea').classList.remove('work-area-locked');
+    document.getElementById('lockMessage').style.display = 'none';
+    showToast('수작업 선택 — 설비 점검 없이 바로 작성 가능');
+    if (document.querySelectorAll('#mainRows tr').length === 0) { for (let i = 0; i < 3; i++) addRow(); }
+  } else {
+    document.getElementById('safetySection').style.display = 'block';
+    initSafetyTable();
+    checkTodaySafety();
+  }
 }
 
 // ═══════════════════════════════════════════════
