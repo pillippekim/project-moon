@@ -586,6 +586,13 @@
           <tbody id="safetyRows"></tbody>
         </table>
       </div>
+      <div style="margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:12px;color:#888;font-weight:600">범례 (클릭 시 전체 적용):</span>
+        <button onclick="setAllSafety('○')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #10b981;background:#d1fae5;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#065f46"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#10b981;color:white;border-radius:6px;font-size:16px">○</span> 정상</button>
+        <button onclick="setAllSafety('△')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #f59e0b;background:#fef3c7;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#92400e"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#f59e0b;color:white;border-radius:6px;font-size:16px">△</span> 수리요망</button>
+        <button onclick="setAllSafety('×')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #ef4444;background:#fef2f2;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#991b1b"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#ef4444;color:white;border-radius:6px;font-size:16px">×</span> 사용불가</button>
+        <button onclick="setAllSafety('│')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #6b7280;background:#f3f4f6;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#374151"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#6b7280;color:white;border-radius:6px;font-size:16px">│</span> 미가동</button>
+      </div>
       <div style="margin-top:12px">
         <textarea id="safetyOverallRemarks" data-i18n="safety.remarksPlaceholder" placeholder="설비점검 시 발견한 전체 특이사항을 입력하세요" style="width:100%;padding:10px;border:1px solid #e0e4ed;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px"></textarea>
       </div>
@@ -1126,6 +1133,15 @@ function setSafetyCheck(itemNum, value, btn) {
   btn.classList.add('active');
 }
 
+function setAllSafety(value) {
+  document.querySelectorAll('.check-select-safety').forEach(div => {
+    div.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    const target = div.querySelector(`button[data-value="${value}"]`);
+    if (target) target.classList.add('active');
+  });
+  showToast(`✓ 전체 항목 "${value}"로 설정됨`);
+}
+
 function collectSafetyData() {
   const result = {};
   SAFETY_CHECK_ITEMS.forEach(item => {
@@ -1264,10 +1280,10 @@ function addRow(faceKey) {
     <td><input type="text" class="sabun" placeholder="제품코드" oninput="onSabunChange('${rowId}')" /></td>
     <td><input type="text" class="product-name" placeholder="자동" readonly style="color:#999;background:#f5f5f5" /></td>
     <td><input type="text" class="batch-no" placeholder="Batch No." /></td>
-    <td><input type="number" class="cavity" placeholder="C/V" min="1" /></td>
-    <td><input type="number" class="shot-count" placeholder="Shot" min="0" /></td>
-    <td><input type="number" class="prod-qty" placeholder="수량" min="0" /></td>
-    <td><input type="number" class="defect-qty" placeholder="0" min="0" value="0" /></td>
+    <td><input type="number" class="cavity" placeholder="C/V" min="1" oninput="calcProdQty('${rowId}')" /></td>
+    <td><input type="number" class="shot-count" placeholder="Shot" min="0" oninput="calcProdQty('${rowId}')" /></td>
+    <td><input type="number" class="prod-qty" placeholder="자동" min="0" readonly style="background:#e8f5e9;font-weight:700;color:#166534" /></td>
+    <td><input type="number" class="defect-qty" placeholder="0" min="0" value="0" oninput="calcProdQty('${rowId}')" /></td>
     <td><input type="text" class="note" placeholder="" /></td>
     <td><button class="btn-del-row" onclick="deleteRow('${rowId}','${faceKey}')">×</button></td>
   `;
@@ -1298,6 +1314,21 @@ function renumberRows(faceKey) {
   const countEl = document.getElementById('rowCount_' + faceKey);
   if (countEl) countEl.textContent = rows.length + '건';
   updateTotalRowCount();
+}
+
+// 생산수량 자동 계산: C/V × Shot - 불량수량
+function calcProdQty(rowId) {
+  const tr = document.getElementById(rowId);
+  if (!tr) return;
+  const cv = parseInt(tr.querySelector('.cavity').value) || 0;
+  const shot = parseInt(tr.querySelector('.shot-count').value) || 0;
+  const defect = parseInt(tr.querySelector('.defect-qty').value) || 0;
+  const prodInput = tr.querySelector('.prod-qty');
+  if (cv > 0 && shot > 0) {
+    prodInput.value = (cv * shot) - defect;
+  } else {
+    prodInput.value = '';
+  }
 }
 
 // 사번 입력 시 제품명 자동 채움
