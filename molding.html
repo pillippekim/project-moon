@@ -905,6 +905,11 @@ function renderWorkDetailArea() {
     for (let i = 0; i < initRows; i++) addRow(face.key);
   });
   updateTotalRowCount();
+  
+  // 비가동 초기 1행
+  downtimeCounter = 0;
+  document.getElementById('downtimeRows').innerHTML = '';
+  addDowntimeRow();
 }
 
 function updateTotalRowCount() {
