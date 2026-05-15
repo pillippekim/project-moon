@@ -153,10 +153,10 @@ tr:hover td { background: #fafafa; }
         <label class="filter-label">종료일</label>
         <input class="filter-input" type="date" id="endDate" />
       </div>
-      <div class="filter-group" style="display:flex;gap:4px;align-items:end">
+      <div class="filter-group" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;align-self:end">
         <button class="btn-period" onclick="setPeriod('today')" style="padding:8px 14px;border:1px solid #243bb2;background:#243bb2;color:white;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">당일</button>
-        <button class="btn-period" onclick="setPeriod('yesterday')" style="padding:8px 14px;border:1px solid #e0e4ed;background:white;color:#555;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">전일</button>
         <button class="btn-period" onclick="setPeriod('thisMonth')" style="padding:8px 14px;border:1px solid #e0e4ed;background:white;color:#555;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">당월</button>
+        <button class="btn-period" onclick="setPeriod('yesterday')" style="padding:8px 14px;border:1px solid #e0e4ed;background:white;color:#555;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">전일</button>
         <button class="btn-period" onclick="setPeriod('lastMonth')" style="padding:8px 14px;border:1px solid #e0e4ed;background:white;color:#555;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">전월</button>
       </div>
       <div class="filter-group">
