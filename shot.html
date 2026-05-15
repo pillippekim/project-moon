@@ -321,7 +321,7 @@ function switchTab(tab){
 function renderHead(){
   const h=document.getElementById('tableHead');
   if(currentTab==='freeze'){
-    h.innerHTML='<tr><th style="width:40px">NO</th><th style="width:110px">설비명</th><th style="width:85px">사번</th><th style="width:90px">고객품번</th><th style="width:100px">품명</th><th style="width:90px">온도(℃)</th><th style="width:80px">시간(분)</th><th style="width:90px">작업수량</th><th style="width:80px">볼크기</th><th style="width:80px">RPM</th><th style="width:80px">생산LOT</th><th style="width:70px">비고</th><th style="width:40px"></th></tr>';
+    h.innerHTML='<tr><th style="width:40px">NO</th><th style="width:110px">설비명</th><th style="width:85px">사번</th><th style="width:90px">고객품번</th><th style="width:100px">품명</th><th style="width:110px">온도(℃)</th><th style="width:80px">시간(분)</th><th style="width:90px">작업수량</th><th style="width:65px">볼크기</th><th style="width:80px">RPM</th><th style="width:80px">생산LOT</th><th style="width:70px">비고</th><th style="width:40px"></th></tr>';
   }else{
     h.innerHTML='<tr><th style="width:40px">NO</th><th style="width:110px">설비명</th><th style="width:85px">사번</th><th style="width:90px">고객품번</th><th style="width:100px">품명</th><th style="width:90px">사상시간(초)</th><th style="width:90px">회전시간(초)</th><th style="width:90px">작업수량</th><th style="width:80px">RPM</th><th style="width:80px">생산LOT</th><th style="width:70px">비고</th><th style="width:40px"></th></tr>';
   }
@@ -351,7 +351,7 @@ function renderRows(){
       <td style="font-size:12px;color:${r.partNo?'#1a1a2e':'#bbb'}">${r.partNo||'-'}</td>
       <td style="font-size:12px;color:${r.partName?'#1a1a2e':'#bbb'}">${r.partName||'-'}</td>`;
     if(currentTab==='freeze'){
-      cols+=`<td><div style="display:flex;align-items:center;justify-content:center"><span style="font-size:16px;font-weight:700;color:#243bb2;margin-right:2px">-</span><input type="number" value="${r.temp ? String(r.temp).replace('-','') : ''}" placeholder="15" step="0.1" min="0" style="width:55px;font-size:14px;font-weight:600;text-align:center;padding:8px" oninput="setF(${r.id},'temp','-'+this.value)" /><span style="font-size:11px;color:#888;margin-left:2px">℃</span></div></td>
+      cols+=`<td><div style="display:flex;align-items:center;justify-content:center"><span style="font-size:16px;font-weight:700;color:#243bb2;margin-right:2px">-</span><input type="number" value="${r.temp ? String(r.temp).replace('-','') : ''}" placeholder="15" step="0.1" min="0" style="width:75px;font-size:14px;font-weight:600;text-align:center;padding:8px" oninput="setF(${r.id},'temp','-'+this.value)" /><span style="font-size:11px;color:#888;margin-left:2px">℃</span></div></td>
         <td><input type="number" value="${r.dur}" placeholder="분" style="font-size:14px;font-weight:600;text-align:center" oninput="setF(${r.id},'dur',this.value)" /></td>
         <td><input type="number" value="${r.qty}" placeholder="0" style="font-size:14px;font-weight:600;text-align:center" oninput="setF(${r.id},'qty',this.value)" /></td>
         <td><select onchange="setF(${r.id},'ballSize',this.value)" style="font-size:14px;font-weight:600;text-align:center;padding:8px"><option value="" ${!r.ballSize?'selected':''}>무</option><option value="소" ${r.ballSize==='소'?'selected':''}>소</option><option value="중" ${r.ballSize==='중'?'selected':''}>중</option><option value="대" ${r.ballSize==='대'?'selected':''}>대</option></select></td>
