@@ -344,6 +344,17 @@
   </div>
 </div>
 
+  <!-- 오늘 내 제출 내역 -->
+  <div style="background:white;border-radius:12px;box-shadow:0 2px 8px rgba(36,59,178,0.08);margin-top:20px;overflow:hidden">
+    <div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center;background:#f0f3f9;border-bottom:1px solid #e0e4ed">
+      <h2 style="font-size:15px;font-weight:700;margin:0">📋 오늘 내 제출 내역</h2>
+      <span id="myHistoryCount" style="font-size:13px;color:#243bb2;font-weight:600">0건</span>
+    </div>
+    <div id="myHistoryBody" style="padding:16px 24px">
+      <div style="text-align:center;color:#aaa;font-size:13px;padding:20px">로딩 중...</div>
+    </div>
+  </div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -725,6 +736,63 @@ function confirmLeave(e) {
   if (!hasInput) { location.href = "index.html"; return; }
   if (confirm("작성 중인 내용이 있어요.\n제출하지 않고 메인으로 이동할까요?")) { location.href = "index.html"; }
 }
+
+
+// ── 오늘 내 제출 내역 ──
+async function loadMyHistory() {
+  const workDate = document.getElementById('workDate').value;
+  const myName = myInfo?.name;
+  if (!workDate || !myName) return;
+
+  const { data, error } = await db.from('postcure_reports')
+    .select('*')
+    .eq('work_date', workDate)
+    .eq('created_by_name', myName)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false });
+
+  const body = document.getElementById('myHistoryBody');
+  const countEl = document.getElementById('myHistoryCount');
+  const list = data || [];
+  countEl.textContent = list.length + '건';
+
+  if (list.length === 0) {
+    body.innerHTML = '<div style="text-align:center;color:#aaa;font-size:13px;padding:20px">오늘 제출한 내역이 없습니다.</div>';
+    return;
+  }
+
+  body.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f0f3f9">' +
+    '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">NO</th>' +
+    '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">사번/항목</th>' +
+    '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">수량</th>' +
+    '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">비고</th>' +
+    '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">제출시간</th>' +
+    '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">작업</th>' +
+    '</tr></thead><tbody>' +
+    list.map(function(r, i) {
+      var time = r.created_at ? new Date(r.created_at).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) : '';
+      var label = r.worker_id || r.sabun || r.material_name || r.equipment_no || '-';
+      var qty = r.quantity || r.quantity || r.total_weight || r.box_count || r.production_qty || 0;
+      return '<tr>' +
+        '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center">' + (i+1) + '</td>' +
+        '<td style="padding:8px 6px;border:1px solid #e0e4ed">' + label + '</td>' +
+        '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;font-weight:600">' + Number(qty).toLocaleString() + '</td>' +
+        '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">' + (r.note||'') + '</td>' +
+        '<td style="padding:8px 6px;border:1px solid #e0e4ed;color:#888;font-size:11px">' + time + '</td>' +
+        '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center"><button onclick="deleteMyRecord(\'' + r.id + '\')" style="background:#fef2f2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">삭제</button></td>' +
+        '</tr>';
+    }).join('') +
+    '</tbody></table></div>';
+}
+
+async function deleteMyRecord(id) {
+  if (!confirm('이 기록을 삭제할까요?')) return;
+  await db.from('postcure_reports').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+  try { await db.from('audit_logs').insert({ table_name:'postcure_reports', record_id:id, action:'DELETE', performed_by:myInfo?.name||'-', performed_at:new Date().toISOString() }); } catch(e) {}
+  loadMyHistory();
+  showToast('✓ 삭제 완료');
+}
+
 </script>
 </body>
 </html>
