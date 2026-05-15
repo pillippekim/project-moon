@@ -47,9 +47,9 @@
   .safety-table .item-cell .item-num { display: inline-block; background: #dc2626; color: white; border-radius: 50%; width: 20px; height: 20px; line-height: 20px; text-align: center; margin-right: 6px; font-size: 10px; }
   .safety-table .remarks-label-cell { background: #fef2f2; color: #991b1b; font-weight: 700; text-align: left; padding-left: 12px; position: sticky; left: 0; z-index: 2; }
   .cs { display: flex; gap: 4px; justify-content: center; }
-  .cs button { width: 48px; height: 48px; border: 2px solid #d1d5db; background: white; border-radius: 8px; cursor: pointer; font-size: 22px; font-weight: 700; transition: all 0.15s; padding: 0; line-height: 1; }
+  .cs button { width: 48px; height: 48px; border: 2px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; font-size: 22px; font-weight: 700; transition: all 0.15s; padding: 0; line-height: 1; }
   .cs button:hover { transform: scale(1.1); }
-  .cs button.normal { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+    .cs button.normal { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
   .cs button.repair { background: #fef3c7; color: #92400e; border-color: #fde68a; }
   .cs button.unusable { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
   .cs button.notuse { background: #f3f4f6; color: #374151; border-color: #d1d5db; }
@@ -146,13 +146,6 @@
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
         <table class="safety-table" id="safetyTable"><thead><tr><th class="item-col-header">점검항목</th></tr></thead><tbody id="safetyRows"></tbody></table>
       </div>
-      <div style="margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-        <span style="font-size:12px;color:#888;font-weight:600">범례 (클릭 시 전체 적용):</span>
-        <button onclick="setAllSafety('○')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #10b981;background:#d1fae5;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#065f46"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#10b981;color:white;border-radius:6px;font-size:16px">○</span> 정상</button>
-        <button onclick="setAllSafety('△')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #f59e0b;background:#fef3c7;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#92400e"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#f59e0b;color:white;border-radius:6px;font-size:16px">△</span> 수리요망</button>
-        <button onclick="setAllSafety('×')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #ef4444;background:#fef2f2;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#991b1b"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#ef4444;color:white;border-radius:6px;font-size:16px">×</span> 사용불가</button>
-        <button onclick="setAllSafety('│')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #6b7280;background:#f3f4f6;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#374151"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#6b7280;color:white;border-radius:6px;font-size:16px">│</span> 미가동</button>
-      </div>
       <div style="margin-top:16px;padding:14px;background:#fef2f2;border-radius:8px;border-left:4px solid #dc2626">
         <label style="font-size:13px;font-weight:600;color:#991b1b;display:block;margin-bottom:8px">📝 전체 특이사항 (선택)</label>
         <textarea id="safetyOverall" placeholder="설비점검 시 발견한 전체 특이사항" style="width:100%;padding:10px;border:1px solid #e0e4ed;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px"></textarea>
@@ -161,6 +154,14 @@
         <div id="safetyProgress" style="font-size:13px;color:#555">✓ 모든 항목 정상(○)으로 자동 설정됨</div>
         <button onclick="completeSafety()" style="background:#dc2626;color:white;border:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">점검 완료 ✓</button>
       </div>
+      <div style="margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:12px;color:#888;font-weight:600">범례 (클릭 시 전체 적용):</span>
+        <button onclick="setAllSafety('○')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #10b981;background:#d1fae5;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#065f46"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#10b981;color:white;border-radius:6px;font-size:16px">○</span> 정상</button>
+        <button onclick="setAllSafety('△')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #f59e0b;background:#fef3c7;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#92400e"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#f59e0b;color:white;border-radius:6px;font-size:16px">△</span> 수리요망</button>
+        <button onclick="setAllSafety('×')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #ef4444;background:#fef2f2;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#991b1b"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#ef4444;color:white;border-radius:6px;font-size:16px">×</span> 사용불가</button>
+        <button onclick="setAllSafety('│')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #6b7280;background:#f3f4f6;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#374151"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#6b7280;color:white;border-radius:6px;font-size:16px">│</span> 미가동</button>
+      </div>
+
     </div>
   </div>
 
@@ -320,9 +321,9 @@ function switchTab(tab){
 function renderHead(){
   const h=document.getElementById('tableHead');
   if(currentTab==='freeze'){
-    h.innerHTML='<tr><th style="width:40px">NO</th><th style="width:110px">설비명</th><th style="width:85px">사번</th><th style="width:90px">고객품번</th><th style="width:100px">품명</th><th style="width:90px">온도(℃)</th><th style="width:80px">시간(분)</th><th style="width:90px">작업수량</th><th style="width:80px">볼크기</th><th style="width:80px">RPM</th><th style="width:80px">생산LOT</th><th style="width:70px">비고</th><th style="width:40px"></th></tr>';
+    h.innerHTML='<tr><th style="width:40px">NO</th><th style="width:110px">설비명</th><th style="width:85px">사번</th><th style="width:100px">고객품번</th><th style="width:100px">품명</th><th style="width:70px">온도(℃)</th><th style="width:70px">시간(분)</th><th style="width:80px">작업수량</th><th style="width:70px">볼크기</th><th style="width:60px">RPM</th><th style="min-width:100px">생산LOT</th><th style="min-width:80px">비고</th><th style="width:40px"></th></tr>';
   }else{
-    h.innerHTML='<tr><th style="width:40px">NO</th><th style="width:110px">설비명</th><th style="width:85px">사번</th><th style="width:90px">고객품번</th><th style="width:100px">품명</th><th style="width:90px">사상시간(초)</th><th style="width:90px">회전시간(초)</th><th style="width:90px">작업수량</th><th style="width:80px">RPM</th><th style="width:80px">생산LOT</th><th style="width:70px">비고</th><th style="width:40px"></th></tr>';
+    h.innerHTML='<tr><th style="width:40px">NO</th><th style="width:110px">설비명</th><th style="width:85px">사번</th><th style="width:100px">고객품번</th><th style="width:100px">품명</th><th style="width:80px">사상시간(초)</th><th style="width:80px">회전시간(초)</th><th style="width:80px">작업수량</th><th style="width:60px">RPM</th><th style="min-width:100px">생산LOT</th><th style="min-width:80px">비고</th><th style="width:40px"></th></tr>';
   }
 }
 
@@ -350,16 +351,16 @@ function renderRows(){
       <td style="font-size:12px;color:${r.partNo?'#1a1a2e':'#bbb'}">${r.partNo||'-'}</td>
       <td style="font-size:12px;color:${r.partName?'#1a1a2e':'#bbb'}">${r.partName||'-'}</td>`;
     if(currentTab==='freeze'){
-      cols+=`<td><div style="display:flex;align-items:center;justify-content:center"><span style="font-size:16px;font-weight:700;color:#243bb2;margin-right:2px">-</span><input type="number" value="${r.temp ? String(r.temp).replace('-','') : ''}" placeholder="15" step="0.1" min="0" style="width:60px;font-size:14px;font-weight:600;text-align:center;padding:8px" oninput="setF(${r.id},'temp','-'+this.value)" /><span style="font-size:11px;color:#888;margin-left:2px">℃</span></div></td>
-        <td><input type="number" value="${r.dur}" placeholder="분" style="font-size:14px;font-weight:600;text-align:center" oninput="setF(${r.id},'dur',this.value)" /></td>
-        <td><input type="number" value="${r.qty}" placeholder="0" style="font-size:14px;font-weight:600;text-align:center" oninput="setF(${r.id},'qty',this.value)" /></td>
-        <td><select onchange="setF(${r.id},'ballSize',this.value)" style="font-size:14px;font-weight:600;text-align:center;padding:8px"><option value="" ${!r.ballSize?'selected':''}>선택</option><option value="무" ${r.ballSize==='무'?'selected':''}>무</option><option value="소" ${r.ballSize==='소'?'selected':''}>소</option><option value="중" ${r.ballSize==='중'?'selected':''}>중</option><option value="대" ${r.ballSize==='대'?'selected':''}>대</option></select></td>
-        <td><input type="number" value="${r.rpm}" placeholder="-" style="font-size:14px;font-weight:600;text-align:center" oninput="setF(${r.id},'rpm',this.value)" /></td>`;
+      cols+=`<td><input type="number" value="${r.temp}" placeholder="℃" step="0.1" oninput="setF(${r.id},'temp',this.value)" /></td>
+        <td><input type="number" value="${r.dur}" placeholder="분" oninput="setF(${r.id},'dur',this.value)" /></td>
+        <td><input type="number" value="${r.qty}" placeholder="0" oninput="setF(${r.id},'qty',this.value)" /></td>
+        <td><input type="text" value="${r.ballSize}" placeholder="-" oninput="setF(${r.id},'ballSize',this.value)" /></td>
+        <td><input type="number" value="${r.rpm}" placeholder="-" oninput="setF(${r.id},'rpm',this.value)" /></td>`;
     }else{
-      cols+=`<td><input type="number" value="${r.grindSec}" placeholder="초" style="font-size:14px;font-weight:600;text-align:center" oninput="setF(${r.id},'grindSec',this.value)" /></td>
-        <td><input type="number" value="${r.rotSec}" placeholder="초" style="font-size:14px;font-weight:600;text-align:center" oninput="setF(${r.id},'rotSec',this.value)" /></td>
-        <td><input type="number" value="${r.qty}" placeholder="0" style="font-size:14px;font-weight:600;text-align:center" oninput="setF(${r.id},'qty',this.value)" /></td>
-        <td><input type="number" value="${r.rpm}" placeholder="-" style="font-size:14px;font-weight:600;text-align:center" oninput="setF(${r.id},'rpm',this.value)" /></td>`;
+      cols+=`<td><input type="number" value="${r.grindSec}" placeholder="초" oninput="setF(${r.id},'grindSec',this.value)" /></td>
+        <td><input type="number" value="${r.rotSec}" placeholder="초" oninput="setF(${r.id},'rotSec',this.value)" /></td>
+        <td><input type="number" value="${r.qty}" placeholder="0" oninput="setF(${r.id},'qty',this.value)" /></td>
+        <td><input type="number" value="${r.rpm}" placeholder="-" oninput="setF(${r.id},'rpm',this.value)" /></td>`;
     }
     cols+=`<td><input type="text" value="${r.lot}" placeholder="LOT" oninput="setF(${r.id},'lot',this.value)" /></td>
       <td><input type="text" value="${r.note}" placeholder="-" oninput="setF(${r.id},'note',this.value)" /></td>
@@ -417,23 +418,21 @@ function showToast(m,t){const e=document.getElementById('toast');e.textContent=m
   renderHead();if(safetyDone){addRow();addRow();addRow();}
 })();
 
+function setAllSafety(value) {
+  document.querySelectorAll('.cs').forEach(function(div) {
+    div.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
+    var target = div.querySelector('button[data-value="' + value + '"]');
+    if (target) target.classList.add('active');
+  });
+  if (typeof showToast === 'function') showToast('전체 항목 설정 완료');
+}
+
 function confirmLeave(e) {
   e.preventDefault();
   var hasInput = typeof rows !== "undefined" && rows.some(function(r) { return r.sabun || r.qty; });
   if (!hasInput) { location.href = "index.html"; return; }
   if (confirm("작성 중인 내용이 있어요.\n제출하지 않고 메인으로 이동할까요?")) { location.href = "index.html"; }
 }
-
-
-function setAllSafety(value) {
-  document.querySelectorAll('.check-select-safety').forEach(function(div) {
-    div.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
-    var target = div.querySelector('button[data-value="' + value + '"]');
-    if (target) target.classList.add('active');
-  });
-  showToast('✓ 전체 항목 "' + value + '"로 설정됨');
-}
-
 </script>
 </body>
 </html>

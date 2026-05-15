@@ -269,8 +269,8 @@
   }
   
   .check-select button {
-    width: 48px;
-    height: 48px;
+    width: 36px;
+    height: 36px;
     border: 2px solid #d1d5db;
     background: white;
     border-radius: 8px;
@@ -287,7 +287,7 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   }
   
-  .check-select button.normal { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+    .check-select button.normal { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
   .check-select button.repair { background: #fef3c7; color: #92400e; border-color: #fde68a; }
   .check-select button.unusable { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
   .check-select button.notuse { background: #f3f4f6; color: #374151; border-color: #d1d5db; }
@@ -475,15 +475,14 @@
     border-color: #243bb2;
   }
   
-  .col-no { width: 45px; }
-  .col-sabun { width: 120px; }
-  .col-material { width: 150px; }
-  .col-lot { width: 120px; }
+  .col-no { width: 50px; }
+  .col-sabun { width: 130px; }
+  .col-material { width: 160px; }
+  .col-lot { width: 130px; }
   .col-box { width: 100px; }
-  .col-total-qty { width: 100px; }
-  .col-scrap { width: 100px; }
-  .col-note { min-width: 120px; }
-  .col-del { width: 45px; }
+  .col-scrap { width: 110px; }
+  .col-note { min-width: 200px; }
+  .col-del { width: 50px; }
   
   /* 행 추가/삭제 */
   .btn-del-row {
@@ -677,17 +676,18 @@
       </div>
       
       <!-- 진행 상태 + 완료 버튼 -->
-      <div style="margin-bottom:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <div class="complete-check-bar">
+        <div class="check-progress" id="checkProgress">✓ 모든 항목 정상(○)으로 자동 설정됨. 이상 시 다른 옵션 선택!</div>
+        <button class="btn-complete-check" id="btnCompleteCheck" onclick="completeCheck()">점검 완료 ✓</button>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
         <span style="font-size:12px;color:#888;font-weight:600">범례 (클릭 시 전체 적용):</span>
         <button onclick="setAllSafety('○')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #10b981;background:#d1fae5;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#065f46"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#10b981;color:white;border-radius:6px;font-size:16px">○</span> 정상</button>
         <button onclick="setAllSafety('△')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #f59e0b;background:#fef3c7;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#92400e"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#f59e0b;color:white;border-radius:6px;font-size:16px">△</span> 수리요망</button>
         <button onclick="setAllSafety('×')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #ef4444;background:#fef2f2;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#991b1b"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#ef4444;color:white;border-radius:6px;font-size:16px">×</span> 사용불가</button>
         <button onclick="setAllSafety('│')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #6b7280;background:#f3f4f6;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#374151"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#6b7280;color:white;border-radius:6px;font-size:16px">│</span> 미가동</button>
       </div>
-      <div class="complete-check-bar">
-        <div class="check-progress" id="checkProgress">✓ 모든 항목 정상(○)으로 자동 설정됨. 이상 시 다른 옵션 선택!</div>
-        <button class="btn-complete-check" id="btnCompleteCheck" onclick="completeCheck()">점검 완료 ✓</button>
-      </div>
+
     </div>
   </div>
 
@@ -706,7 +706,6 @@
             <th class="col-material">재질명</th>
             <th class="col-lot">뱃지 No</th>
             <th class="col-box">재단박스<br>수량(개)</th>
-            <th class="col-total-qty">총재단<br>수량(EA)</th>
             <th class="col-scrap">자투리<br>발생량(g)</th>
             <th class="col-note">비고</th>
             <th class="col-del"></th>
@@ -723,10 +722,6 @@
         <div class="summary-item">
           <div class="summary-label">총 재단박스</div>
           <div class="summary-value"><span id="totalBoxes">0</span><span class="unit">개</span></div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-label">총 재단수량</div>
-          <div class="summary-value"><span id="totalCutQty">0</span><span class="unit">EA</span></div>
         </div>
         <div class="summary-item">
           <div class="summary-label">총 자투리</div>
@@ -1197,7 +1192,6 @@ function addRow() {
     </td>
     <td><input type="text" class="lot-no" placeholder="뱃지 No" /></td>
     <td><input type="number" class="box-count" min="0" placeholder="0" oninput="updateSummary()" /></td>
-    <td><input type="number" class="total-qty" min="0" placeholder="0" style="font-weight:700;text-align:center" oninput="updateSummary()" /></td>
     <td><input type="number" class="scrap-weight" step="0.01" min="0" placeholder="0" oninput="updateSummary()" /></td>
     <td><input type="text" class="note" placeholder="" /></td>
     <td><button class="btn-del-row" onclick="deleteRow('${rowId}')">×</button></td>
@@ -1247,17 +1241,14 @@ function onSabunChange(rowId) {
 function updateSummary() {
   let totalBoxes = 0;
   let totalScrap = 0;
-  let totalCutQty = 0;
   const rows = document.querySelectorAll('#mainRows tr');
   
   rows.forEach(tr => {
     totalBoxes += parseInt(tr.querySelector('.box-count').value) || 0;
-    totalCutQty += parseInt(tr.querySelector('.total-qty').value) || 0;
     totalScrap += parseFloat(tr.querySelector('.scrap-weight').value) || 0;
   });
   
   document.getElementById('totalBoxes').textContent = totalBoxes.toLocaleString();
-  document.getElementById('totalCutQty').textContent = totalCutQty.toLocaleString();
   document.getElementById('totalScrap').textContent = totalScrap.toFixed(2);
   document.getElementById('totalRows').textContent = rows.length;
 }
@@ -1288,7 +1279,6 @@ async function submitReport() {
     const material = tr.querySelector('.material').value;
     const lotNo = tr.querySelector('.lot-no').value.trim();
     const boxCount = parseInt(tr.querySelector('.box-count').value) || 0;
-    const totalQty = parseInt(tr.querySelector('.total-qty').value) || 0;
     const scrapWeight = parseFloat(tr.querySelector('.scrap-weight').value) || 0;
     const note = tr.querySelector('.note').value.trim();
     
@@ -1312,7 +1302,6 @@ async function submitReport() {
       material_name: material,
       lot_no: lotNo || null,
       box_count: boxCount,
-      total_qty: totalQty,
       scrap_weight: scrapWeight,
       note: note || null,
       remarks: document.getElementById('remarks').value.trim() || null,
@@ -1375,23 +1364,21 @@ function showToast(msg, type) {
 // 시작
 init();
 
-function confirmLeave(e) {
-  e.preventDefault();
-  var hasInput = document.querySelectorAll("#mainRows tr").length > 0 && Array.from(document.querySelectorAll("#mainRows .sabun")).some(function(i) { return i.value.trim(); });
-  if (!hasInput) { location.href = "index.html"; return; }
-  if (confirm("작성 중인 내용이 있어요.\n제출하지 않고 메인으로 이동할까요?")) { location.href = "index.html"; }
-}
-
-
 function setAllSafety(value) {
   document.querySelectorAll('.check-select').forEach(function(div) {
     div.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
     var target = div.querySelector('button[data-value="' + value + '"]');
     if (target) target.classList.add('active');
   });
-  showToast('✓ 전체 항목 "' + value + '"로 설정됨');
+  if (typeof showToast === 'function') showToast('전체 항목 설정 완료');
 }
 
+function confirmLeave(e) {
+  e.preventDefault();
+  var hasInput = typeof rows !== "undefined" && rows.some(function(r) { return r.sabun || r.qty; });
+  if (!hasInput) { location.href = "index.html"; return; }
+  if (confirm("작성 중인 내용이 있어요.\n제출하지 않고 메인으로 이동할까요?")) { location.href = "index.html"; }
+}
 </script>
 
 </body>

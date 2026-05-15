@@ -102,12 +102,12 @@
 
   .check-select { display: flex; gap: 4px; justify-content: center; }
   .check-select button {
-    width: 36px; height: 36px; border: 2px solid #d1d5db; background: white;
-    border-radius: 6px; cursor: pointer; font-size: 17px; font-weight: 700;
+    width: 48px; height: 48px; border: 2px solid #d1d5db; background: white;
+    border-radius: 6px; cursor: pointer; font-size: 22px; font-weight: 700;
     transition: all 0.15s; padding: 0; line-height: 1;
   }
   .check-select button:hover { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-  .check-select button.normal { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+    .check-select button.normal { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
   .check-select button.repair { background: #fef3c7; color: #92400e; border-color: #fde68a; }
   .check-select button.unusable { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
   .check-select button.notuse { background: #f3f4f6; color: #374151; border-color: #d1d5db; }
@@ -264,13 +264,6 @@
         <tbody id="safetyRows"></tbody>
       </table>
       </div>
-      <div style="margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-        <span style="font-size:12px;color:#888;font-weight:600">범례 (클릭 시 전체 적용):</span>
-        <button onclick="setAllSafety('○')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #10b981;background:#d1fae5;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#065f46"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#10b981;color:white;border-radius:6px;font-size:16px">○</span> 정상</button>
-        <button onclick="setAllSafety('△')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #f59e0b;background:#fef3c7;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#92400e"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#f59e0b;color:white;border-radius:6px;font-size:16px">△</span> 수리요망</button>
-        <button onclick="setAllSafety('×')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #ef4444;background:#fef2f2;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#991b1b"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#ef4444;color:white;border-radius:6px;font-size:16px">×</span> 사용불가</button>
-        <button onclick="setAllSafety('│')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #6b7280;background:#f3f4f6;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#374151"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#6b7280;color:white;border-radius:6px;font-size:16px">│</span> 미가동</button>
-      </div>
       <div class="overall-remarks-box">
         <label>📝 전체 특이사항 (선택)</label>
         <textarea id="overallRemarks" placeholder="설비점검 시 발견한 전체 특이사항을 입력하세요"></textarea>
@@ -279,6 +272,14 @@
         <div class="check-progress" id="checkProgress">✓ 모든 항목 정상(○)으로 자동 설정됨</div>
         <button class="btn-complete-check" onclick="completeCheck()">점검 완료 ✓</button>
       </div>
+      <div style="margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:12px;color:#888;font-weight:600">범례 (클릭 시 전체 적용):</span>
+        <button onclick="setAllSafety('○')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #10b981;background:#d1fae5;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#065f46"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#10b981;color:white;border-radius:6px;font-size:16px">○</span> 정상</button>
+        <button onclick="setAllSafety('△')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #f59e0b;background:#fef3c7;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#92400e"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#f59e0b;color:white;border-radius:6px;font-size:16px">△</span> 수리요망</button>
+        <button onclick="setAllSafety('×')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #ef4444;background:#fef2f2;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#991b1b"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#ef4444;color:white;border-radius:6px;font-size:16px">×</span> 사용불가</button>
+        <button onclick="setAllSafety('│')" style="display:flex;align-items:center;gap:4px;padding:6px 14px;border:2px solid #6b7280;background:#f3f4f6;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;color:#374151"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#6b7280;color:white;border-radius:6px;font-size:16px">│</span> 미가동</button>
+      </div>
+
     </div>
   </div>
 
@@ -709,23 +710,21 @@ function showToast(msg, type) {
 
 init();
 
+function setAllSafety(value) {
+  document.querySelectorAll('.check-select').forEach(function(div) {
+    div.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
+    var target = div.querySelector('button[data-value="' + value + '"]');
+    if (target) target.classList.add('active');
+  });
+  if (typeof showToast === 'function') showToast('전체 항목 설정 완료');
+}
+
 function confirmLeave(e) {
   e.preventDefault();
   var hasInput = typeof rows !== "undefined" && rows.some(function(r) { return r.sabun || r.qty; });
   if (!hasInput) { location.href = "index.html"; return; }
   if (confirm("작성 중인 내용이 있어요.\n제출하지 않고 메인으로 이동할까요?")) { location.href = "index.html"; }
 }
-
-
-function setAllSafety(value) {
-  document.querySelectorAll('.check-select-safety').forEach(function(div) {
-    div.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
-    var target = div.querySelector('button[data-value="' + value + '"]');
-    if (target) target.classList.add('active');
-  });
-  showToast('✓ 전체 항목 "' + value + '"로 설정됨');
-}
-
 </script>
 </body>
 </html>
