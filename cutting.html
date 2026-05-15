@@ -475,14 +475,15 @@
     border-color: #243bb2;
   }
   
-  .col-no { width: 50px; }
-  .col-sabun { width: 130px; }
-  .col-material { width: 160px; }
-  .col-lot { width: 130px; }
+  .col-no { width: 45px; }
+  .col-sabun { width: 120px; }
+  .col-material { width: 150px; }
+  .col-lot { width: 120px; }
   .col-box { width: 100px; }
-  .col-scrap { width: 110px; }
-  .col-note { min-width: 200px; }
-  .col-del { width: 50px; }
+  .col-total-qty { width: 100px; }
+  .col-scrap { width: 100px; }
+  .col-note { min-width: 120px; }
+  .col-del { width: 45px; }
   
   /* 행 추가/삭제 */
   .btn-del-row {
@@ -705,6 +706,7 @@
             <th class="col-material">재질명</th>
             <th class="col-lot">뱃지 No</th>
             <th class="col-box">재단박스<br>수량(개)</th>
+            <th class="col-total-qty">총재단<br>수량(EA)</th>
             <th class="col-scrap">자투리<br>발생량(g)</th>
             <th class="col-note">비고</th>
             <th class="col-del"></th>
@@ -721,6 +723,10 @@
         <div class="summary-item">
           <div class="summary-label">총 재단박스</div>
           <div class="summary-value"><span id="totalBoxes">0</span><span class="unit">개</span></div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">총 재단수량</div>
+          <div class="summary-value"><span id="totalCutQty">0</span><span class="unit">EA</span></div>
         </div>
         <div class="summary-item">
           <div class="summary-label">총 자투리</div>
@@ -1191,6 +1197,7 @@ function addRow() {
     </td>
     <td><input type="text" class="lot-no" placeholder="뱃지 No" /></td>
     <td><input type="number" class="box-count" min="0" placeholder="0" oninput="updateSummary()" /></td>
+    <td><input type="number" class="total-qty" min="0" placeholder="0" style="font-weight:700;text-align:center" oninput="updateSummary()" /></td>
     <td><input type="number" class="scrap-weight" step="0.01" min="0" placeholder="0" oninput="updateSummary()" /></td>
     <td><input type="text" class="note" placeholder="" /></td>
     <td><button class="btn-del-row" onclick="deleteRow('${rowId}')">×</button></td>
@@ -1240,14 +1247,17 @@ function onSabunChange(rowId) {
 function updateSummary() {
   let totalBoxes = 0;
   let totalScrap = 0;
+  let totalCutQty = 0;
   const rows = document.querySelectorAll('#mainRows tr');
   
   rows.forEach(tr => {
     totalBoxes += parseInt(tr.querySelector('.box-count').value) || 0;
+    totalCutQty += parseInt(tr.querySelector('.total-qty').value) || 0;
     totalScrap += parseFloat(tr.querySelector('.scrap-weight').value) || 0;
   });
   
   document.getElementById('totalBoxes').textContent = totalBoxes.toLocaleString();
+  document.getElementById('totalCutQty').textContent = totalCutQty.toLocaleString();
   document.getElementById('totalScrap').textContent = totalScrap.toFixed(2);
   document.getElementById('totalRows').textContent = rows.length;
 }
@@ -1278,6 +1288,7 @@ async function submitReport() {
     const material = tr.querySelector('.material').value;
     const lotNo = tr.querySelector('.lot-no').value.trim();
     const boxCount = parseInt(tr.querySelector('.box-count').value) || 0;
+    const totalQty = parseInt(tr.querySelector('.total-qty').value) || 0;
     const scrapWeight = parseFloat(tr.querySelector('.scrap-weight').value) || 0;
     const note = tr.querySelector('.note').value.trim();
     
@@ -1301,6 +1312,7 @@ async function submitReport() {
       material_name: material,
       lot_no: lotNo || null,
       box_count: boxCount,
+      total_qty: totalQty,
       scrap_weight: scrapWeight,
       note: note || null,
       remarks: document.getElementById('remarks').value.trim() || null,
