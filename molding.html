@@ -308,6 +308,16 @@
   .col-note { width: 120px; }
   .col-del { width: 40px; }
   
+  /* ── 성형 조건 탭 ── */
+  .condition-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+  .cond-tab { padding: 8px 16px; border: 2px solid #e0e4ed; background: white; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .cond-tab.active { background: #243bb2; color: white; border-color: #243bb2; }
+  .cond-tab:hover:not(.active) { border-color: #243bb2; color: #243bb2; }
+  .cond-tab.cond-change { border-color: #f59e0b; }
+  .cond-tab.cond-change.active { background: #d97706; border-color: #d97706; }
+  .cond-tab.cond-change:hover:not(.active) { border-color: #d97706; color: #d97706; }
+  .face-label { font-size: 12px; font-weight: 700; color: #243bb2; padding: 4px 10px; background: #eef0ff; border-radius: 6px; margin-bottom: 6px; display: inline-block; }
+
   /* ── 성형 조건 ── */
   .condition-area {
     background: white;
@@ -589,22 +599,30 @@
   <!-- 작업 영역 (점검 완료 전 잠금) -->
   <div id="workArea" class="work-area-locked">
     <div id="lockMessage" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;font-weight:700;color:#dc2626;z-index:10;background:rgba(255,255,255,0.9);padding:16px 32px;border-radius:12px;pointer-events:none;white-space:nowrap" data-i18n="safety.lockedMsg">🔒 설비 점검 완료 후 입력 가능</div>
-    <!-- 성형 조건 -->
+    <!-- 성형 조건 (탭형: 기준/초품/중품/종품 + 교체) -->
     <div class="condition-area">
       <h2 data-i18n="molding.conditionTitle">🌡️ 성형 조건</h2>
-      <div class="condition-grid">
-        <div>
-          <label data-i18n="molding.pressure">성형압력 (kgf/cm²)</label>
-          <input type="number" id="moldingPressure" step="1" placeholder="예: 150" />
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div class="condition-tabs" id="conditionTabs">
+          <button class="cond-tab active" onclick="switchCondTab('standard')">기준</button>
+          <button class="cond-tab" onclick="switchCondTab('first')">초품</button>
+          <button class="cond-tab" onclick="switchCondTab('middle')">중품</button>
+          <button class="cond-tab" onclick="switchCondTab('last')">종품</button>
         </div>
-        <div>
-          <label data-i18n="molding.upperTemp">상판온도 (℃)</label>
-          <input type="number" id="upperTemp" step="1" placeholder="예: 170" />
-        </div>
-        <div>
-          <label data-i18n="molding.lowerTemp">하판온도 (℃)</label>
-          <input type="number" id="lowerTemp" step="1" placeholder="예: 170" />
-        </div>
+        <label style="font-size:12px;color:#888;display:flex;align-items:center;gap:4px;cursor:pointer;margin-left:auto">
+          <input type="checkbox" id="moldChangeCheck" onchange="toggleMoldChange()"> 금형 교체 있음
+        </label>
+      </div>
+      <!-- 교체 탭 (숨김) -->
+      <div class="condition-tabs" id="conditionTabsChange" style="display:none;margin-bottom:12px">
+        <span style="font-size:11px;color:#d97706;font-weight:600;margin-right:8px">교체 후 →</span>
+        <button class="cond-tab cond-change" onclick="switchCondTab('standard_c')">기준</button>
+        <button class="cond-tab cond-change" onclick="switchCondTab('first_c')">초품</button>
+        <button class="cond-tab cond-change" onclick="switchCondTab('middle_c')">중품</button>
+        <button class="cond-tab cond-change" onclick="switchCondTab('last_c')">종품</button>
+      </div>
+      <div id="conditionInputArea">
+        <!-- JS에서 동적 생성 (작업면 수에 따라) -->
       </div>
     </div>
 
@@ -627,7 +645,6 @@
                 <th class="col-shot" data-i18n="molding.shotCount">실적판수</th>
                 <th class="col-qty" data-i18n="common.productionQty">생산수량</th>
                 <th class="col-defect" data-i18n="common.defectQty">불량수량</th>
-                <th class="col-type" data-i18n="molding.workType">작업유형</th>
                 <th class="col-note" data-i18n="common.note">비고</th>
                 <th class="col-del"></th>
               </tr>
@@ -642,7 +659,7 @@
     <!-- 비가동 -->
     <div class="downtime-area">
       <h2 data-i18n="molding.downtimeTitle">⏸️ 비가동 사유</h2>
-      <div class="downtime-grid">
+      <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 2fr;gap:12px;align-items:end">
         <div>
           <label data-i18n="molding.downtimeCode">비가동 코드</label>
           <select id="downtimeCode">
@@ -657,8 +674,12 @@
           </select>
         </div>
         <div>
-          <label data-i18n="molding.downtimeMin">비가동 시간(분)</label>
-          <input type="number" id="downtimeMinutes" placeholder="" min="0" />
+          <label>비가동 시작</label>
+          <input type="time" id="downtimeStart" />
+        </div>
+        <div>
+          <label>비가동 종료</label>
+          <input type="time" id="downtimeEnd" />
         </div>
         <div>
           <label data-i18n="molding.downtimeDetail">비가동 상세</label>
@@ -747,12 +768,101 @@ const SAFETY_OPTIONS = [
   { value: '│', class: 'notuse', i18nKey: 'notuse' }
 ];
 
-const WORK_TYPE_KEYS = [
-  { value: '표준', i18nKey: 'typeStandard' },
-  { value: '초품', i18nKey: 'typeFirst' },
-  { value: '중품', i18nKey: 'typeMiddle' },
-  { value: '종품', i18nKey: 'typeLast' }
-];
+// ═══════════════════════════════════════════════
+// 성형 조건 (탭형 + 작업면)
+// ═══════════════════════════════════════════════
+let currentCondTab = 'standard';
+const COND_TABS = ['standard','first','middle','last','standard_c','first_c','middle_c','last_c'];
+const COND_LABELS = { standard:'기준', first:'초품', middle:'중품', last:'종품', standard_c:'기준(교체)', first_c:'초품(교체)', middle_c:'중품(교체)', last_c:'종품(교체)' };
+let conditionData = {}; // { standard: { ga: {pressure,upper,lower}, na:{...}, da:{...} }, ... }
+let currentFaces = 1; // 1면 or 3면
+
+function initConditionData() {
+  COND_TABS.forEach(tab => {
+    conditionData[tab] = {};
+    if (currentFaces === 3) {
+      ['ga','na','da'].forEach(face => { conditionData[tab][face] = { pressure:'', upper:'', lower:'' }; });
+    } else {
+      conditionData[tab]['single'] = { pressure:'', upper:'', lower:'' };
+    }
+  });
+}
+
+function detectFaces() {
+  if (!selectedEquipment) return 1;
+  const type = selectedEquipment.type || '';
+  // injection, inj-vacuum = 1면 / transfer, vacuum, general = 3면(Press)
+  if (type === 'injection' || type === 'inj-vacuum') return 1;
+  return 3;
+}
+
+function renderConditionInputs() {
+  currentFaces = detectFaces();
+  initConditionData();
+  renderCondTab();
+}
+
+function switchCondTab(tab) {
+  // 현재 탭 데이터 저장
+  saveCurrentCondData();
+  currentCondTab = tab;
+  
+  // 탭 활성화
+  document.querySelectorAll('.cond-tab').forEach(b => b.classList.remove('active'));
+  const isChange = tab.endsWith('_c');
+  const btns = document.querySelectorAll(isChange ? '.cond-tab.cond-change' : '.cond-tab:not(.cond-change)');
+  const baseTab = tab.replace('_c','');
+  btns.forEach(b => { if (b.textContent.trim() === COND_LABELS[baseTab] || b.textContent.trim() === COND_LABELS[tab]) b.classList.add('active'); });
+  
+  renderCondTab();
+}
+
+function renderCondTab() {
+  const area = document.getElementById('conditionInputArea');
+  const data = conditionData[currentCondTab] || {};
+  const faces = currentFaces === 3 ? [
+    { key:'ga', label:'가면', color:'#fff3cd' },
+    { key:'na', label:'나면', color:'#dbeafe' },
+    { key:'da', label:'다면', color:'#d4edda' }
+  ] : [
+    { key:'single', label:'', color:'' }
+  ];
+
+  const tabLabel = COND_LABELS[currentCondTab] || '';
+  
+  area.innerHTML = faces.map(face => {
+    const d = data[face.key] || { pressure:'', upper:'', lower:'' };
+    const faceHeader = face.label ? `<span class="face-label" style="background:${face.color}">${face.label}</span>` : '';
+    return `
+      ${faceHeader}
+      <div class="condition-grid" style="margin-bottom:12px">
+        <div><label>성형압력 (kgf/cm²)</label><input type="number" class="cond-input" data-face="${face.key}" data-field="pressure" value="${d.pressure}" step="1" placeholder="예: 150" /></div>
+        <div><label>상판온도 (℃)</label><input type="number" class="cond-input" data-face="${face.key}" data-field="upper" value="${d.upper}" step="1" placeholder="예: 170" /></div>
+        <div><label>하판온도 (℃)</label><input type="number" class="cond-input" data-face="${face.key}" data-field="lower" value="${d.lower}" step="1" placeholder="예: 170" /></div>
+      </div>
+    `;
+  }).join('');
+}
+
+function saveCurrentCondData() {
+  document.querySelectorAll('.cond-input').forEach(input => {
+    const face = input.dataset.face;
+    const field = input.dataset.field;
+    if (conditionData[currentCondTab] && conditionData[currentCondTab][face]) {
+      conditionData[currentCondTab][face][field] = input.value;
+    }
+  });
+}
+
+function toggleMoldChange() {
+  const checked = document.getElementById('moldChangeCheck').checked;
+  document.getElementById('conditionTabsChange').style.display = checked ? 'flex' : 'none';
+}
+
+function collectAllConditions() {
+  saveCurrentCondData();
+  return JSON.parse(JSON.stringify(conditionData));
+}
 
 // ═══════════════════════════════════════════════
 // 초기화
@@ -898,6 +1008,7 @@ function selectEquipment(eqNo) {
   // 점검표 초기화 및 이력 확인
   initSafetyTable();
   checkTodaySafety();
+  renderConditionInputs();
 }
 
 // ═══════════════════════════════════════════════
@@ -1085,11 +1196,6 @@ function addRow() {
     <td class="col-shot"><input type="number" class="shot-count" placeholder="Shot" min="0" /></td>
     <td class="col-qty"><input type="number" class="prod-qty" placeholder="수량" min="0" /></td>
     <td class="col-defect"><input type="number" class="defect-qty" placeholder="0" min="0" value="0" /></td>
-    <td class="col-type">
-      <select class="work-type">
-        ${WORK_TYPE_KEYS.map(wt => `<option value="${wt.value}">${t('molding', wt.i18nKey)}</option>`).join('')}
-      </select>
-    </td>
     <td class="col-note"><input type="text" class="note" placeholder="" /></td>
     <td class="col-del"><button class="btn-del-row" onclick="deleteRow('${rowId}')">×</button></td>
   `;
@@ -1154,11 +1260,10 @@ async function submitReport() {
   if (!workerName) { showToast('작업자를 선택하세요.', 'error'); return; }
   if (!selectedEquipment) { showToast('설비를 선택하세요.', 'error'); return; }
   
-  const moldingPressure = parseFloat(document.getElementById('moldingPressure').value) || null;
-  const upperTemp = parseFloat(document.getElementById('upperTemp').value) || null;
-  const lowerTemp = parseFloat(document.getElementById('lowerTemp').value) || null;
+  const allConditions = collectAllConditions();
   const downtimeCode = document.getElementById('downtimeCode').value || null;
-  const downtimeMinutes = parseInt(document.getElementById('downtimeMinutes').value) || null;
+  const downtimeStart = document.getElementById('downtimeStart').value || null;
+  const downtimeEnd = document.getElementById('downtimeEnd').value || null;
   const downtimeDetail = document.getElementById('downtimeDetail').value.trim() || null;
   const remarks = document.getElementById('remarks').value.trim() || null;
   
@@ -1174,7 +1279,6 @@ async function submitReport() {
     const shotCount = parseInt(tr.querySelector('.shot-count').value) || null;
     const prodQty = parseInt(tr.querySelector('.prod-qty').value) || null;
     const defectQty = parseInt(tr.querySelector('.defect-qty').value) || 0;
-    const workType = tr.querySelector('.work-type').value;
     const note = tr.querySelector('.note').value.trim();
     
     // 빈 행 건너뛰기
@@ -1202,14 +1306,14 @@ async function submitReport() {
       shot_count: shotCount,
       production_qty: prodQty,
       defect_qty: defectQty,
-      work_type: workType,
-      molding_pressure: moldingPressure,
-      upper_temp: upperTemp,
-      lower_temp: lowerTemp,
+      work_type: null,
+      molding_pressure: null,
+      upper_temp: null,
+      lower_temp: null,
       downtime_code: downtimeCode,
-      downtime_minutes: downtimeMinutes,
+      downtime_minutes: null,
       problem: downtimeDetail,
-      note: note || remarks || null,
+      note: JSON.stringify({ text: note || remarks, conditions: allConditions, downtime_start: downtimeStart, downtime_end: downtimeEnd }),
       created_by_emp_code: myInfo?.emp_code || null,
       created_by_name: myInfo?.name || null
     });
