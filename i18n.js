@@ -303,10 +303,60 @@ const AUTO_TRANSLATE = {
   '🔒 안전 점검 완료 후 입력 가능': { id: '🔒 Isi setelah pemeriksaan selesai', en: '🔒 Complete check first' },
   '🔒 설비 점검 완료 후 입력 가능': { id: '🔒 Isi setelah pemeriksaan selesai', en: '🔒 Complete check first' },
   
-  // 재단 섹션 헤더
+  // CMB 전용
+  '📋 혼련 작업 내역': { id: '📋 Detail Kerja CMB', en: '📋 CMB Work Details' },
+  '혼련 Action 내역': { id: 'Detail Aksi CMB', en: 'CMB Action Details' },
+  '🌡️ 시간대별 점검': { id: '🌡️ Pemeriksaan per jam', en: '🌡️ Hourly Check' },
+  '시간대별 점검': { id: 'Pemeriksaan per jam', en: 'Hourly Check' },
+  '📌 MIXING 순서:': { id: '📌 Urutan MIXING:', en: '📌 MIXING Order:' },
+  '총 사용량 (재믹싱 제외)': { id: 'Total pemakaian (tanpa remix)', en: 'Total usage (excl. remix)' },
+  'BATCH No.': { id: 'No. BATCH', en: 'BATCH No.' },
+  '자동부여': { id: 'Otomatis', en: 'Auto' },
+  '중량 (Kg)': { id: 'Berat (Kg)', en: 'Weight (Kg)' },
+  '중량': { id: 'Berat', en: 'Weight' },
+  '재믹싱': { id: 'Remix', en: 'Remix' },
+  '평량': { id: 'Timbang', en: 'Weighing' },
+  '정상투입': { id: 'Normal', en: 'Normal' },
+  '점검 시간': { id: 'Waktu periksa', en: 'Check time' },
+  '기준값': { id: 'Standar', en: 'Standard' },
+  '에어압력': { id: 'Tekanan udara', en: 'Air pressure' },
+  '니다 온도 (℃)': { id: 'Suhu Kneader (℃)', en: 'Kneader Temp (℃)' },
+  '로라 온도 (℃)': { id: 'Suhu Roller (℃)', en: 'Roller Temp (℃)' },
+  '입수': { id: 'Masuk', en: 'In' },
+  '출수': { id: 'Keluar', en: 'Out' },
+  '입수 5~30': { id: 'Masuk 5~30', en: 'In 5~30' },
+  '출수 10~35': { id: 'Keluar 10~35', en: 'Out 10~35' },
+  '4~6': { id: '4~6', en: '4~6' },
+  '(Kg/㎠)': { id: '(Kg/㎠)', en: '(Kg/㎠)' },
+  'KNEADER (니더)': { id: 'KNEADER', en: 'KNEADER' },
+  'ROLLER (로라)': { id: 'ROLLER', en: 'ROLLER' },
+  '냉각기 (칠러)': { id: 'Pendingin (Chiller)', en: 'Chiller' },
+  '고무시트 복합재단기': { id: 'Mesin potong komposit', en: 'Composite cutter' },
+  '유압절단기': { id: 'Pemotong hidrolik', en: 'Hydraulic cutter' },
+  '스위치 작동': { id: 'Sakelar', en: 'Switch' },
+  '기계작동 원활': { id: 'Mesin berfungsi baik', en: 'Machine operates well' },
+  '이상음/진동': { id: 'Suara/getaran abnormal', en: 'Abnormal noise/vibration' },
+  '조임상태': { id: 'Kekencangan baut', en: 'Tightening state' },
+  '압력 양호': { id: 'Tekanan baik', en: 'Pressure OK' },
+  
+  // 재단 전용
+  '📋 재단 작업 내역': { id: '📋 Detail Kerja Potong', en: '📋 Cutting Work Details' },
+  '🔒 안전 점검 완료 필요': { id: '🔒 Pemeriksaan keselamatan diperlukan', en: '🔒 Safety check required' },
   '재단박스': { id: 'Kotak', en: 'Box' },
-  '총재단': { id: 'Total potong', en: 'Total cut' },
-  '발생량(g)': { id: '(g)', en: '(g)' },
+  '자투리': { id: 'Sisa', en: 'Scrap' },
+  '총 재단박스': { id: 'Total kotak', en: 'Total boxes' },
+  '총 재단수량': { id: 'Total potong', en: 'Total cut qty' },
+  '총 자투리': { id: 'Total sisa', en: 'Total scrap' },
+  '작업 건수': { id: 'Jumlah data', en: 'Work count' },
+  
+  // 재단 점검항목
+  '칼날 상태': { id: 'Kondisi pisau', en: 'Blade condition' },
+  '모터 이상음': { id: 'Suara motor abnormal', en: 'Motor noise' },
+  '안전커버 작동': { id: 'Penutup keamanan', en: 'Safety cover' },
+  
+  // 공통 추가
+  '(제품코드)': { id: '(Kode produk)', en: '(Product code)' },
+  '제품코드 (예:': { id: 'Kode produk (cth:', en: 'Product code (e.g.' },
   
   // 버튼/라벨 추가
   '초기화': { id: 'Reset', en: 'Reset' },
@@ -328,6 +378,16 @@ const AUTO_TRANSLATE = {
   '니더2호': { id: 'Kneader 2', en: 'Kneader 2' },
   '니더3호': { id: 'Kneader 3', en: 'Kneader 3' },
   '니더4호': { id: 'Kneader 4', en: 'Kneader 4' },
+  
+  // 재단 설비명
+  '사림 1호': { id: 'Sarim 1', en: 'Sarim 1' },
+  '사림 2호': { id: 'Sarim 2', en: 'Sarim 2' },
+  '사림 3호': { id: 'Sarim 3', en: 'Sarim 3' },
+  '사림 4호': { id: 'Sarim 4', en: 'Sarim 4' },
+  '자동재단기 1': { id: 'Mesin potong otomatis 1', en: 'Auto cutter 1' },
+  '자동재단기 2': { id: 'Mesin potong otomatis 2', en: 'Auto cutter 2' },
+  '폭재단기 1': { id: 'Mesin potong lebar 1', en: 'Width cutter 1' },
+  '폭재단기 2': { id: 'Mesin potong lebar 2', en: 'Width cutter 2' },
   
   // CMB 테이블 헤더
   '재질': { id: 'Bahan', en: 'Material' },
