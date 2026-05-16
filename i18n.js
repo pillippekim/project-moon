@@ -368,19 +368,22 @@ function autoTranslatePage() {
   if (lang === 'ko') return;
   
   // 1. 모든 요소의 직접 텍스트 교체
-  const elements = document.querySelectorAll('label, th, td, span, button, option, h2, h1, h3, div, a');
+  const elements = document.querySelectorAll('label, th, td, span, button, option, h2, h1, h3, a');
   elements.forEach(el => {
+    // langSelector 내부는 건너뛰기 (언어 변경 드롭다운 보호)
+    if (el.closest('#langSelector')) return;
+    // select 자체는 건너뛰기 (option만 처리)
+    if (el.tagName === 'SELECT') return;
     // 자식에 input/select/textarea가 있으면 건너뛰기
     if (el.querySelector('input,select,textarea,table')) return;
     // 자식 요소가 많은 복합 요소는 건너뛰기
     if (el.children.length > 3) return;
     
     const text = el.textContent.trim();
-    if (!text || text.length > 60) return;
+    if (!text || text.length > 80) return;
     
     // 정확히 매칭
     if (AUTO_TRANSLATE[text] && AUTO_TRANSLATE[text][lang]) {
-      // 앞뒤 공백 유지
       const before = el.textContent.match(/^(\s*)/)[0];
       const after = el.textContent.match(/(\s*)$/)[0];
       el.textContent = before + AUTO_TRANSLATE[text][lang] + after;
@@ -388,10 +391,10 @@ function autoTranslatePage() {
     }
     
     // 자식이 없는 순수 텍스트 요소에서 부분 매칭 시도
-    if (el.children.length === 0) {
+    if (el.children.length === 0 && el.tagName !== 'OPTION') {
       let changed = text;
       for (const [ko, trans] of Object.entries(AUTO_TRANSLATE)) {
-        if (trans[lang] && changed.includes(ko)) {
+        if (trans[lang] && ko.length >= 2 && changed.includes(ko)) {
           changed = changed.replace(ko, trans[lang]);
         }
       }
@@ -401,7 +404,18 @@ function autoTranslatePage() {
     }
   });
   
-  // 2. placeholder 번역
+  // 2. div 요소 중 직접 텍스트만 가진 것 처리
+  document.querySelectorAll('div').forEach(el => {
+    if (el.closest('#langSelector')) return;
+    if (el.children.length > 0) return;
+    const text = el.textContent.trim();
+    if (!text || text.length > 80) return;
+    if (AUTO_TRANSLATE[text] && AUTO_TRANSLATE[text][lang]) {
+      el.textContent = AUTO_TRANSLATE[text][lang];
+    }
+  });
+  
+  // 3. placeholder 번역
   const placeholderMap = {
     '사번입력': { id: 'Kode produk', en: 'Product code' },
     '제품코드 (예: 502': { id: 'Kode produk (cth: 502', en: 'Product code (e.g. 502' },
@@ -411,7 +425,9 @@ function autoTranslatePage() {
     '이상 시 입력': { id: 'Jika ada masalah', en: 'If abnormal' },
     '오늘 작업 중 특이사항을 입력하세요': { id: 'Masukkan catatan hari ini', en: 'Enter today\'s remarks' },
     '작업 중 특이사항이 있으면 입력하세요': { id: 'Masukkan catatan jika ada', en: 'Enter remarks if any' },
+    '특이사항이 있으면 입력하세요': { id: 'Masukkan catatan jika ada', en: 'Enter remarks if any' },
     '설비점검 시 발견한 전체 특이사항을 입력하세요': { id: 'Masukkan catatan pemeriksaan', en: 'Enter inspection remarks' },
+    '설비점검 시 발견한': { id: 'Catatan pemeriksaan', en: 'Inspection remarks' },
     '선택하세요': { id: 'Pilih', en: 'Select' },
   };
   document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
@@ -423,12 +439,15 @@ function autoTranslatePage() {
     }
   });
   
-  // 3. select option 번역
-  document.querySelectorAll('select option').forEach(opt => {
-    const text = opt.textContent.trim();
-    if (AUTO_TRANSLATE[text] && AUTO_TRANSLATE[text][lang]) {
-      opt.textContent = AUTO_TRANSLATE[text][lang];
-    }
+  // 4. select option 번역 (langSelector 제외)
+  document.querySelectorAll('select').forEach(sel => {
+    if (sel.closest('#langSelector')) return;
+    sel.querySelectorAll('option').forEach(opt => {
+      const text = opt.textContent.trim();
+      if (AUTO_TRANSLATE[text] && AUTO_TRANSLATE[text][lang]) {
+        opt.textContent = AUTO_TRANSLATE[text][lang];
+      }
+    });
   });
 }
 
