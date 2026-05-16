@@ -1517,6 +1517,14 @@ async function deleteMyRecord(id) {
   showToast('✓ 삭제 완료');
 }
 
+
+// 동적 생성된 요소 번역 (점검 테이블 등)
+setTimeout(function() {
+  if (typeof autoTranslatePage === 'function') autoTranslatePage();
+}, 500);
+setTimeout(function() {
+  if (typeof autoTranslatePage === 'function') autoTranslatePage();
+}, 1500);
 </script>
 
 </body>
