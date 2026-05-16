@@ -6,6 +6,7 @@
 <title>혼련(CMB) 작업일지 - HKHT</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth_guard.js"></script>
+<script src="i18n.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   
@@ -607,9 +608,12 @@
 
   <!-- 상단 바 -->
   <div class="top-bar">
-    <a href="#" class="back-btn" onclick="confirmLeave(event)">← 메인으로</a>
-    <h1>🧪 혼련(CMB) 작업일지</h1>
-    <div class="user-info" id="userInfo">로딩 중...</div>
+    <a href="#" class="back-btn" onclick="confirmLeave(event)" data-i18n="common.back">← 메인으로</a>
+    <h1 data-i18n="cmb.title">🔥 혼련(CMB) 작업일지</h1>
+    <div style="text-align:right">
+      <div class="user-info" id="userInfo">로딩 중...</div>
+      <div id="langSelector" style="margin-top:6px"></div>
+    </div>
   </div>
 
   <!-- 안내 배너 -->
@@ -876,9 +880,13 @@ async function init() {
     if (!myInfo) return;
   }
   
+  // 다국어 적용
+  if (typeof applyI18N === 'function') applyI18N();
+  if (typeof createLangSelector === 'function') createLangSelector('langSelector');
+  
   // 사용자 정보 표시
   document.getElementById('userInfo').textContent = 
-    myInfo ? `${myInfo.name} (입사코드: ${myInfo.emp_code})` : '';
+    myInfo ? `${myInfo.name} (${t('common','sabun')}: ${myInfo.emp_code})` : '';
   
   // 오늘 날짜 기본값
   const today = new Date().toISOString().split('T')[0];

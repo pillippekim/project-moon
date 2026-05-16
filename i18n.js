@@ -143,17 +143,46 @@ const I18N = {
 
   // ── CMB 전용 ──
   cmb: {
-    title:        { ko: '혼련(CMB) 작업일지', id: 'Laporan Kerja CMB', en: 'CMB Work Report' },
+    title:        { ko: '🔥 혼련(CMB) 작업일지', id: '🔥 Laporan Kerja CMB', en: '🔥 CMB Work Report' },
     materialName: { ko: '재질명', id: 'Nama bahan', en: 'Material name' },
     totalWeight:  { ko: '총 투입량 (Kg)', id: 'Total berat (Kg)', en: 'Total weight (Kg)' },
     mixCount:     { ko: '배합 횟수', id: 'Jumlah campuran', en: 'Mix count' },
+    batchNo:      { ko: '뱃지 No', id: 'No. Batch', en: 'Batch No.' },
+    equipSelect:  { ko: '설비 선택', id: 'Pilih mesin', en: 'Select machine' },
+    lotNo:        { ko: 'LOT No.', id: 'No. LOT', en: 'LOT No.' },
   },
 
   // ── 재단 전용 ──
   cutting: {
-    title:        { ko: '재단 작업일지', id: 'Laporan Kerja Potong', en: 'Cutting Work Report' },
-    boxCount:     { ko: '박스 수', id: 'Jumlah kotak', en: 'Box count' },
+    title:        { ko: '✂️ 재단 작업일지', id: '✂️ Laporan Kerja Potong', en: '✂️ Cutting Work Report' },
+    boxCount:     { ko: '재단박스수량(개)', id: 'Jumlah kotak', en: 'Box count' },
+    totalQty:     { ko: '총재단수량(EA)', id: 'Total potong (EA)', en: 'Total cut qty (EA)' },
+    scrapWeight:  { ko: '자투리 발생량(g)', id: 'Sisa potongan (g)', en: 'Scrap weight (g)' },
     sheetCount:   { ko: '장 수', id: 'Jumlah lembar', en: 'Sheet count' },
+    lotNo:        { ko: '뱃지 No', id: 'No. Batch', en: 'Badge No.' },
+  },
+
+  // ── CMB 점검항목 ──
+  cmbSafetyItems: {
+    item1: { ko: '구동모터 이상유무', id: 'Motor penggerak normal', en: 'Drive motor check' },
+    item2: { ko: '유압력 상태', id: 'Tekanan hidrolik', en: 'Hydraulic pressure' },
+    item3: { ko: '냉각수 순환', id: 'Sirkulasi air pendingin', en: 'Cooling water circulation' },
+    item4: { ko: '로터 상태', id: 'Kondisi rotor', en: 'Rotor condition' },
+    item5: { ko: '투입구 상태', id: 'Kondisi hopper', en: 'Hopper condition' },
+    item6: { ko: '온도조절기 작동', id: 'Pengatur suhu', en: 'Temp controller' },
+    item7: { ko: '청결상태', id: 'Kebersihan', en: 'Cleanliness' },
+    item8: { ko: '비상정지 버튼', id: 'Tombol darurat', en: 'Emergency stop' },
+  },
+
+  // ── 재단 점검항목 ──
+  cuttingSafetyItems: {
+    item1: { ko: '칼날 상태', id: 'Kondisi pisau', en: 'Blade condition' },
+    item2: { ko: '가이드롤러 작동', id: 'Roller pemandu', en: 'Guide roller' },
+    item3: { ko: '콘트롤 박스', id: 'Panel kontrol', en: 'Control box' },
+    item4: { ko: '안전커버 장착', id: 'Penutup keamanan', en: 'Safety cover' },
+    item5: { ko: '에어공급', id: 'Suplai udara', en: 'Air supply' },
+    item6: { ko: '청결상태', id: 'Kebersihan', en: 'Cleanliness' },
+    item7: { ko: '비상정지 버튼', id: 'Tombol darurat', en: 'Emergency stop' },
   },
 };
 
