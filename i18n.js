@@ -206,7 +206,152 @@ function t(section, key) {
   }
 }
 
-// 페이지 전체 번역 적용: data-i18n 속성이 있는 요소들을 자동 번역
+// 페이지 전체 한국어 → 외국어 자동 번역 (data-i18n 없는 요소도 처리)
+const AUTO_TRANSLATE = {
+  // 공통 라벨
+  '작업 일자': { id: 'Tanggal kerja', en: 'Work date' },
+  '작업일자': { id: 'Tanggal kerja', en: 'Work date' },
+  '작성일': { id: 'Tanggal', en: 'Date' },
+  '요일': { id: 'Hari', en: 'Day' },
+  '근무구분': { id: 'Shift', en: 'Shift' },
+  '작업자': { id: 'Pekerja', en: 'Worker' },
+  '시작시간': { id: 'Waktu mulai', en: 'Start time' },
+  '종료시간': { id: 'Waktu selesai', en: 'End time' },
+  '선택하세요...': { id: 'Pilih...', en: 'Select...' },
+  '비고': { id: 'Catatan', en: 'Note' },
+  '제출하기': { id: 'Kirim', en: 'Submit' },
+  '↻ 초기화': { id: '↻ Reset', en: '↻ Reset' },
+  '+ 행 추가': { id: '+ Tambah baris', en: '+ Add row' },
+  '특이사항': { id: 'Keterangan', en: 'Remarks' },
+  
+  // 점검 관련
+  '일일 안전 점검 (작업 전 필수)': { id: 'Pemeriksaan Keselamatan Harian (WAJIB)', en: 'Daily Safety Check (REQUIRED)' },
+  '일일 설비 점검 (작업 전 필수)': { id: 'Pemeriksaan Mesin Harian (WAJIB)', en: 'Daily Machine Check (REQUIRED)' },
+  '점검항목': { id: 'Item periksa', en: 'Check item' },
+  '판정': { id: 'Hasil', en: 'Result' },
+  '점검 진행 중': { id: 'Sedang periksa', en: 'In progress' },
+  '점검 완료 ✓': { id: 'Selesai ✓', en: 'Complete ✓' },
+  '✓ 점검 완료': { id: '✓ Selesai', en: '✓ Completed' },
+  '✓ 모든 항목 정상(○)으로 자동 설정됨': { id: '✓ Semua item otomatis normal (○)', en: '✓ All items auto-set to normal (○)' },
+  '정상': { id: 'OK', en: 'OK' },
+  '수리요망': { id: 'Perlu perbaikan', en: 'Need repair' },
+  '사용불가': { id: 'Tidak layak', en: 'Unusable' },
+  '미가동': { id: 'Tidak beroperasi', en: 'Not running' },
+  '✓ 작업 가능': { id: '✓ Bisa kerja', en: '✓ Ready to work' },
+  
+  // 테이블 헤더
+  '사번': { id: 'Kode produk', en: 'Product code' },
+  '사번\n(제품코드)': { id: 'Kode produk', en: 'Product code' },
+  '제품명': { id: 'Nama produk', en: 'Product name' },
+  '품명': { id: 'Nama produk', en: 'Product name' },
+  '고객 품번': { id: 'No. pelanggan', en: 'Customer P/N' },
+  '고객품번': { id: 'No. pelanggan', en: 'Customer P/N' },
+  '수량': { id: 'Jumlah', en: 'Quantity' },
+  '생산수량': { id: 'Jumlah produksi', en: 'Production qty' },
+  '불량수량': { id: 'Jumlah cacat', en: 'Defect qty' },
+  '포장수량': { id: 'Jumlah kemasan', en: 'Packing qty' },
+  '작업수량': { id: 'Jumlah kerja', en: 'Work qty' },
+  
+  // 재단 전용
+  '재질명': { id: 'Nama bahan', en: 'Material name' },
+  '뱃지 No': { id: 'No. Batch', en: 'Badge No.' },
+  '재단박스\n수량(개)': { id: 'Kotak\n(pcs)', en: 'Box\ncount' },
+  '총재단\n수량(EA)': { id: 'Total\npotong', en: 'Total\ncut qty' },
+  '자투리\n발생량(g)': { id: 'Sisa\n(g)', en: 'Scrap\n(g)' },
+  '총 재단박스': { id: 'Total kotak', en: 'Total boxes' },
+  '총 재단수량': { id: 'Total potong', en: 'Total cut qty' },
+  '총 자투리': { id: 'Total sisa', en: 'Total scrap' },
+  '작업 건수': { id: 'Jumlah data', en: 'Work count' },
+  '선택하세요...': { id: 'Pilih...', en: 'Select...' },
+  
+  // CMB 전용
+  '설비 선택': { id: 'Pilih mesin', en: 'Select machine' },
+  '총 투입량': { id: 'Total berat', en: 'Total weight' },
+  '배합 횟수': { id: 'Jumlah campuran', en: 'Mix count' },
+  'LOT No.': { id: 'No. LOT', en: 'LOT No.' },
+  
+  // 안내 배너
+  '안전이 우선입니다. 점검없이 작업금지!': { id: '⚠️ Keselamatan utama. Dilarang kerja tanpa pemeriksaan!', en: '⚠️ Safety first. No work without inspection!' },
+  
+  // 요약
+  '입력 행 수': { id: 'Jumlah baris', en: 'Row count' },
+  '총 작업수량': { id: 'Total kerja', en: 'Total work qty' },
+  '총 포장수량': { id: 'Total kemasan', en: 'Total packing' },
+  '작업자 수': { id: 'Jumlah pekerja', en: 'Workers' },
+  
+  // 제출 내역
+  '오늘 내 제출 내역': { id: 'Riwayat hari ini', en: 'My submissions today' },
+  '제출시간': { id: 'Waktu kirim', en: 'Submit time' },
+  '작업': { id: 'Aksi', en: 'Action' },
+  '삭제': { id: 'Hapus', en: 'Delete' },
+  
+  // 작업 특이사항
+  '작업 특이사항 / 비고': { id: 'Catatan kerja / Keterangan', en: 'Work remarks / Notes' },
+  
+  // 점검 항목 (재단)
+  '스위치 작동': { id: 'Sakelar berfungsi', en: 'Switch operates' },
+  '칼날 상태': { id: 'Kondisi pisau', en: 'Blade condition' },
+  '모터 이상음': { id: 'Suara motor abnormal', en: 'Motor abnormal noise' },
+  '작동유 충만': { id: 'Oli cukup', en: 'Hydraulic oil full' },
+  '안전커버 작동': { id: 'Penutup keamanan', en: 'Safety cover' },
+  '에어압력': { id: 'Tekanan udara', en: 'Air pressure' },
+  '청결 상태': { id: 'Kebersihan', en: 'Cleanliness' },
+  '비상정지 버튼': { id: 'Tombol darurat', en: 'Emergency stop' },
+  
+  // 점검 항목 (CMB)
+  '구동모터 이상유무': { id: 'Motor penggerak normal', en: 'Drive motor check' },
+  '유압력 상태': { id: 'Tekanan hidrolik', en: 'Hydraulic pressure' },
+  '냉각수 순환': { id: 'Sirkulasi air pendingin', en: 'Cooling water' },
+  '로터 상태': { id: 'Kondisi rotor', en: 'Rotor condition' },
+  '투입구 상태': { id: 'Kondisi hopper', en: 'Hopper condition' },
+  '온도조절기 작동': { id: 'Pengatur suhu', en: 'Temp controller' },
+  '청결상태': { id: 'Kebersihan', en: 'Cleanliness' },
+};
+
+function autoTranslatePage() {
+  const lang = getCurrentLang();
+  if (lang === 'ko') return; // 한국어면 번역 불필요
+  
+  // 모든 텍스트 노드를 순회하며 한국어 → 외국어 교체
+  const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+  while (walk.nextNode()) {
+    const node = walk.currentNode;
+    const text = node.textContent.trim();
+    if (!text) continue;
+    
+    // 정확히 매칭
+    if (AUTO_TRANSLATE[text] && AUTO_TRANSLATE[text][lang]) {
+      node.textContent = node.textContent.replace(text, AUTO_TRANSLATE[text][lang]);
+    }
+  }
+  
+  // label, th, td, span, div, button, option 의 텍스트도 처리
+  document.querySelectorAll('label, th, td, span, button, option, h2, h1, .summary-label, .alert-title, .stat-label').forEach(el => {
+    if (el.children.length > 0 && el.querySelector('input,select,textarea')) return; // 입력 필드 포함하면 건너뛰기
+    const text = el.textContent.trim();
+    if (AUTO_TRANSLATE[text] && AUTO_TRANSLATE[text][lang]) {
+      el.textContent = AUTO_TRANSLATE[text][lang];
+    }
+  });
+  
+  // placeholder도 번역
+  const placeholderMap = {
+    '사번입력': { id: 'Kode produk', en: 'Product code' },
+    '제품코드 (예: 502': { id: 'Kode produk (cth: 502', en: 'Product code (e.g. 502' },
+    '뱃지 No': { id: 'No. Batch', en: 'Badge No.' },
+    '이상 시 입력': { id: 'Masukkan jika ada masalah', en: 'Enter if abnormal' },
+    '오늘 작업 중 특이사항을 입력하세요': { id: 'Masukkan catatan hari ini', en: 'Enter today\'s remarks' },
+  };
+  document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
+    const ph = el.placeholder;
+    for (const [ko, trans] of Object.entries(placeholderMap)) {
+      if (ph.includes(ko) && trans[lang]) {
+        el.placeholder = trans[lang];
+      }
+    }
+  });
+}
+
 // 사용법: <span data-i18n="common.submit">제출하기</span>
 function applyI18N() {
   const lang = getCurrentLang();
@@ -230,6 +375,9 @@ function applyI18N() {
     const [section, key] = titleEl.dataset.i18nTitle.split('.');
     document.title = t(section, key) + ' - HKHT';
   }
+  
+  // 자동 번역 (data-i18n 없는 요소도 처리)
+  autoTranslatePage();
 }
 
 // 언어 변경 함수 (설정 페이지나 드롭다운에서 호출)
