@@ -279,12 +279,13 @@ const AUTO_TRANSLATE = {
   '총 포장수량': { id: 'Total kemasan', en: 'Total packing' },
   '작업자 수': { id: 'Jumlah pekerja', en: 'Workers' },
   
-  // 제출 내역
+  // 특이사항/비고 섹션
+  '● 특이사항 / 비고': { id: '● Catatan / Keterangan', en: '● Remarks / Notes' },
+  '● 작업 특이사항 / 비고': { id: '● Catatan kerja / Keterangan', en: '● Work remarks / Notes' },
+  '특이사항이 있으면 입력하세요 (선택)': { id: 'Masukkan catatan jika ada (opsional)', en: 'Enter remarks if any (optional)' },
+  '작업 중 특이사항이 있으면 입력하세요 (선택)': { id: 'Masukkan catatan jika ada (opsional)', en: 'Enter remarks if any (optional)' },
   '📋 오늘 내 제출 내역': { id: '📋 Riwayat hari ini', en: '📋 My submissions today' },
   '오늘 내 제출 내역': { id: 'Riwayat hari ini', en: 'My submissions today' },
-  '제출시간': { id: 'Waktu kirim', en: 'Submit time' },
-  '작업': { id: 'Aksi', en: 'Action' },
-  '삭제': { id: 'Hapus', en: 'Delete' },
   '오늘 제출한 내역이 없습니다.': { id: 'Belum ada data hari ini.', en: 'No submissions today.' },
   '로딩 중...': { id: 'Memuat...', en: 'Loading...' },
   '사번/항목': { id: 'Kode/Item', en: 'Code/Item' },
