@@ -280,13 +280,68 @@ const AUTO_TRANSLATE = {
   '작업자 수': { id: 'Jumlah pekerja', en: 'Workers' },
   
   // 제출 내역
+  '📋 오늘 내 제출 내역': { id: '📋 Riwayat hari ini', en: '📋 My submissions today' },
   '오늘 내 제출 내역': { id: 'Riwayat hari ini', en: 'My submissions today' },
   '제출시간': { id: 'Waktu kirim', en: 'Submit time' },
   '작업': { id: 'Aksi', en: 'Action' },
   '삭제': { id: 'Hapus', en: 'Delete' },
+  '오늘 제출한 내역이 없습니다.': { id: 'Belum ada data hari ini.', en: 'No submissions today.' },
+  '로딩 중...': { id: 'Memuat...', en: 'Loading...' },
+  '사번/항목': { id: 'Kode/Item', en: 'Code/Item' },
   
   // 작업 특이사항
+  '💬 작업 특이사항 / 비고': { id: '💬 Catatan kerja / Keterangan', en: '💬 Work remarks / Notes' },
   '작업 특이사항 / 비고': { id: 'Catatan kerja / Keterangan', en: 'Work remarks / Notes' },
+  '📝 특이사항': { id: '📝 Keterangan', en: '📝 Remarks' },
+  '📝 전체 특이사항 (선택)': { id: '📝 Catatan keseluruhan (opsional)', en: '📝 Overall remarks (optional)' },
+  
+  // 섹션 헤더
+  '📋 재단 작업 내역': { id: '📋 Detail Kerja Potong', en: '📋 Cutting Work Details' },
+  '📋 작업 내역': { id: '📋 Detail Kerja', en: '📋 Work Details' },
+  '🔒 안전 점검 완료 필요': { id: '🔒 Perlu pemeriksaan dulu', en: '🔒 Safety check required' },
+  '🔒 안전 점검 완료 후 입력 가능': { id: '🔒 Isi setelah pemeriksaan selesai', en: '🔒 Complete check first' },
+  '🔒 설비 점검 완료 후 입력 가능': { id: '🔒 Isi setelah pemeriksaan selesai', en: '🔒 Complete check first' },
+  
+  // 재단 섹션 헤더
+  '재단박스': { id: 'Kotak', en: 'Box' },
+  '총재단': { id: 'Total potong', en: 'Total cut' },
+  '발생량(g)': { id: '(g)', en: '(g)' },
+  
+  // 버튼/라벨 추가
+  '초기화': { id: 'Reset', en: 'Reset' },
+  '개': { id: 'pcs', en: 'pcs' },
+  '건': { id: 'data', en: 'records' },
+  '명': { id: 'orang', en: 'people' },
+  'EA': { id: 'EA', en: 'EA' },
+  
+  // 안내 배너 (CMB)
+  '⚠️ 잠깐! 우리 회사 제품의 생명은 우리 공정에서부터 시작입니다. 확인! 확인! 확인!': { id: '⚠️ Perhatian! Kualitas produk dimulai dari proses kita. Periksa! Periksa! Periksa!', en: '⚠️ Attention! Product quality starts from our process. Check! Check! Check!' },
+  
+  // 점검 상태
+  '✓ 작업 가능': { id: '✓ Bisa kerja', en: '✓ Ready' },
+  '점검 완료': { id: 'Selesai', en: 'Completed' },
+  '✓ 점검 완료!': { id: '✓ Selesai!', en: '✓ Completed!' },
+  
+  // CMB 설비명
+  '니더1호': { id: 'Kneader 1', en: 'Kneader 1' },
+  '니더2호': { id: 'Kneader 2', en: 'Kneader 2' },
+  '니더3호': { id: 'Kneader 3', en: 'Kneader 3' },
+  '니더4호': { id: 'Kneader 4', en: 'Kneader 4' },
+  
+  // CMB 테이블 헤더
+  '재질': { id: 'Bahan', en: 'Material' },
+  '투입량(Kg)': { id: 'Berat (Kg)', en: 'Weight (Kg)' },
+  '배합횟수': { id: 'Campuran', en: 'Mix count' },
+  'LOT': { id: 'LOT', en: 'LOT' },
+  
+  // 재단 점검 항목 추가
+  '스위치 작동': { id: 'Sakelar', en: 'Switch' },
+  
+  // 점검 placeholder
+  '이상 시 입력': { id: 'Jika ada masalah', en: 'If abnormal' },
+  
+  // 범례
+  '범례 (클릭 시 전체 적용):': { id: 'Legenda (klik untuk semua):', en: 'Legend (click to apply all):' },
   
   // 점검 항목 (재단)
   '스위치 작동': { id: 'Sakelar berfungsi', en: 'Switch operates' },
@@ -310,44 +365,69 @@ const AUTO_TRANSLATE = {
 
 function autoTranslatePage() {
   const lang = getCurrentLang();
-  if (lang === 'ko') return; // 한국어면 번역 불필요
+  if (lang === 'ko') return;
   
-  // 모든 텍스트 노드를 순회하며 한국어 → 외국어 교체
-  const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
-  while (walk.nextNode()) {
-    const node = walk.currentNode;
-    const text = node.textContent.trim();
-    if (!text) continue;
+  // 1. 모든 요소의 직접 텍스트 교체
+  const elements = document.querySelectorAll('label, th, td, span, button, option, h2, h1, h3, div, a');
+  elements.forEach(el => {
+    // 자식에 input/select/textarea가 있으면 건너뛰기
+    if (el.querySelector('input,select,textarea,table')) return;
+    // 자식 요소가 많은 복합 요소는 건너뛰기
+    if (el.children.length > 3) return;
+    
+    const text = el.textContent.trim();
+    if (!text || text.length > 60) return;
     
     // 정확히 매칭
     if (AUTO_TRANSLATE[text] && AUTO_TRANSLATE[text][lang]) {
-      node.textContent = node.textContent.replace(text, AUTO_TRANSLATE[text][lang]);
+      // 앞뒤 공백 유지
+      const before = el.textContent.match(/^(\s*)/)[0];
+      const after = el.textContent.match(/(\s*)$/)[0];
+      el.textContent = before + AUTO_TRANSLATE[text][lang] + after;
+      return;
     }
-  }
-  
-  // label, th, td, span, div, button, option 의 텍스트도 처리
-  document.querySelectorAll('label, th, td, span, button, option, h2, h1, .summary-label, .alert-title, .stat-label').forEach(el => {
-    if (el.children.length > 0 && el.querySelector('input,select,textarea')) return; // 입력 필드 포함하면 건너뛰기
-    const text = el.textContent.trim();
-    if (AUTO_TRANSLATE[text] && AUTO_TRANSLATE[text][lang]) {
-      el.textContent = AUTO_TRANSLATE[text][lang];
+    
+    // 자식이 없는 순수 텍스트 요소에서 부분 매칭 시도
+    if (el.children.length === 0) {
+      let changed = text;
+      for (const [ko, trans] of Object.entries(AUTO_TRANSLATE)) {
+        if (trans[lang] && changed.includes(ko)) {
+          changed = changed.replace(ko, trans[lang]);
+        }
+      }
+      if (changed !== text) {
+        el.textContent = changed;
+      }
     }
   });
   
-  // placeholder도 번역
+  // 2. placeholder 번역
   const placeholderMap = {
     '사번입력': { id: 'Kode produk', en: 'Product code' },
     '제품코드 (예: 502': { id: 'Kode produk (cth: 502', en: 'Product code (e.g. 502' },
+    '제품코드': { id: 'Kode produk', en: 'Product code' },
     '뱃지 No': { id: 'No. Batch', en: 'Badge No.' },
-    '이상 시 입력': { id: 'Masukkan jika ada masalah', en: 'Enter if abnormal' },
+    'Batch No.': { id: 'No. Batch', en: 'Batch No.' },
+    '이상 시 입력': { id: 'Jika ada masalah', en: 'If abnormal' },
     '오늘 작업 중 특이사항을 입력하세요': { id: 'Masukkan catatan hari ini', en: 'Enter today\'s remarks' },
+    '작업 중 특이사항이 있으면 입력하세요': { id: 'Masukkan catatan jika ada', en: 'Enter remarks if any' },
+    '설비점검 시 발견한 전체 특이사항을 입력하세요': { id: 'Masukkan catatan pemeriksaan', en: 'Enter inspection remarks' },
+    '선택하세요': { id: 'Pilih', en: 'Select' },
   };
   document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
     const ph = el.placeholder;
     for (const [ko, trans] of Object.entries(placeholderMap)) {
       if (ph.includes(ko) && trans[lang]) {
-        el.placeholder = trans[lang];
+        el.placeholder = el.placeholder.replace(ko, trans[lang]);
       }
+    }
+  });
+  
+  // 3. select option 번역
+  document.querySelectorAll('select option').forEach(opt => {
+    const text = opt.textContent.trim();
+    if (AUTO_TRANSLATE[text] && AUTO_TRANSLATE[text][lang]) {
+      opt.textContent = AUTO_TRANSLATE[text][lang];
     }
   });
 }
