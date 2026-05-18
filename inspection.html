@@ -191,7 +191,7 @@
   .col-worker { width: 90px; }
   .col-lot { min-width: 180px; }
   .col-qty { width: 100px; }
-  .col-deftype { width: 100px; }
+  .col-deftype { width: 140px; }
   .col-defmemo { min-width: 100px; }
   .col-del { width: 40px; }
   
@@ -235,6 +235,18 @@
   .lot-add:hover { text-decoration: underline; }
   .lot-del { background: none; border: none; cursor: pointer; color: #ccc; font-size: 14px; padding: 0 2px; line-height: 1; }
   .lot-del:hover { color: #c92a2a; }
+  /* 불량유형 다중선택 */
+  .defect-selector { position:relative; }
+  .defect-display { min-height:32px;padding:4px 6px;border:1px solid #e0e4ed;border-radius:6px;background:white;cursor:pointer;font-size:11px;display:flex;flex-wrap:wrap;gap:3px;align-items:center; }
+  .defect-display:hover { border-color:#243bb2; }
+  .defect-display .dt-tag { display:inline-block;background:#fef2f2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600; }
+  .defect-display .dt-placeholder { color:#bbb;font-size:11px; }
+  .defect-dropdown { display:none;position:absolute;top:100%;left:0;right:0;z-index:60;background:white;border:1px solid #e0e4ed;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.12);padding:6px;margin-top:2px;max-height:200px;overflow-y:auto; }
+  .defect-dropdown.open { display:block; }
+  .defect-opt { padding:5px 8px;border-radius:4px;font-size:11px;cursor:pointer;margin-bottom:2px;transition:all 0.15s; }
+  .defect-opt:hover { background:#f0f3f9; }
+  .defect-opt.selected { background:#fef2f2;color:#dc2626;font-weight:600; }
+
   .scan-btn {
     flex-shrink: 0; background: #f0f3f9; border: 1px solid #d6dcec;
     border-radius: 6px; padding: 5px 10px; cursor: pointer;
@@ -408,7 +420,7 @@
               <th class="col-qty">합격수량</th>
               <th class="col-qty">불합격</th>
               <th class="col-deftype">불량유형</th>
-              <th class="col-defmemo">불량 메모/비고</th>
+              <th class="col-defmemo">비고</th>
               <th class="col-del"></th>
             </tr>
           </thead>
@@ -444,7 +456,7 @@
   <!-- 특이사항 -->
   <div class="section">
     <div class="section-header">
-      <h2>💬 특이사항 / 비고</h2>
+      <h2>💬 특이사항</h2>
     </div>
     <div class="section-body">
       <textarea class="remarks-area" id="remarks" placeholder="특이사항이 있으면 입력하세요 (선택)"></textarea>
@@ -577,7 +589,7 @@ function addRow() {
   uid++;
   rows.push({
     id: uid, sabun:'', partNo:'', partName:'', worker: MY_NAME,
-    lots:[''], inspect:'', pass:'', fail:'', defectType:'', defectMemo:''
+    lots:[''], inspect:'', pass:'', fail:'', defectType:[], defectMemo:''
   });
   renderRows();
 }
@@ -601,6 +613,44 @@ function applySabun(id, val) {
   r.partName = prod ? prod.partName : '';
   renderRows();
 }
+
+// ── 불량유형 다중선택 ──
+function toggleDefectDropdown(rowId) {
+  var el = document.getElementById('defectDrop_' + rowId);
+  // 다른 드롭다운 닫기
+  document.querySelectorAll('.defect-dropdown.open').forEach(function(d) { if (d !== el) d.classList.remove('open'); });
+  el.classList.toggle('open');
+}
+
+function toggleDefectType(rowId, type) {
+  var r = rows.find(function(x) { return x.id === rowId; });
+  if (!r) return;
+  if (!Array.isArray(r.defectType)) r.defectType = [];
+  var idx = r.defectType.indexOf(type);
+  if (idx >= 0) { r.defectType.splice(idx, 1); } else { r.defectType.push(type); }
+  // DOM 직접 업데이트 (renderRows 안 부름)
+  var display = document.getElementById('defectDrop_' + rowId).previousElementSibling;
+  if (r.defectType.length > 0) {
+    display.innerHTML = r.defectType.map(function(t) { return '<span class="dt-tag">' + t + '</span>'; }).join('');
+  } else {
+    display.innerHTML = '<span class="dt-placeholder">없음</span>';
+  }
+  // 드롭다운 옵션 상태 업데이트
+  var opts = document.getElementById('defectDrop_' + rowId).querySelectorAll('.defect-opt');
+  opts.forEach(function(opt) {
+    var optType = opt.textContent.replace('✓ ', '');
+    var isSel = r.defectType.indexOf(optType) >= 0;
+    opt.className = 'defect-opt' + (isSel ? ' selected' : '');
+    opt.textContent = (isSel ? '✓ ' : '') + optType;
+  });
+}
+
+// 바깥 클릭 시 드롭다운 닫기
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.defect-selector')) {
+    document.querySelectorAll('.defect-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
+  }
+});
 
 function setField(id, field, val) {
   const r = rows.find(r => r.id === id);
@@ -710,10 +760,14 @@ function renderRows() {
       <td><input type="number" data-field="fail" value="${r.fail}" placeholder="0" min="0"
         oninput="setField(${r.id},'fail',this.value)" /></td>
       <td>
-        <select onchange="setField(${r.id},'defectType',this.value)">
-          <option value="" ${!r.defectType?'selected':''}>없음</option>
-          ${DEFECT_TYPES.map(t => `<option value="${t}" ${r.defectType===t?'selected':''}>${t}</option>`).join('')}
-        </select>
+        <div class="defect-selector">
+          <div class="defect-display" onclick="toggleDefectDropdown(${r.id})">
+            ${(r.defectType && r.defectType.length > 0) ? r.defectType.map(function(t){return '<span class="dt-tag">'+t+'</span>';}).join('') : '<span class="dt-placeholder">없음</span>'}
+          </div>
+          <div class="defect-dropdown" id="defectDrop_${r.id}">
+            ${DEFECT_TYPES.map(function(t){ var sel = (r.defectType||[]).indexOf(t) >= 0; return '<div class="defect-opt'+(sel?' selected':'')+'" onclick="toggleDefectType('+r.id+',\''+t+'\')">'+( sel?'✓ ':'')+t+'</div>'; }).join('')}
+          </div>
+        </div>
       </td>
       <td><input type="text" data-field="defectMemo" value="${r.defectMemo}" placeholder="-"
         oninput="setField(${r.id},'defectMemo',this.value)" /></td>
@@ -972,7 +1026,7 @@ async function submitForm() {
       inspect_qty: parseInt(r.inspect)||0,
       pass_qty: parseInt(r.pass)||0,
       fail_qty: parseInt(r.fail)||0,
-      defect_type: r.defectType,
+      defect_type: Array.isArray(r.defectType) ? r.defectType.join(', ') : (r.defectType || ''),
       defect_memo: r.defectMemo,
       remarks: remarks
     };
@@ -1017,7 +1071,7 @@ async function submitForm() {
     inspect_qty: parseInt(r.inspect)||0,
     pass_qty: parseInt(r.pass)||0,
     fail_qty: parseInt(r.fail)||0,
-    defect_type: r.defectType,
+    defect_type: Array.isArray(r.defectType) ? r.defectType.join(', ') : (r.defectType || ''),
     defect_memo: r.defectMemo,
     remarks: remarks,
     created_by_emp_code: MY_EMP_CODE,
@@ -1175,7 +1229,7 @@ async function editMyRecord(id) {
     inspect: data.inspect_qty || '',
     pass: data.pass_qty || '',
     fail: data.fail_qty || '',
-    defectType: data.defect_type || '',
+    defectType: data.defect_type ? data.defect_type.split(', ').filter(function(s){return s;}) : [],
     defectMemo: data.defect_memo || ''
   });
   
