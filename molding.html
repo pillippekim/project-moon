@@ -646,16 +646,16 @@
       <button class="btn-reset" onclick="resetForm()" data-i18n="common.reset">↻ 초기화</button>
       <button class="btn-submit" id="submitBtn" onclick="submitReport()" data-i18n="common.submit">제출하기</button>
     </div>
-  </div>
 
-  <!-- 오늘 내 제출 내역 -->
-  <div style="background:white;border-radius:12px;box-shadow:0 2px 8px rgba(36,59,178,0.08);margin-top:20px;overflow:hidden">
-    <div style="padding:16px 24px;background:#243bb2;color:white;display:flex;justify-content:space-between;align-items:center">
-      <h2 style="font-size:15px;font-weight:700;margin:0">📋 오늘 내 제출 내역</h2>
-      <span id="myHistoryCount" style="font-size:12px;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:6px">0건</span>
-    </div>
-    <div id="myHistoryBody" style="padding:16px 24px">
-      <div style="text-align:center;color:#aaa;font-size:13px;padding:20px">로딩 중...</div>
+    <!-- 오늘 내 제출 내역 -->
+    <div id="myHistorySection" style="margin-top:20px;background:white;border-radius:12px;box-shadow:0 2px 8px rgba(36,59,178,0.08);overflow:hidden">
+      <div style="padding:16px 24px;background:#243bb2;color:white;display:flex;justify-content:space-between;align-items:center">
+        <h2 style="font-size:15px;font-weight:700;margin:0">📋 오늘 내 제출 내역</h2>
+        <span id="myHistoryCount" style="font-size:12px;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:6px">0건</span>
+      </div>
+      <div id="myHistoryBody" style="padding:16px 24px">
+        <div style="text-align:center;color:#aaa;font-size:13px;padding:20px">로딩 중...</div>
+      </div>
     </div>
   </div>
 </div>
@@ -972,7 +972,11 @@ async function init() {
   // 작업일자 변경 시 점검 이력 다시 확인
   document.getElementById('workDate').addEventListener('change', () => {
     if (selectedEquipment) checkTodaySafety();
+    loadMyHistory();
   });
+  
+  // 오늘 내 제출 내역 로드
+  loadMyHistory();
 }
 
 // 작업자 목록 (성형 공정)
@@ -1135,7 +1139,6 @@ function setAllSafety(value) {
     if (target) target.classList.add('active');
   });
   showToast(`✓ 전체 항목 "${value}"로 설정됨`);
-    loadMyHistory();
 }
 
 function collectSafetyData() {
@@ -1482,6 +1485,7 @@ async function submitReport() {
   }
   
   showToast(`✓ ${reportRows.length}건 제출 완료!`);
+  loadMyHistory();
   setTimeout(() => resetForm(false), 1500);
 }
 
@@ -1517,64 +1521,120 @@ function confirmLeave(e) {
   if (confirm('작성 중인 내용이 있어요.\n제출하지 않고 메인으로 이동할까요?')) { location.href = 'index.html'; }
 }
 
-init();
-
-
-// ── 오늘 내 제출 내역 ──
+// ── 오늘 내 제출 내역 ──────────────────────────────
 async function loadMyHistory() {
   const workDate = document.getElementById('workDate').value;
   const myName = myInfo?.name;
-  if (!workDate || !myName) return;
-
-  const { data, error } = await db.from('molding_reports')
-    .select('*')
-    .eq('work_date', workDate)
-    .eq('created_by_name', myName)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false });
-
   const body = document.getElementById('myHistoryBody');
   const countEl = document.getElementById('myHistoryCount');
-  const list = data || [];
-  countEl.textContent = list.length + '건';
-
-  if (list.length === 0) {
-    body.innerHTML = '<div style="text-align:center;color:#aaa;font-size:13px;padding:20px">오늘 제출한 내역이 없습니다.</div>';
+  if (!body || !countEl) return;
+  if (!workDate || !myName) {
+    body.innerHTML = '<div style="text-align:center;color:#aaa;font-size:13px;padding:20px">로그인 정보를 확인 중...</div>';
     return;
   }
 
-  body.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f0f3f9">' +
-    '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">NO</th>' +
-    '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">사번/항목</th>' +
-    '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">수량</th>' +
-    '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">비고</th>' +
-    '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">제출시간</th>' +
-    '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">작업</th>' +
-    '</tr></thead><tbody>' +
-    list.map(function(r, i) {
-      var time = r.created_at ? new Date(r.created_at).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) : '';
-      var label = r.worker_id || r.sabun || r.material_name || r.equipment_no || '-';
-      var qty = r.production_qty || r.quantity || r.total_weight || r.box_count || r.production_qty || 0;
-      return '<tr>' +
-        '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center">' + (i+1) + '</td>' +
-        '<td style="padding:8px 6px;border:1px solid #e0e4ed">' + label + '</td>' +
-        '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;font-weight:600">' + Number(qty).toLocaleString() + '</td>' +
-        '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">' + (r.note||'') + '</td>' +
-        '<td style="padding:8px 6px;border:1px solid #e0e4ed;color:#888;font-size:11px">' + time + '</td>' +
-        '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center"><button onclick="deleteMyRecord(\'' + r.id + '\')" style="background:#fef2f2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">삭제</button></td>' +
-        '</tr>';
-    }).join('') +
-    '</tbody></table></div>';
+  try {
+    const { data, error } = await db.from('molding_reports')
+      .select('*')
+      .eq('work_date', workDate)
+      .eq('created_by_name', myName)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      body.innerHTML = '<div style="text-align:center;color:#dc2626;font-size:13px;padding:20px">조회 실패: ' + error.message + '</div>';
+      countEl.textContent = '0건';
+      return;
+    }
+
+    var list = data || [];
+    countEl.textContent = list.length + '건';
+
+    if (list.length === 0) {
+      body.innerHTML = '<div style="text-align:center;color:#aaa;font-size:13px;padding:20px">오늘 제출한 내역이 없습니다.</div>';
+      return;
+    }
+
+    var totalProd = list.reduce(function(s, r) { return s + (parseInt(r.production_qty) || 0); }, 0);
+    var totalDefect = list.reduce(function(s, r) { return s + (parseInt(r.defect_qty) || 0); }, 0);
+    var equipSet = new Set(list.map(function(r) { return r.equipment_no; }).filter(Boolean));
+
+    body.innerHTML = '<div style="margin-bottom:12px;font-size:13px;color:#555">' +
+      '오늘 총 <strong style="color:#243bb2">' + list.length + '건</strong>, ' +
+      '생산수량 <strong style="color:#243bb2">' + totalProd.toLocaleString() + ' EA</strong>' +
+      (totalDefect > 0 ? ' · 불량 <strong style="color:#dc2626">' + totalDefect.toLocaleString() + ' EA</strong>' : '') +
+      ' · 설비 <strong style="color:#243bb2">' + equipSet.size + '대</strong>' +
+      '</div>' +
+      '<div style="overflow-x:auto">' +
+      '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+      '<thead><tr style="background:#f0f3f9">' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">NO</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">설비</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">사번</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">면</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">C/V</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">Shot</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">생산</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">불량</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">LOT</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">제출시간</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">작업</th>' +
+      '</tr></thead><tbody>' +
+      list.map(function(r, i) {
+        var time = r.created_at ? new Date(r.created_at).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) : '';
+        var prod = parseInt(r.production_qty) || 0;
+        var defect = parseInt(r.defect_qty) || 0;
+        var faceLabel = r.work_type || '-';
+        return '<tr>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center">' + (i+1) + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">' + (r.equipment_no||'-') + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed">' + (r.sabun||'-') + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">' + faceLabel + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right">' + (r.cavity||'-') + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right">' + (r.shot_count||'-') + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;font-weight:600">' + prod.toLocaleString() + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;color:' + (defect > 0 ? '#dc2626' : '#aaa') + '">' + (defect > 0 ? defect.toLocaleString() : '-') + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-family:monospace;font-size:11px">' + (r.batch_no||'-') + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;color:#888;font-size:11px">' + time + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center"><button onclick="deleteMyRecord(\'' + r.id + '\')" style="background:#fef2f2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">삭제</button></td>' +
+          '</tr>';
+      }).join('') +
+      '</tbody></table></div>';
+  } catch(e) {
+    console.error('loadMyHistory error:', e);
+    body.innerHTML = '<div style="text-align:center;color:#dc2626;font-size:13px;padding:20px">조회 중 오류 발생</div>';
+  }
 }
 
 async function deleteMyRecord(id) {
-  if (!confirm('이 기록을 삭제할까요?')) return;
-  await db.from('molding_reports').update({ deleted_at: new Date().toISOString() }).eq('id', id);
-  try { await db.from('audit_logs').insert({ table_name:'molding_reports', record_id:id, action:'DELETE', performed_by:myInfo?.name||'-', performed_at:new Date().toISOString() }); } catch(e) {}
-  loadMyHistory();
+  if (!confirm('이 제출 내역을 삭제할까요?')) return;
+  
+  var myName = myInfo?.name || '';
+  var { error } = await db.from('molding_reports')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('created_by_name', myName);
+  
+  if (error) {
+    showToast('삭제 실패: ' + error.message, 'error');
+    return;
+  }
+  
+  try {
+    await db.from('audit_logs').insert({
+      table_name: 'molding_reports',
+      record_id: id,
+      action: 'DELETE',
+      performed_by: myName,
+      performed_at: new Date().toISOString()
+    });
+  } catch(e) {}
+  
   showToast('✓ 삭제 완료');
+  loadMyHistory();
 }
 
+init();
 </script>
 
 </body>
