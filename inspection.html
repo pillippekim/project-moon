@@ -190,9 +190,9 @@
   .col-partname { width: 120px; }
   .col-worker { width: 90px; }
   .col-lot { min-width: 180px; }
-  .col-qty { width: 75px; }
+  .col-qty { width: 100px; }
   .col-deftype { width: 100px; }
-  .col-defmemo { min-width: 130px; }
+  .col-defmemo { min-width: 100px; }
   .col-del { width: 40px; }
   
   /* 행 추가/삭제 */
@@ -595,12 +595,38 @@ function setField(id, field, val) {
   if (!r) return;
   r[field] = val;
 
-  // 불합격 자동 계산: 검사수량 - 합격수량
+  // 검사수량 자동 계산
+  // - 검사수량 또는 합격수량 입력 시 → 불합격 = 검사 - 합격
+  // - 불합격수량 입력 시 → 합격 = 검사 - 불합격
   if (field === 'inspect' || field === 'pass') {
     const ins = parseInt(r.inspect) || 0;
     const pas = parseInt(r.pass) || 0;
     r.fail = ins - pas >= 0 ? String(ins - pas) : '0';
+  } else if (field === 'fail') {
+    const ins = parseInt(r.inspect) || 0;
+    const fai = parseInt(r.fail) || 0;
+    r.pass = ins - fai >= 0 ? String(ins - fai) : '0';
   }
+
+  // 숫자/텍스트 입력 필드는 renderRows() 호출하지 않음 (focus 유지)
+  // - DOM 직접 업데이트로 자동 계산 결과만 반영
+  // - 합계는 updateSummary()만 호출
+  if (field === 'inspect' || field === 'pass' || field === 'fail' || field === 'defectMemo') {
+    // 자동 계산된 값을 해당 input에 직접 반영
+    const row = document.querySelector(`tr[data-row-id="${id}"]`);
+    if (row) {
+      if (field === 'inspect' || field === 'pass') {
+        const failInput = row.querySelector('input[data-field="fail"]');
+        if (failInput) failInput.value = r.fail;
+      } else if (field === 'fail') {
+        const passInput = row.querySelector('input[data-field="pass"]');
+        if (passInput) passInput.value = r.pass;
+      }
+    }
+    updateSummary();
+    return;
+  }
+
   renderRows();
 }
 
@@ -627,7 +653,7 @@ function renderRows() {
     return;
   }
   tbody.innerHTML = rows.map((r, i) => `
-    <tr>
+    <tr data-row-id="${r.id}">
       <td><strong>${i+1}</strong></td>
       <td>
         <input type="text" value="${r.sabun}" placeholder="사번입력"
@@ -656,18 +682,19 @@ function renderRows() {
           <button class="lot-add" onclick="addLot(${r.id})">+ LOT 추가</button>
         </div>
       </td>
-      <td><input type="number" value="${r.inspect}" placeholder="0" min="0"
+      <td><input type="number" data-field="inspect" value="${r.inspect}" placeholder="0" min="0"
         oninput="setField(${r.id},'inspect',this.value)" /></td>
-      <td><input type="number" value="${r.pass}" placeholder="0" min="0"
+      <td><input type="number" data-field="pass" value="${r.pass}" placeholder="0" min="0"
         oninput="setField(${r.id},'pass',this.value)" /></td>
-      <td><input type="number" value="${r.fail}" placeholder="0" readonly /></td>
+      <td><input type="number" data-field="fail" value="${r.fail}" placeholder="0" min="0"
+        oninput="setField(${r.id},'fail',this.value)" /></td>
       <td>
         <select onchange="setField(${r.id},'defectType',this.value)">
           <option value="" ${!r.defectType?'selected':''}>없음</option>
           ${DEFECT_TYPES.map(t => `<option value="${t}" ${r.defectType===t?'selected':''}>${t}</option>`).join('')}
         </select>
       </td>
-      <td><input type="text" value="${r.defectMemo}" placeholder="-"
+      <td><input type="text" data-field="defectMemo" value="${r.defectMemo}" placeholder="-"
         oninput="setField(${r.id},'defectMemo',this.value)" /></td>
       <td><button class="btn-del-row" onclick="removeRow(${r.id})">×</button></td>
     </tr>
