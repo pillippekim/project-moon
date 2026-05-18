@@ -481,8 +481,9 @@
   .col-material { width: 160px; }
   .col-lot { width: 130px; }
   .col-box { width: 100px; }
+  .col-cutqty { width: 130px; }
   .col-scrap { width: 110px; }
-  .col-note { min-width: 200px; }
+  .col-note { min-width: 140px; }
   .col-del { width: 50px; }
   
   /* 행 추가/삭제 */
@@ -710,6 +711,7 @@
             <th class="col-material">재질명</th>
             <th class="col-lot">뱃지 No</th>
             <th class="col-box">재단박스<br>수량(개)</th>
+            <th class="col-cutqty">총 재단수량<br>(EA)</th>
             <th class="col-scrap">자투리<br>발생량(g)</th>
             <th class="col-note">비고</th>
             <th class="col-del"></th>
@@ -726,6 +728,10 @@
         <div class="summary-item">
           <div class="summary-label">총 재단박스</div>
           <div class="summary-value"><span id="totalBoxes">0</span><span class="unit">개</span></div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">총 재단수량</div>
+          <div class="summary-value"><span id="totalCutQty">0</span><span class="unit">EA</span></div>
         </div>
         <div class="summary-item">
           <div class="summary-label">총 자투리</div>
@@ -1222,6 +1228,7 @@ function addRow() {
     </td>
     <td><input type="text" class="lot-no" placeholder="뱃지 No" /></td>
     <td><input type="number" class="box-count" min="0" placeholder="0" oninput="updateSummary()" /></td>
+    <td><input type="number" class="cut-qty" min="0" placeholder="0" oninput="updateSummary()" /></td>
     <td><input type="number" class="scrap-weight" step="0.01" min="0" placeholder="0" oninput="updateSummary()" /></td>
     <td><input type="text" class="note" placeholder="" /></td>
     <td><button class="btn-del-row" onclick="deleteRow('${rowId}')">×</button></td>
@@ -1270,15 +1277,18 @@ function onSabunChange(rowId) {
 // 요약 업데이트
 function updateSummary() {
   let totalBoxes = 0;
+  let totalCutQty = 0;
   let totalScrap = 0;
   const rows = document.querySelectorAll('#mainRows tr');
   
   rows.forEach(tr => {
     totalBoxes += parseInt(tr.querySelector('.box-count').value) || 0;
+    totalCutQty += parseInt(tr.querySelector('.cut-qty').value) || 0;
     totalScrap += parseFloat(tr.querySelector('.scrap-weight').value) || 0;
   });
   
   document.getElementById('totalBoxes').textContent = totalBoxes.toLocaleString();
+  document.getElementById('totalCutQty').textContent = totalCutQty.toLocaleString();
   document.getElementById('totalScrap').textContent = totalScrap.toFixed(2);
   document.getElementById('totalRows').textContent = rows.length;
 }
@@ -1321,6 +1331,7 @@ async function submitReport() {
     const material = editRow.querySelector('.material').value;
     const lotNo = editRow.querySelector('.lot-no').value.trim();
     const boxCount = parseInt(editRow.querySelector('.box-count').value) || 0;
+    const cutQty = parseInt(editRow.querySelector('.cut-qty').value) || 0;
     const scrapWeight = parseFloat(editRow.querySelector('.scrap-weight').value) || 0;
     const note = editRow.querySelector('.note').value.trim();
     
@@ -1339,6 +1350,7 @@ async function submitReport() {
       material_name: material,
       lot_no: lotNo || null,
       box_count: boxCount,
+      total_qty: cutQty,
       scrap_weight: scrapWeight,
       note: note || null,
       remarks: document.getElementById('remarks').value.trim() || null
@@ -1390,11 +1402,12 @@ async function submitReport() {
     const material = tr.querySelector('.material').value;
     const lotNo = tr.querySelector('.lot-no').value.trim();
     const boxCount = parseInt(tr.querySelector('.box-count').value) || 0;
+    const cutQty = parseInt(tr.querySelector('.cut-qty').value) || 0;
     const scrapWeight = parseFloat(tr.querySelector('.scrap-weight').value) || 0;
     const note = tr.querySelector('.note').value.trim();
     
     // 사번/재질/박스 모두 비어있으면 빈 행으로 간주 → 무시
-    if (!sabun && !material && boxCount === 0 && scrapWeight === 0 && !note) {
+    if (!sabun && !material && boxCount === 0 && cutQty === 0 && scrapWeight === 0 && !note) {
       continue;
     }
     
@@ -1413,6 +1426,7 @@ async function submitReport() {
       material_name: material,
       lot_no: lotNo || null,
       box_count: boxCount,
+      total_qty: cutQty,
       scrap_weight: scrapWeight,
       note: note || null,
       remarks: document.getElementById('remarks').value.trim() || null,
@@ -1534,13 +1548,15 @@ async function loadMyHistory() {
   }
 
   const totalBoxes = list.reduce((s, r) => s + (parseInt(r.box_count) || 0), 0);
+  const totalCutQty = list.reduce((s, r) => s + (parseInt(r.total_qty) || 0), 0);
   const totalScrap = list.reduce((s, r) => s + (parseFloat(r.scrap_weight) || 0), 0);
 
   body.innerHTML = `
     <div style="margin-bottom:12px;font-size:13px;color:#555">
       오늘 총 <strong style="color:#243bb2">${list.length}건</strong>, 
-      박스수량 합계 <strong style="color:#243bb2">${totalBoxes.toLocaleString()} EA</strong>
-      ${totalScrap > 0 ? ` · 스크랩 <strong style="color:#d97706">${totalScrap.toFixed(2)} kg</strong>` : ''}
+      박스 <strong style="color:#243bb2">${totalBoxes.toLocaleString()} 개</strong>
+      ${totalCutQty > 0 ? ` · 재단수량 <strong style="color:#243bb2">${totalCutQty.toLocaleString()} EA</strong>` : ''}
+      ${totalScrap > 0 ? ` · 스크랩 <strong style="color:#d97706">${totalScrap.toFixed(2)} g</strong>` : ''}
     </div>
     <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -1551,7 +1567,8 @@ async function loadMyHistory() {
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">재질</th>
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">뱃지 No.</th>
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">박스수량</th>
-            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">스크랩(kg)</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">재단수량(EA)</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">스크랩(g)</th>
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">비고</th>
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">제출시간</th>
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">작업</th>
@@ -1562,6 +1579,7 @@ async function loadMyHistory() {
             const time = r.created_at ? new Date(r.created_at).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) : '';
             const isEditing = editingRecordId === r.id;
             const boxCount = parseInt(r.box_count) || 0;
+            const cutQty = parseInt(r.total_qty) || 0;
             const scrap = parseFloat(r.scrap_weight) || 0;
             return `<tr style="${isEditing ? 'background:#fff7ed;' : ''}">
               <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center">${i+1}</td>
@@ -1569,6 +1587,7 @@ async function loadMyHistory() {
               <td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">${r.material_name||'-'}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed;font-family:monospace;font-size:11px">${r.lot_no||'-'}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;font-weight:600">${boxCount.toLocaleString()}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;font-weight:600">${cutQty > 0 ? cutQty.toLocaleString() : '-'}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right">${scrap > 0 ? scrap.toFixed(2) : '-'}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">${r.note||''}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed;color:#888;font-size:11px">${time}</td>
@@ -1626,6 +1645,7 @@ async function editMyRecord(id) {
     editRow.querySelector('.material').value = data.material_name || '';
     editRow.querySelector('.lot-no').value = data.lot_no || '';
     editRow.querySelector('.box-count').value = data.box_count || '';
+    editRow.querySelector('.cut-qty').value = data.total_qty || '';
     editRow.querySelector('.scrap-weight').value = data.scrap_weight || '';
     editRow.querySelector('.note').value = data.note || '';
   }
