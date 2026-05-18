@@ -411,10 +411,14 @@ tr:hover td { background: #fafafa; }
         <input class="modal-input" id="ect_lot_no" />
       </div>
     </div>
-    <div class="modal-grid modal-grid-2">
+    <div class="modal-grid modal-grid-3">
       <div class="modal-field">
         <span class="modal-label">재단박스 수량 (개)</span>
         <input class="modal-input" type="number" id="ect_box_count" />
+      </div>
+      <div class="modal-field">
+        <span class="modal-label">총 재단수량 (EA)</span>
+        <input class="modal-input" type="number" id="ect_total_qty" />
       </div>
       <div class="modal-field">
         <span class="modal-label">자투리 발생량 (g)</span>
@@ -959,6 +963,7 @@ function renderStats() {
     `;
   } else if (currentProcess === '재단') {
     const totalBoxes = cut.reduce((s,r)=>s+(r.box_count||0),0);
+    const totalCutQty = cut.reduce((s,r)=>s+(r.total_qty||0),0);
     const totalScrap = cut.reduce((s,r)=>s+(parseFloat(r.scrap_weight)||0),0);
     const workers = new Set(cut.map(r=>r.worker_name).filter(Boolean)).size;
     
@@ -982,6 +987,7 @@ function renderStats() {
     statsEl.innerHTML = `
       <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">재단 건수</div><div class="stat-num blue">${cut.length} <span class="stat-unit">건</span></div></div>
       <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-label">총 재단박스</div><div class="stat-num" style="color:#7e22ce">${totalBoxes.toLocaleString()} <span class="stat-unit">개</span></div></div>
+      <div class="stat-card"><div class="stat-icon">🔢</div><div class="stat-label">총 재단수량</div><div class="stat-num blue">${totalCutQty.toLocaleString()} <span class="stat-unit">EA</span></div></div>
       <div class="stat-card"><div class="stat-icon">🗑️</div><div class="stat-label">총 자투리</div><div class="stat-num orange">${totalScrap.toFixed(2)} <span class="stat-unit">g</span></div></div>
       <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-label">설비 이상 (△/×)</div><div class="stat-num red">${repairCount}/${unusableCount} <span class="stat-unit">건</span></div></div>
     `;
@@ -1098,7 +1104,7 @@ function renderAllSections() {
       <div class="section-card">
         ${cut.length === 0 ? '<div style="color:#aaa;text-align:center;padding:1rem;font-size:13px">데이터 없음</div>'
           : cut.slice(0, 5).map(r => {
-              return `<div style="font-size:12px;color:#555;padding:6px 0;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between"><span>${r.work_date} · ${r.worker_id||'-'} · ${r.material_name||'-'}</span><span style="color:#7e22ce;font-weight:500">${(r.box_count||0).toLocaleString()} 박스</span></div>`;
+              return `<div style="font-size:12px;color:#555;padding:6px 0;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between"><span>${r.work_date} · ${r.worker_id||'-'} · ${r.material_name||'-'}</span><span style="color:#7e22ce;font-weight:500">${(r.box_count||0).toLocaleString()} 박스 / ${(r.total_qty||0).toLocaleString()} EA</span></div>`;
             }).join('')
           + (cut.length > 5 ? `<div style="text-align:center;padding-top:8px"><button class="btn-section-detail" onclick="switchProcess('재단')">전체 ${cut.length}건 보기 →</button></div>` : '')}
       </div>
@@ -1483,6 +1489,7 @@ function renderCuttingTable(data) {
               <th>NO</th><th>작업일</th><th>사번<br>(제품코드)</th>
               <th>품명</th><th>재질명</th><th>뱃지 No</th>
               <th style="text-align:right">박스수량(개)</th>
+              <th style="text-align:right">재단수량(EA)</th>
               <th style="text-align:right">자투리(g)</th>
               <th>작업자</th><th>비고</th><th>특이사항</th>
               <th>안전점검</th><th>입력자</th><th>제출일시</th><th>작업</th>
@@ -1524,6 +1531,7 @@ function renderCuttingTable(data) {
                 <td style="font-weight:500;color:#7e22ce">${r.material_name||'-'}</td>
                 <td style="color:#7e22ce;font-size:12px">${r.lot_no||'-'}</td>
                 <td style="text-align:right;font-weight:500">${(r.box_count||0).toLocaleString()}</td>
+                <td style="text-align:right;font-weight:500;color:#243bb2">${(r.total_qty||0).toLocaleString()}</td>
                 <td style="text-align:right">${(parseFloat(r.scrap_weight)||0).toFixed(2)}</td>
                 <td>${r.worker_name||'-'}</td>
                 <td style="font-size:12px;color:#888">${r.note||'-'}</td>
@@ -1635,6 +1643,7 @@ function openEditCutting(r) {
   document.getElementById('ect_material_name').value = r.material_name || '';
   document.getElementById('ect_lot_no').value = r.lot_no || '';
   document.getElementById('ect_box_count').value = r.box_count || 0;
+  document.getElementById('ect_total_qty').value = r.total_qty || 0;
   document.getElementById('ect_scrap_weight').value = r.scrap_weight || 0;
   document.getElementById('ect_note').value = r.note || '';
   document.getElementById('ect_remarks').value = r.remarks || '';
@@ -1652,6 +1661,7 @@ async function saveEditCutting() {
     material_name: document.getElementById('ect_material_name').value.trim(),
     lot_no: document.getElementById('ect_lot_no').value.trim() || null,
     box_count: parseInt(document.getElementById('ect_box_count').value) || 0,
+    total_qty: parseInt(document.getElementById('ect_total_qty').value) || 0,
     scrap_weight: parseFloat(document.getElementById('ect_scrap_weight').value) || 0,
     note: document.getElementById('ect_note').value,
     remarks: document.getElementById('ect_remarks').value,
@@ -2111,6 +2121,7 @@ function downloadExcel() {
         '재질명': r.material_name || '',
         '뱃지 No': r.lot_no || '',
         '재단박스 수량(개)': r.box_count || 0,
+        '총 재단수량(EA)': r.total_qty || 0,
         '자투리 발생량(g)': parseFloat(r.scrap_weight) || 0,
         '작업자': r.worker_name || '',
         '비고': r.note || '',
@@ -2120,7 +2131,7 @@ function downloadExcel() {
       };
     });
     const ws = XLSX.utils.json_to_sheet(rows);
-    ws['!cols'] = [{wch:5},{wch:11},{wch:12},{wch:15},{wch:25},{wch:12},{wch:14},{wch:12},{wch:12},{wch:10},{wch:18},{wch:18},{wch:10},{wch:18}];
+    ws['!cols'] = [{wch:5},{wch:11},{wch:12},{wch:15},{wch:25},{wch:12},{wch:14},{wch:12},{wch:14},{wch:12},{wch:10},{wch:18},{wch:18},{wch:10},{wch:18}];
     XLSX.utils.book_append_sheet(wb, ws, '재단 작업일지');
     
     // 안전 점검 데이터 (별도 시트)
