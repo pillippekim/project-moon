@@ -1974,7 +1974,7 @@ function renderPostcureTable(data) {
                 <td style="font-size:11px">${r.remarks||'-'}</td>
                 <td style="font-size:11px">${r.created_by_name||'-'}</td>
                 <td style="font-size:11px">${r.created_at ? new Date(r.created_at).toLocaleString('ko-KR') : '-'}</td>
-                <td>${isDeleted ? '<span style="color:#aaa;font-size:11px">삭제됨</span>' : `<button class="btn-row" onclick='openEditPostcure(${JSON.stringify(r).replace(/'/g, "&#39;")})'>수정</button> <button class="btn-row-del" onclick="deletePostcure(${r.id})">삭제</button></div>`}</td>
+                <td>${isDeleted ? '<span style="color:#aaa;font-size:11px">삭제됨</span>' : `<div class="row-actions"><button class="btn-row btn-row-edit" onclick='openEditPostcure(${JSON.stringify(r).replace(/'/g, "&#39;")})'>수정</button><button class="btn-row btn-row-del" onclick="deletePostcure(${r.id})">삭제</button></div>`}</td>
               </tr>`;
             }).join('')}
           </tbody>
