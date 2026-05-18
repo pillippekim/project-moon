@@ -57,6 +57,7 @@ tr:last-child td { border-bottom: none; }
 tr:hover td { background: #fafafa; }
 .empty-row td { text-align: center; color: #aaa; padding: 2rem; font-size: 14px; }
 .lot-tag { display: inline-block; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #fef9c3; color: #ca8a04; margin: 1px; font-weight: 500; }
+.lot-cell { max-width: 520px; min-width: 300px; }
 .process-tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
 .process-포장 { background: #eff6ff; color: #243bb2; }
 .process-검사 { background: #f0fdf4; color: #16a34a; }
@@ -1288,7 +1289,7 @@ function renderPackagingTable(data) {
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>NO</th><th>작업일</th><th>사번</th><th>고객품번</th><th>품명</th><th>작업자</th><th>성형 LOT No.</th><th style="text-align:right">포장수량</th><th>비고</th><th>특이사항</th><th>입력자</th><th>제출일시</th><th>작업</th></tr>
+            <tr><th>NO</th><th>작업일</th><th>사번</th><th>고객품번</th><th>품명</th><th>작업자</th><th class="lot-cell">성형 LOT No.</th><th style="text-align:right">포장수량</th><th>비고</th><th>특이사항</th><th>입력자</th><th>제출일시</th><th>작업</th></tr>
           </thead>
           <tbody>
             ${data.map((r, i) => {
@@ -1310,7 +1311,7 @@ function renderPackagingTable(data) {
                 <td style="font-size:12px;color:#555">${prod.partNo||'-'}</td>
                 <td style="font-size:12px;color:#555">${prod.partName||'-'}</td>
                 <td>${r.worker_name||'-'}</td>
-                <td>${lots}</td>
+                <td class="lot-cell">${lots}</td>
                 <td style="text-align:right;font-weight:500;color:#243bb2">${(r.quantity||0).toLocaleString()}</td>
                 <td style="font-size:12px;color:#888">${r.note||'-'}</td>
                 <td style="font-size:12px;color:#888">${r.remarks||'-'}</td>
@@ -1336,7 +1337,7 @@ function renderInspectionTable(data) {
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>NO</th><th>작업일</th><th>사번</th><th>고객품번</th><th>품명</th><th>작업자</th><th>성형 LOT No.</th><th style="text-align:right">검사</th><th style="text-align:right">합격</th><th style="text-align:right">불합격</th><th>불량유형</th><th>메모</th><th>특이사항</th><th>입력자</th><th>제출일시</th><th>작업</th></tr>
+            <tr><th>NO</th><th>작업일</th><th>사번</th><th>고객품번</th><th>품명</th><th>작업자</th><th class="lot-cell">성형 LOT No.</th><th style="text-align:right">검사</th><th style="text-align:right">합격</th><th style="text-align:right">불합격</th><th>불량유형</th><th>메모</th><th>특이사항</th><th>입력자</th><th>제출일시</th><th>작업</th></tr>
           </thead>
           <tbody>
             ${data.map((r, i) => {
@@ -1358,7 +1359,7 @@ function renderInspectionTable(data) {
                 <td style="font-size:12px;color:#555">${prod.partNo||'-'}</td>
                 <td style="font-size:12px;color:#555">${prod.partName||'-'}</td>
                 <td>${r.worker_name||'-'}</td>
-                <td>${lots}</td>
+                <td class="lot-cell">${lots}</td>
                 <td style="text-align:right;font-weight:500;color:#243bb2">${(r.inspect_qty||0).toLocaleString()}</td>
                 <td class="pass-cell" style="text-align:right">${(r.pass_qty||0).toLocaleString()}</td>
                 <td class="defect-cell" style="text-align:right">${(r.fail_qty||0).toLocaleString()}</td>
