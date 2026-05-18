@@ -464,55 +464,46 @@ async function loadMyHistory(){
     const freezeCount=list.filter(r=>r.shot_type==='freeze').length;
     const autoCount=list.filter(r=>r.shot_type==='auto').length;
 
-    body.innerHTML=`
-      <div style="margin-bottom:12px;font-size:13px;color:#555">
-        오늘 총 <strong style="color:#243bb2">${list.length}건</strong>, 
-        작업수량 합계 <strong style="color:#243bb2">${totalQty.toLocaleString()} EA</strong>
-        ${freezeCount>0?` · 냉동 <strong style="color:#0ea5e9">${freezeCount}건</strong>`:''}
-        ${autoCount>0?` · 자동 <strong style="color:#8b5cf6">${autoCount}건</strong>`:''}
-      </div>
-      <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead>
-            <tr style="background:#f0f3f9">
-              <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">NO</th>
-              <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">유형</th>
-              <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">설비</th>
-              <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">사번</th>
-              <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">수량</th>
-              <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">LOT</th>
-              <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">비고</th>
-              <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">제출시간</th>
-              <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">작업</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${list.map((r,i)=>{
-              const time=r.created_at?new Date(r.created_at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'';
-              const isEditing=editingRecordId===r.id;
-              const typeLabel=r.shot_type==='freeze'?'<span style="color:#0ea5e9;font-weight:600">냉동</span>':'<span style="color:#8b5cf6;font-weight:600">자동</span>';
-              const qty=parseInt(r.work_qty)||0;
-              return \`<tr style="\${isEditing?'background:#fff7ed;':''}">
-                <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center">\${i+1}</td>
-                <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center">\${typeLabel}</td>
-                <td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">\${r.equipment||'-'}</td>
-                <td style="padding:8px 6px;border:1px solid #e0e4ed">\${r.worker_id||'-'}</td>
-                <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;font-weight:600">\${qty.toLocaleString()}</td>
-                <td style="padding:8px 6px;border:1px solid #e0e4ed;font-family:monospace;font-size:11px">\${r.lot_no||'-'}</td>
-                <td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">\${r.note||''}</td>
-                <td style="padding:8px 6px;border:1px solid #e0e4ed;color:#888;font-size:11px">\${time}</td>
-                <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center;white-space:nowrap">
-                  \${isEditing
-                    ?'<span style="color:#d97706;font-size:11px;font-weight:600">수정 중...</span>'
-                    :\`<button onclick="editMyRecord('\${r.id}')" style="background:#fff7ed;color:#d97706;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;margin-right:4px">수정</button><button onclick="deleteMyRecord('\${r.id}')" style="background:#fef2f2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">삭제</button>\`
-                  }
-                </td>
-              </tr>\`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
+    body.innerHTML = '<div style="margin-bottom:12px;font-size:13px;color:#555">' +
+      '오늘 총 <strong style="color:#243bb2">' + list.length + '건</strong>, ' +
+      '작업수량 합계 <strong style="color:#243bb2">' + totalQty.toLocaleString() + ' EA</strong>' +
+      (freezeCount>0?' · 냉동 <strong style="color:#0ea5e9">' + freezeCount + '건</strong>':'') +
+      (autoCount>0?' · 자동 <strong style="color:#8b5cf6">' + autoCount + '건</strong>':'') +
+      '</div>' +
+      '<div style="overflow-x:auto">' +
+      '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+      '<thead><tr style="background:#f0f3f9">' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">NO</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">유형</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">설비</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">사번</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">수량</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">LOT</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">비고</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">제출시간</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">작업</th>' +
+      '</tr></thead><tbody>' +
+      list.map(function(r, i) {
+        var time = r.created_at ? new Date(r.created_at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) : '';
+        var isEditing = editingRecordId === r.id;
+        var typeLabel = r.shot_type==='freeze' ? '<span style="color:#0ea5e9;font-weight:600">냉동</span>' : '<span style="color:#8b5cf6;font-weight:600">자동</span>';
+        var qty = parseInt(r.work_qty) || 0;
+        var actionBtns = isEditing
+          ? '<span style="color:#d97706;font-size:11px;font-weight:600">수정 중...</span>'
+          : '<button onclick="editMyRecord(\'' + r.id + '\')" style="background:#fff7ed;color:#d97706;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;margin-right:4px">수정</button><button onclick="deleteMyRecord(\'' + r.id + '\')" style="background:#fef2f2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">삭제</button>';
+        return '<tr style="' + (isEditing ? 'background:#fff7ed;' : '') + '">' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center">' + (i+1) + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center">' + typeLabel + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">' + (r.equipment||'-') + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed">' + (r.worker_id||'-') + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;font-weight:600">' + qty.toLocaleString() + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-family:monospace;font-size:11px">' + (r.lot_no||'-') + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">' + (r.note||'') + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;color:#888;font-size:11px">' + time + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center;white-space:nowrap">' + actionBtns + '</td>' +
+          '</tr>';
+      }).join('') +
+      '</tbody></table></div>';
   }catch(e){console.error('loadMyHistory error:',e);body.innerHTML='<div style="text-align:center;color:#dc2626;font-size:13px;padding:20px">조회 중 오류 발생</div>';}
 }
 
