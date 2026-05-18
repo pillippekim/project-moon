@@ -1730,8 +1730,13 @@ async function editMyRecord(id) {
   // 내역 테이블 갱신 (수정 중 행 강조)
   loadMyHistory();
   
-  // 상단으로 스크롤
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // 작업 영역으로 스크롤
+  const workSection = document.getElementById('workArea');
+  if (workSection) {
+    workSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
   showToast('✏️ 수정할 내용을 변경 후 "수정 저장"을 눌러주세요');
 }
 
