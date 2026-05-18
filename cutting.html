@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>재단 작업일지 - HKHT</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@zxing/library@0.21.0/umd/index.min.js"></script>
 <script src="auth_guard.js"></script>
 <script src="i18n.js"></script>
 <style>
@@ -607,6 +608,31 @@
     .input-table { min-width: 800px; }
     .check-select button { width: 30px; height: 30px; font-size: 14px; }
   }
+
+  /* 바코드 스캔 */
+  .scan-btn { display:inline-flex;align-items:center;padding:5px 8px;border:1px solid #e0e4ed;border-radius:6px;background:#f0f3f9;color:#243bb2;font-size:11px;cursor:pointer;font-weight:600;font-family:inherit;flex-shrink:0; }
+  .scan-btn:hover { background:#e3e8f5; }
+  .scan-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:center;justify-content:center; }
+  .scan-overlay.open { display:flex; }
+  .scan-box { background:white;border-radius:16px;padding:1.5rem;width:340px;box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+  .scan-title { font-size:17px;font-weight:700;margin-bottom:6px;color:#1a1a2e; }
+  .scan-sub { font-size:13px;color:#888;margin-bottom:1rem;line-height:1.5; }
+  .scan-input { width:100%;font-size:14px;border:1px solid #e0e4ed;border-radius:8px;padding:10px 12px;outline:none;font-family:inherit;color:#1a1a2e; }
+  .scan-input:focus { border-color:#243bb2; }
+  .scan-btns { display:flex;gap:8px;margin-top:1rem; }
+  .scan-ok { flex:1;font-size:13px;padding:10px;border-radius:8px;background:#243bb2;color:white;border:none;cursor:pointer;font-weight:600;font-family:inherit; }
+  .scan-cancel { font-size:13px;padding:10px 18px;border-radius:8px;background:#f0f3f9;color:#555;border:none;cursor:pointer;font-family:inherit; }
+  .scan-mode-btns { display:flex;gap:8px;margin-bottom:12px; }
+  .scan-mode-btn { flex:1;font-size:12px;padding:9px;border-radius:8px;border:1.5px solid #e0e4ed;background:white;cursor:pointer;font-family:inherit;color:#555;font-weight:500;transition:all 0.2s; }
+  .scan-mode-btn.active { border-color:#243bb2;background:#f0f3f9;color:#243bb2;font-weight:600; }
+  .scan-camera-area { display:none;width:100%;height:240px;background:#000;border-radius:10px;margin-bottom:1rem;position:relative;overflow:hidden; }
+  .scan-camera-area.open { display:block; }
+  .scan-camera-area video { width:100%;height:100%;object-fit:cover; }
+  .scan-frame { position:absolute;inset:20% 10%;border:2px solid #243bb2;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,0.4);pointer-events:none; }
+  .scan-frame::before { content:'';position:absolute;left:0;right:0;top:50%;height:2px;background:linear-gradient(90deg,transparent,#ef4444,transparent);animation:scanLine 1.6s ease-in-out infinite; }
+  @keyframes scanLine { 0%,100%{top:10%} 50%{top:90%} }
+  .scan-status { position:absolute;bottom:10px;left:10px;right:10px;text-align:center;color:white;font-size:12px;background:rgba(0,0,0,0.6);padding:6px;border-radius:6px; }
+  .camera-flip-btn { position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.9);border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center; }
 </style>
 </head>
 <body>
@@ -772,6 +798,39 @@
     </div>
   </div>
 
+</div>
+
+<!-- 바코드 스캔 모달 -->
+<div class="scan-overlay" id="scanModal">
+  <div class="scan-box">
+    <div class="scan-title">뱃지 No. 바코드 스캔</div>
+    <div class="scan-sub">바코드를 스캔하거나 직접 입력하세요.</div>
+    <div class="scan-mode-btns">
+      <button class="scan-mode-btn active" id="modeCamera" onclick="switchScanMode('camera')">📷 카메라 스캔</button>
+      <button class="scan-mode-btn" id="modeManual" onclick="switchScanMode('manual')">⌨️ 직접 입력</button>
+      <button class="scan-mode-btn" id="modeContinuous" onclick="switchScanMode('continuous')" style="background:#059669;color:white;border-color:#059669">🔄 연속 스캔</button>
+    </div>
+    <div class="scan-camera-area" id="scanCameraArea">
+      <video id="scanVideo" playsinline autoplay muted></video>
+      <div class="scan-frame"></div>
+      <div class="scan-status" id="scanStatus">바코드를 사각형 안에 맞춰주세요</div>
+      <button class="camera-flip-btn" onclick="flipCamera()" title="카메라 전환">🔄</button>
+    </div>
+    <div id="continuousList" style="display:none;max-height:200px;overflow-y:auto;margin:8px 0;border:1px solid #e0e4ed;border-radius:8px;padding:8px">
+      <div style="font-size:12px;color:#888;margin-bottom:6px;display:flex;justify-content:space-between">
+        <span>📋 스캔된 바코드 (<span id="contScanCount">0</span>개)</span>
+        <button onclick="clearContinuousList()" style="background:none;border:none;color:#dc2626;font-size:11px;cursor:pointer;font-weight:600">전체 삭제</button>
+      </div>
+      <div id="contScanItems" style="font-size:12px"></div>
+    </div>
+    <div id="scanError" style="font-size:12px;color:#c92a2a;text-align:center;margin-bottom:8px;display:none"></div>
+    <input class="scan-input" id="scanInput" type="text" placeholder="뱃지 번호 입력" style="display:none"
+      onkeydown="if(event.key==='Enter') confirmScan()" />
+    <div class="scan-btns">
+      <button class="scan-cancel" onclick="closeScanModal()">취소</button>
+      <button class="scan-ok" id="scanOkBtn" onclick="confirmScan()" style="display:none">입력 완료</button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1226,7 +1285,7 @@ function addRow() {
         ${materialsCache.map(m => `<option value="${m}">${m}</option>`).join('')}
       </select>
     </td>
-    <td><input type="text" class="lot-no" placeholder="뱃지 No" /></td>
+    <td><div style="display:flex;align-items:center;gap:3px"><input type="text" class="lot-no" placeholder="뱃지 No" style="flex:1;font-size:12px;font-family:monospace" /><button class="scan-btn" onclick="openScanModal('${rowId}')" title="바코드 스캔">📷</button></div></td>
     <td><input type="number" class="box-count" min="0" placeholder="0" oninput="updateSummary()" /></td>
     <td><input type="number" class="cut-qty" min="0" placeholder="0" oninput="updateSummary()" /></td>
     <td><input type="number" class="scrap-weight" step="0.01" min="0" placeholder="0" oninput="updateSummary()" /></td>
@@ -1489,6 +1548,132 @@ function resetForm(askConfirm = true) {
   }
   resetWorkRows();
 }
+
+// ═══ 바코드 스캔 ═══
+var scanTargetRowId = null;
+var codeReader = null;
+var cameraDevices = [];
+var currentCameraIdx = 0;
+var scanMode = 'camera';
+var continuousScans = [];
+var lastScannedCode = '';
+var lastScannedTime = 0;
+
+function openScanModal(rowId) {
+  scanTargetRowId = rowId;
+  document.getElementById('scanInput').value = '';
+  document.getElementById('scanError').style.display = 'none';
+  document.getElementById('scanModal').classList.add('open');
+  switchScanMode('camera');
+}
+
+function switchScanMode(mode) {
+  scanMode = mode;
+  document.getElementById('modeCamera').classList.toggle('active', mode === 'camera');
+  document.getElementById('modeManual').classList.toggle('active', mode === 'manual');
+  document.getElementById('modeContinuous').classList.toggle('active', mode === 'continuous');
+  var cameraArea = document.getElementById('scanCameraArea');
+  var inputEl = document.getElementById('scanInput');
+  var okBtn = document.getElementById('scanOkBtn');
+  var contList = document.getElementById('continuousList');
+  if (mode === 'camera' || mode === 'continuous') {
+    cameraArea.classList.add('open'); inputEl.style.display = 'none'; okBtn.style.display = 'none';
+    contList.style.display = mode === 'continuous' ? 'block' : 'none';
+    if (mode === 'continuous') {
+      continuousScans = []; renderContinuousList();
+      okBtn.style.display = 'block'; okBtn.textContent = '✓ 스캔 완료 (적용)'; okBtn.onclick = applyContinuousScans;
+    }
+    startCamera();
+  } else {
+    cameraArea.classList.remove('open'); inputEl.style.display = 'block';
+    okBtn.style.display = 'block'; okBtn.textContent = '입력 완료'; okBtn.onclick = function() { confirmScan(); };
+    contList.style.display = 'none'; stopCamera();
+    setTimeout(function() { inputEl.focus(); }, 100);
+  }
+}
+
+async function startCamera() {
+  if (!window.ZXing) { showCameraError('바코드 라이브러리 로딩 실패'); return; }
+  try {
+    stopCamera();
+    codeReader = new ZXing.BrowserMultiFormatReader();
+    var devices = await codeReader.listVideoInputDevices();
+    if (!devices || devices.length === 0) { showCameraError('카메라를 찾을 수 없어요.'); return; }
+    cameraDevices = devices;
+    var flipBtn = document.querySelector('.camera-flip-btn');
+    if (flipBtn) flipBtn.style.display = devices.length > 1 ? 'flex' : 'none';
+    if (currentCameraIdx >= devices.length) currentCameraIdx = 0;
+    var sel = devices[currentCameraIdx];
+    document.getElementById('scanStatus').textContent = '📷 ' + (sel.label || '카메라 ' + (currentCameraIdx + 1)) + ' 사용 중';
+    var video = document.getElementById('scanVideo');
+    codeReader.decodeFromVideoDevice(sel.deviceId, video, function(result, err) {
+      if (result) {
+        var text = result.getText(); var now = Date.now();
+        if (scanMode === 'continuous') {
+          if (text === lastScannedCode && now - lastScannedTime < 2000) return;
+          lastScannedCode = text; lastScannedTime = now;
+          if (continuousScans.includes(text)) { document.getElementById('scanStatus').textContent = '⚠️ 이미 스캔됨: ' + text; return; }
+          continuousScans.push(text); renderContinuousList();
+          document.getElementById('scanStatus').textContent = '✓ ' + continuousScans.length + '번째 스캔: ' + text;
+          try { navigator.vibrate && navigator.vibrate(100); } catch(e) {}
+          try { var ctx = new (window.AudioContext || window.webkitAudioContext)(); var osc = ctx.createOscillator(); osc.type='sine'; osc.frequency.value=1200; osc.connect(ctx.destination); osc.start(); setTimeout(function(){osc.stop();ctx.close();},100); } catch(e) {}
+          return;
+        }
+        document.getElementById('scanStatus').textContent = '✓ 인식 완료: ' + text;
+        setTimeout(function() { applyScannedLot(text); closeScanModal(); showToast('바코드 인식 ✓ ' + text); }, 300);
+      }
+    });
+  } catch (e) { showCameraError(getCameraErrorMsg(e)); }
+}
+
+function stopCamera() { if (codeReader) { try { codeReader.reset(); } catch(e){} codeReader = null; } }
+function showCameraError(msg) {
+  var errEl = document.getElementById('scanError'); errEl.textContent = '⚠️ ' + msg; errEl.style.display = 'block';
+  document.getElementById('scanCameraArea').classList.remove('open');
+  setTimeout(function() { switchScanMode('manual'); }, 1500);
+}
+function getCameraErrorMsg(e) {
+  if (e.name === 'NotAllowedError') return '카메라 권한이 거부되었어요.';
+  if (e.name === 'NotFoundError') return '카메라를 찾을 수 없어요.';
+  if (e.name === 'NotReadableError') return '카메라가 다른 앱에서 사용 중이에요.';
+  return '카메라를 시작할 수 없어요: ' + (e.message || e.name);
+}
+function flipCamera() {
+  if (cameraDevices.length <= 1) { showToast('전환할 카메라가 없어요.'); return; }
+  currentCameraIdx = (currentCameraIdx + 1) % cameraDevices.length;
+  document.getElementById('scanStatus').textContent = '🔄 전환 중...';
+  stopCamera(); setTimeout(function() { startCamera(); }, 500);
+}
+function confirmScan() { var val = document.getElementById('scanInput').value.trim(); if (!val) return; applyScannedLot(val); closeScanModal(); }
+
+function applyScannedLot(lotValue) {
+  if (!scanTargetRowId) return;
+  var tr = document.getElementById(scanTargetRowId);
+  if (!tr) return;
+  var lotInput = tr.querySelector('.lot-no');
+  if (lotInput) { lotInput.value = lotValue; lotInput.style.background = '#d4edda'; setTimeout(function() { lotInput.style.background = ''; }, 600); }
+}
+
+function renderContinuousList() {
+  var items = document.getElementById('contScanItems'); var count = document.getElementById('contScanCount');
+  count.textContent = continuousScans.length;
+  if (continuousScans.length === 0) { items.innerHTML = '<div style="color:#aaa;text-align:center;padding:8px">스캔 대기 중...</div>'; return; }
+  items.innerHTML = continuousScans.map(function(code, i) {
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:' + (i%2===0?'#f9fafb':'white') + ';border-radius:4px;margin-bottom:2px"><span><strong style="color:#243bb2">' + (i+1) + '.</strong> ' + code + '</span><button onclick="removeContinuousScan(' + i + ')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;padding:2px 6px">×</button></div>';
+  }).join('');
+}
+function removeContinuousScan(idx) { continuousScans.splice(idx, 1); renderContinuousList(); }
+function clearContinuousList() { continuousScans = []; renderContinuousList(); }
+function applyContinuousScans() {
+  if (continuousScans.length === 0) { showToast('스캔된 바코드가 없어요.', 'error'); return; }
+  var allRows = document.querySelectorAll('#mainRows tr'); var applied = 0;
+  for (var i = 0; i < continuousScans.length && i < allRows.length; i++) {
+    var lotInput = allRows[i].querySelector('.lot-no');
+    if (lotInput) { lotInput.value = continuousScans[i]; applied++; }
+  }
+  closeScanModal(); showToast('✓ ' + applied + '개 행에 뱃지 No. 일괄 적용!'); continuousScans = [];
+}
+function closeScanModal() { document.getElementById('scanModal').classList.remove('open'); stopCamera(); scanTargetRowId = null; }
 
 function showToast(msg, type) {
   const toast = document.getElementById('toast');
