@@ -10,7 +10,7 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 1rem; }
-.app { max-width: 1280px; margin: 0 auto; }
+.app { max-width: 1600px; margin: 0 auto; }
 .top-nav { display: flex; align-items: center; justify-content: space-between; background: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(36,59,178,0.08); margin-bottom: 20px; }
 .back-btn { background: #f0f3f9; color: #243bb2; border: none; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; font-family: inherit; }
 .back-btn:hover { background: #e3e8f5; text-decoration: none; }
@@ -50,9 +50,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
 /* 테이블 */
 .table-wrap { overflow-x: auto; max-height: 70vh; overflow-y: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
-th { font-size: 12px; font-weight: 500; color: #888; padding: 9px 12px; background: #f9f9f9; border-bottom: 1px solid #eee; text-align: left; white-space: nowrap; position: sticky; top: 0; z-index: 10; }
-td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; color: #111; vertical-align: middle; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 1200px; }
+th { font-size: 12px; font-weight: 500; color: #888; padding: 9px 10px; background: #f9f9f9; border-bottom: 1px solid #eee; text-align: left; white-space: nowrap; position: sticky; top: 0; z-index: 10; }
+td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; color: #111; vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: #fafafa; }
 .empty-row td { text-align: center; color: #aaa; padding: 2rem; font-size: 14px; }
@@ -1936,6 +1936,24 @@ function renderMoldingTable(data) {
       const st = del ? 'background:#f9f9f9;opacity:0.5;text-decoration:line-through' : '';
       const typeColors = { '표준':'#243bb2', '초품':'#059669', '중품':'#d97706', '종품':'#7c3aed' };
       const tc = typeColors[r.work_type] || '#666';
+      // note 필드: JSON인 경우 text만 추출, 아니면 그대로 표시
+      let noteText = '';
+      try {
+        const noteObj = JSON.parse(r.note);
+        noteText = noteObj.text || '';
+      } catch(e) {
+        noteText = r.note || '';
+      }
+      // 비가동코드: note JSON에서 추출 또는 downtime_code 사용
+      let dtCode = r.downtime_code || '';
+      if (!dtCode) {
+        try {
+          const noteObj = JSON.parse(r.note);
+          if (noteObj.downtime && noteObj.downtime.length > 0) {
+            dtCode = noteObj.downtime.map(d => d.code).filter(Boolean).join(', ');
+          }
+        } catch(e) {}
+      }
       return `<tr style="${st}">
         <td>${i+1}</td><td>${r.work_date||''}</td><td>${r.shift_type||''}</td>
         <td>${r.team||''}</td><td style="font-size:11px">${r.equipment_no||''}</td>
@@ -1945,8 +1963,8 @@ function renderMoldingTable(data) {
         <td style="text-align:right;color:${(r.defect_qty||0)>0?'#dc2626':'#666'}">${r.defect_qty||0}</td>
         <td><span style="background:${tc}15;color:${tc};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">${r.work_type||'표준'}</span></td>
         <td>${r.molding_pressure||''}</td><td>${r.upper_temp||''}</td><td>${r.lower_temp||''}</td>
-        <td style="font-size:11px;color:#e67e22">${r.downtime_code||''}</td>
-        <td>${r.worker_name||''}</td><td style="font-size:11px">${r.note||''}</td>
+        <td style="font-size:11px;color:#e67e22">${dtCode}</td>
+        <td>${r.worker_name||''}</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${noteText}">${noteText||'-'}</td>
         <td style="font-size:11px;color:#999">${fmtDatetime(r.created_at)}</td>
         <td>${del ? '<span style="color:#aaa;font-size:11px">삭제됨</span>' : `<button class="btn-del" onclick="deleteMolding('${r.id}')">🗑️</button>`}</td>
       </tr>`;
@@ -2263,7 +2281,7 @@ function downloadExcel() {
       '비가동시간(분)': r.downtime_minutes || '',
       '문제점': r.problem || '',
       '작업자': r.worker_name || '',
-      '비고': r.note || '',
+      '비고': (() => { try { return JSON.parse(r.note).text || ''; } catch(e) { return r.note || ''; } })(),
       '입력자': r.created_by_name || '',
     }));
     const ws = XLSX.utils.json_to_sheet(moldRows);
