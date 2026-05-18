@@ -596,9 +596,14 @@ function setField(id, field, val) {
   r[field] = val;
 
   // 검사수량 자동 계산
-  // - 검사수량 또는 합격수량 입력 시 → 불합격 = 검사 - 합격
+  // - 검사수량 입력 시 → 합격 = 검사, 불합격 = 0 (불량 없는 일반 케이스)
+  // - 합격수량 입력 시 → 불합격 = 검사 - 합격
   // - 불합격수량 입력 시 → 합격 = 검사 - 불합격
-  if (field === 'inspect' || field === 'pass') {
+  if (field === 'inspect') {
+    const ins = parseInt(r.inspect) || 0;
+    r.pass = ins > 0 ? String(ins) : '';
+    r.fail = ins > 0 ? '0' : '';
+  } else if (field === 'pass') {
     const ins = parseInt(r.inspect) || 0;
     const pas = parseInt(r.pass) || 0;
     r.fail = ins - pas >= 0 ? String(ins - pas) : '0';
@@ -610,12 +615,16 @@ function setField(id, field, val) {
 
   // 숫자/텍스트 입력 필드는 renderRows() 호출하지 않음 (focus 유지)
   // - DOM 직접 업데이트로 자동 계산 결과만 반영
-  // - 합계는 updateSummary()만 호출
   if (field === 'inspect' || field === 'pass' || field === 'fail' || field === 'defectMemo') {
-    // 자동 계산된 값을 해당 input에 직접 반영
     const row = document.querySelector(`tr[data-row-id="${id}"]`);
     if (row) {
-      if (field === 'inspect' || field === 'pass') {
+      if (field === 'inspect') {
+        // 검사수량 입력 시 합격/불합격 모두 자동 채움
+        const passInput = row.querySelector('input[data-field="pass"]');
+        const failInput = row.querySelector('input[data-field="fail"]');
+        if (passInput) passInput.value = r.pass;
+        if (failInput) failInput.value = r.fail;
+      } else if (field === 'pass') {
         const failInput = row.querySelector('input[data-field="fail"]');
         if (failInput) failInput.value = r.fail;
       } else if (field === 'fail') {
@@ -821,6 +830,32 @@ async function submitForm() {
   const valid = rows.filter(r => r.sabun || r.lots.some(l=>l) || r.inspect);
   if (!workDate) { showToast('작성일을 입력해주세요.', 'error'); return; }
   if (valid.length === 0) { showToast('검사 내역을 1건 이상 입력해주세요.', 'error'); return; }
+
+  // 검사수량/합격/불합격 검증
+  for (let i = 0; i < valid.length; i++) {
+    const r = valid[i];
+    const ins = parseInt(r.inspect) || 0;
+    const pas = r.pass === '' || r.pass === null || r.pass === undefined ? null : parseInt(r.pass);
+    const fai = r.fail === '' || r.fail === null || r.fail === undefined ? null : parseInt(r.fail);
+    const rowNum = rows.indexOf(r) + 1;
+
+    if (ins <= 0) {
+      showToast(`${rowNum}행: 검사수량을 입력해주세요.`, 'error');
+      return;
+    }
+    // 합격 또는 불합격 중 하나라도 입력 필수
+    if (pas === null && fai === null) {
+      showToast(`${rowNum}행: 합격 또는 불합격 수량을 입력해주세요.`, 'error');
+      return;
+    }
+    // 수량 일치 검증
+    const passQty = pas || 0;
+    const failQty = fai || 0;
+    if (passQty + failQty !== ins) {
+      showToast(`${rowNum}행: 합격(${passQty}) + 불합격(${failQty}) ≠ 검사수량(${ins})`, 'error');
+      return;
+    }
+  }
 
   const btn = document.getElementById('submitBtn');
   btn.disabled = true; btn.textContent = editingRecordId ? '수정 중...' : '제출 중...';
