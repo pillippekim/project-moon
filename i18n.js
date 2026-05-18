@@ -333,11 +333,7 @@ const AUTO_TRANSLATE = {
   '냉각기 (칠러)': { id: 'Pendingin (Chiller)', en: 'Chiller' },
   '고무시트 복합재단기': { id: 'Mesin potong komposit', en: 'Composite cutter' },
   '유압절단기': { id: 'Pemotong hidrolik', en: 'Hydraulic cutter' },
-  '스위치 작동': { id: 'Sakelar', en: 'Switch' },
-  '기계작동 원활': { id: 'Mesin berfungsi baik', en: 'Machine operates well' },
-  '이상음/진동': { id: 'Suara/getaran abnormal', en: 'Abnormal noise/vibration' },
-  '조임상태': { id: 'Kekencangan baut', en: 'Tightening state' },
-  '압력 양호': { id: 'Tekanan baik', en: 'Pressure OK' },
+
   
   // 재단 전용
   '📋 재단 작업 내역': { id: '📋 Detail Kerja Potong', en: '📋 Cutting Work Details' },
@@ -350,8 +346,7 @@ const AUTO_TRANSLATE = {
   '작업 건수': { id: 'Jumlah data', en: 'Work count' },
   
   // 재단 점검항목
-  '칼날 상태': { id: 'Kondisi pisau', en: 'Blade condition' },
-  '모터 이상음': { id: 'Suara motor abnormal', en: 'Motor noise' },
+
   '안전커버 작동': { id: 'Penutup keamanan', en: 'Safety cover' },
   
   // 공통 추가
@@ -396,8 +391,34 @@ const AUTO_TRANSLATE = {
   'LOT': { id: 'LOT', en: 'LOT' },
   
   // 재단 점검 항목 추가
-  '스위치 작동': { id: 'Sakelar', en: 'Switch' },
+
   
+
+  // ── 점검항목 번역 (전 공정 통합) ──
+  '스위치 작동': { id: 'Sakelar berfungsi', en: 'Switch operation' },
+  '기계작동 원활': { id: 'Mesin berjalan lancar', en: 'Machine runs smoothly' },
+  '이상음/진동': { id: 'Suara/getaran abnormal', en: 'Abnormal noise / vibration' },
+  '조임상태': { id: 'Kekencangan baut', en: 'Bolt & screw tightening' },
+  '조임상태(1~8번)': { id: 'Kekencangan baut (1~8)', en: 'Tightening (1~8)' },
+  '압력 양호': { id: 'Tekanan normal', en: 'Pressure normal' },
+  '청결 상태': { id: 'Kebersihan', en: 'Cleanliness' },
+  '청결상태': { id: 'Kebersihan', en: 'Cleanliness' },
+  '비상정지 버튼': { id: 'Tombol darurat', en: 'Emergency stop button' },
+  '칼날 상태': { id: 'Kondisi pisau', en: 'Blade condition' },
+  '모터 이상음': { id: 'Suara motor abnormal', en: 'Motor abnormal noise' },
+  '작동유 충만': { id: 'Oli cukup', en: 'Hydraulic oil full' },
+  '안전커버 작동': { id: 'Penutup keamanan', en: 'Safety cover' },
+  '에어압력': { id: 'Tekanan udara', en: 'Air pressure' },
+  '표준온도(20±5℃)': { id: 'Suhu standar (20±5℃)', en: 'Std temp (20±5℃)' },
+  '순환/칠러펌프': { id: 'Pompa sirkulasi/chiller', en: 'Circulation/chiller pump' },
+  '압력(고/저/유)': { id: 'Tekanan (tinggi/rendah/oli)', en: 'Pressure (high/low/oil)' },
+  '누수 확인': { id: 'Cek kebocoran', en: 'Leakage check' },
+  '주모터 작동': { id: 'Motor utama', en: 'Main motor' },
+  '오일량(50%이상)': { id: 'Oli (min 50%)', en: 'Oil level (min 50%)' },
+  '절단기 압력(3~5kgf)': { id: 'Tekanan pemotong (3~5kgf)', en: 'Cutter pressure (3~5kgf)' },
+  '냉각수 자동온도': { id: 'Suhu air pendingin otomatis', en: 'Auto cooling water temp' },
+  '경보 작동': { id: 'Alarm berfungsi', en: 'Alarm works' },
+
   // 점검 placeholder
   '이상 시 입력': { id: 'Jika ada masalah', en: 'If abnormal' },
   
@@ -405,7 +426,7 @@ const AUTO_TRANSLATE = {
   '범례 (클릭 시 전체 적용):': { id: 'Legenda (klik untuk semua):', en: 'Legend (click to apply all):' },
   
   // 점검 항목 (재단)
-  '스위치 작동': { id: 'Sakelar berfungsi', en: 'Switch operates' },
+
   '칼날 상태': { id: 'Kondisi pisau', en: 'Blade condition' },
   '모터 이상음': { id: 'Suara motor abnormal', en: 'Motor abnormal noise' },
   '작동유 충만': { id: 'Oli cukup', en: 'Hydraulic oil full' },
