@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>2차가류 작업일지 - HKHT</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@zxing/library@0.21.0/umd/index.min.js"></script>
 <script src="auth_guard.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -204,6 +205,31 @@
     .top-bar h1 { font-size: 16px; }
     .summary-box { grid-template-columns: 1fr; }
   }
+
+  /* 바코드 스캔 */
+  .scan-btn { display:inline-flex;align-items:center;padding:5px 8px;border:1px solid #e0e4ed;border-radius:6px;background:#f0f3f9;color:#243bb2;font-size:11px;cursor:pointer;font-weight:600;font-family:inherit;flex-shrink:0; }
+  .scan-btn:hover { background:#e3e8f5; }
+  .scan-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:center;justify-content:center; }
+  .scan-overlay.open { display:flex; }
+  .scan-box { background:white;border-radius:16px;padding:1.5rem;width:340px;box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+  .scan-title { font-size:17px;font-weight:700;margin-bottom:6px;color:#1a1a2e; }
+  .scan-sub { font-size:13px;color:#888;margin-bottom:1rem;line-height:1.5; }
+  .scan-input { width:100%;font-size:14px;border:1px solid #e0e4ed;border-radius:8px;padding:10px 12px;outline:none;font-family:inherit;color:#1a1a2e; }
+  .scan-input:focus { border-color:#243bb2; }
+  .scan-btns { display:flex;gap:8px;margin-top:1rem; }
+  .scan-ok { flex:1;font-size:13px;padding:10px;border-radius:8px;background:#243bb2;color:white;border:none;cursor:pointer;font-weight:600;font-family:inherit; }
+  .scan-cancel { font-size:13px;padding:10px 18px;border-radius:8px;background:#f0f3f9;color:#555;border:none;cursor:pointer;font-family:inherit; }
+  .scan-mode-btns { display:flex;gap:8px;margin-bottom:12px; }
+  .scan-mode-btn { flex:1;font-size:12px;padding:9px;border-radius:8px;border:1.5px solid #e0e4ed;background:white;cursor:pointer;font-family:inherit;color:#555;font-weight:500;transition:all 0.2s; }
+  .scan-mode-btn.active { border-color:#243bb2;background:#f0f3f9;color:#243bb2;font-weight:600; }
+  .scan-camera-area { display:none;width:100%;height:240px;background:#000;border-radius:10px;margin-bottom:1rem;position:relative;overflow:hidden; }
+  .scan-camera-area.open { display:block; }
+  .scan-camera-area video { width:100%;height:100%;object-fit:cover; }
+  .scan-frame { position:absolute;inset:20% 10%;border:2px solid #243bb2;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,0.4);pointer-events:none; }
+  .scan-frame::before { content:'';position:absolute;left:0;right:0;top:50%;height:2px;background:linear-gradient(90deg,transparent,#ef4444,transparent);animation:scanLine 1.6s ease-in-out infinite; }
+  @keyframes scanLine { 0%,100%{top:10%} 50%{top:90%} }
+  .scan-status { position:absolute;bottom:10px;left:10px;right:10px;text-align:center;color:white;font-size:12px;background:rgba(0,0,0,0.6);padding:6px;border-radius:6px; }
+  .camera-flip-btn { position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.9);border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center; }
 </style>
 </head>
 <body>
@@ -339,6 +365,31 @@
     </div>
     <div id="myHistoryBody" style="padding:16px 24px">
       <div style="text-align:center;color:#aaa;font-size:13px;padding:20px">로딩 중...</div>
+    </div>
+  </div>
+</div>
+
+<!-- 바코드 스캔 모달 -->
+<div class="scan-overlay" id="scanModal">
+  <div class="scan-box">
+    <div class="scan-title">생산 LOT 바코드 스캔</div>
+    <div class="scan-sub">이동전표 하단 바코드를 스캔하세요.</div>
+    <div class="scan-mode-btns">
+      <button class="scan-mode-btn active" id="modeCamera" onclick="switchScanMode('camera')">📷 카메라 스캔</button>
+      <button class="scan-mode-btn" id="modeManual" onclick="switchScanMode('manual')">⌨️ 직접 입력</button>
+    </div>
+    <div class="scan-camera-area" id="scanCameraArea">
+      <video id="scanVideo" playsinline autoplay muted></video>
+      <div class="scan-frame"></div>
+      <div class="scan-status" id="scanStatus">바코드를 사각형 안에 맞춰주세요</div>
+      <button class="camera-flip-btn" onclick="flipCamera()" title="카메라 전환">🔄</button>
+    </div>
+    <div id="scanError" style="font-size:12px;color:#c92a2a;text-align:center;margin-bottom:8px;display:none"></div>
+    <input class="scan-input" id="scanInput" type="text" placeholder="예: C260424020" style="display:none"
+      onkeydown="if(event.key==='Enter') confirmScan()" />
+    <div class="scan-btns">
+      <button class="scan-cancel" onclick="closeScanModal()">취소</button>
+      <button class="scan-ok" id="scanOkBtn" onclick="confirmScan()" style="display:none">입력 완료</button>
     </div>
   </div>
 </div>
@@ -641,7 +692,7 @@ function renderRows() {
         ${moldingWorkersCache.map(w => `<option value="${w.name}" ${r.moldingWorker===w.name?'selected':''}>${w.display}</option>`).join('')}
       </select></td>
       <td><input type="text" value="${r.hardness}" placeholder="-" oninput="setField(${r.id},'hardness',this.value)" /></td>
-      <td><input type="text" value="${r.lotNo}" placeholder="LOT" oninput="setField(${r.id},'lotNo',this.value)" /></td>
+      <td><div style="display:flex;align-items:center;gap:3px"><input type="text" value="${r.lotNo}" placeholder="LOT" style="flex:1;font-size:12px;font-family:monospace" oninput="setField(${r.id},'lotNo',this.value)" /><button class="scan-btn" onclick="openScanModal(${r.id})" title="바코드 스캔">📷</button></div></td>
       <td><input type="text" value="${r.note}" placeholder="-" oninput="setField(${r.id},'note',this.value)" /></td>
       <td><button class="btn-del-row" onclick="removeRow(${r.id})">×</button></td>
     </tr>
@@ -762,6 +813,119 @@ function resetForm(askConfirm = true) {
   const editBadge = document.getElementById('editModeBadge');
   if (editBadge) editBadge.style.display = 'none';
   if (safetyCheckCompleted) { addRow(); addRow(); addRow(); }
+}
+
+// ═══ 바코드 스캔 ═══
+var scanTargetId = null;
+var codeReader = null;
+var cameraDevices = [];
+var currentCameraIdx = 0;
+var scanMode = 'camera';
+
+function openScanModal(rowId) {
+  scanTargetId = rowId;
+  document.getElementById('scanInput').value = '';
+  document.getElementById('scanError').style.display = 'none';
+  document.getElementById('scanModal').classList.add('open');
+  switchScanMode('camera');
+}
+
+function switchScanMode(mode) {
+  scanMode = mode;
+  document.getElementById('modeCamera').classList.toggle('active', mode === 'camera');
+  document.getElementById('modeManual').classList.toggle('active', mode === 'manual');
+  var cameraArea = document.getElementById('scanCameraArea');
+  var inputEl = document.getElementById('scanInput');
+  var okBtn = document.getElementById('scanOkBtn');
+  if (mode === 'camera') {
+    cameraArea.classList.add('open');
+    inputEl.style.display = 'none';
+    okBtn.style.display = 'none';
+    startCamera();
+  } else {
+    cameraArea.classList.remove('open');
+    inputEl.style.display = 'block';
+    okBtn.style.display = 'block';
+    okBtn.textContent = '입력 완료';
+    stopCamera();
+    setTimeout(function() { inputEl.focus(); }, 100);
+  }
+}
+
+async function startCamera() {
+  if (!window.ZXing) { showCameraError('바코드 라이브러리 로딩 실패'); return; }
+  try {
+    stopCamera();
+    codeReader = new ZXing.BrowserMultiFormatReader();
+    var devices = await codeReader.listVideoInputDevices();
+    if (!devices || devices.length === 0) { showCameraError('카메라를 찾을 수 없어요.'); return; }
+    cameraDevices = devices;
+    var flipBtn = document.querySelector('.camera-flip-btn');
+    if (flipBtn) flipBtn.style.display = devices.length > 1 ? 'flex' : 'none';
+    if (currentCameraIdx >= devices.length) currentCameraIdx = 0;
+    var sel = devices[currentCameraIdx];
+    document.getElementById('scanStatus').textContent = '📷 ' + (sel.label || '카메라 ' + (currentCameraIdx + 1)) + ' 사용 중';
+    var video = document.getElementById('scanVideo');
+    codeReader.decodeFromVideoDevice(sel.deviceId, video, function(result, err) {
+      if (result) {
+        var text = result.getText();
+        document.getElementById('scanStatus').textContent = '✓ 인식 완료: ' + text;
+        setTimeout(function() {
+          applyScannedLot(text);
+          closeScanModal();
+          showToast('바코드 인식 ✓ ' + text);
+        }, 300);
+      }
+    });
+  } catch (e) {
+    showCameraError(getCameraErrorMsg(e));
+  }
+}
+
+function stopCamera() {
+  if (codeReader) { try { codeReader.reset(); } catch(e){} codeReader = null; }
+}
+
+function showCameraError(msg) {
+  var errEl = document.getElementById('scanError');
+  errEl.textContent = '⚠️ ' + msg;
+  errEl.style.display = 'block';
+  document.getElementById('scanCameraArea').classList.remove('open');
+  setTimeout(function() { switchScanMode('manual'); }, 1500);
+}
+
+function getCameraErrorMsg(e) {
+  if (e.name === 'NotAllowedError') return '카메라 권한이 거부되었어요. 브라우저 설정에서 허용해주세요.';
+  if (e.name === 'NotFoundError') return '카메라를 찾을 수 없어요.';
+  if (e.name === 'NotReadableError') return '카메라가 다른 앱에서 사용 중이에요.';
+  return '카메라를 시작할 수 없어요: ' + (e.message || e.name);
+}
+
+function flipCamera() {
+  if (cameraDevices.length <= 1) { showToast('전환할 카메라가 없어요.'); return; }
+  currentCameraIdx = (currentCameraIdx + 1) % cameraDevices.length;
+  document.getElementById('scanStatus').textContent = '🔄 전환 중...';
+  stopCamera();
+  setTimeout(function() { startCamera(); }, 500);
+}
+
+function confirmScan() {
+  var val = document.getElementById('scanInput').value.trim();
+  if (!val) return;
+  applyScannedLot(val);
+  closeScanModal();
+}
+
+function applyScannedLot(lotValue) {
+  if (scanTargetId === null) return;
+  var r = rows.find(function(x) { return x.id === scanTargetId; });
+  if (r) { r.lotNo = lotValue; renderRows(); }
+}
+
+function closeScanModal() {
+  document.getElementById('scanModal').classList.remove('open');
+  stopCamera();
+  scanTargetId = null;
 }
 
 function showToast(msg, type) {
