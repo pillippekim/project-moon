@@ -473,17 +473,26 @@
 <!-- 스캔 모달 -->
 <div class="scan-overlay" id="scanModal">
   <div class="scan-box">
-    <div class="scan-title">성형 LOT No. 스캔</div>
-    <div class="scan-sub">이동전표 하단 바코드를 스캔하세요.</div>
+    <div class="scan-title" id="scanTitle">성형 LOT No. 스캔</div>
+    <div class="scan-sub" id="scanSub">이동전표 하단 바코드를 스캔하세요.</div>
     <div class="scan-mode-btns">
       <button class="scan-mode-btn active" id="modeCamera" onclick="switchScanMode('camera')">📷 카메라 스캔</button>
       <button class="scan-mode-btn" id="modeManual" onclick="switchScanMode('manual')">⌨️ 직접 입력</button>
+      <button class="scan-mode-btn" id="modeContinuous" onclick="switchScanMode('continuous')" style="background:#059669;color:white;border-color:#059669">🔄 연속 스캔</button>
     </div>
     <div class="scan-camera-area" id="scanCameraArea">
       <video id="scanVideo" playsinline autoplay muted></video>
       <div class="scan-frame"></div>
       <div class="scan-status" id="scanStatus">바코드를 사각형 안에 맞춰주세요</div>
       <button class="camera-flip-btn" onclick="flipCamera()" title="카메라 전환">🔄</button>
+    </div>
+    <!-- 연속 스캔 목록 -->
+    <div id="continuousList" style="display:none;max-height:200px;overflow-y:auto;margin:8px 0;border:1px solid #e0e4ed;border-radius:8px;padding:8px">
+      <div style="font-size:12px;color:#888;margin-bottom:6px;display:flex;justify-content:space-between">
+        <span>📋 스캔된 바코드 (<span id="contScanCount">0</span>개)</span>
+        <button onclick="clearContinuousList()" style="background:none;border:none;color:#dc2626;font-size:11px;cursor:pointer;font-weight:600">전체 삭제</button>
+      </div>
+      <div id="contScanItems" style="font-size:12px"></div>
     </div>
     <div class="scan-error" id="scanError"></div>
     <input class="scan-input" id="scanInput" type="text" placeholder="예: C260424020" style="display:none"
@@ -518,6 +527,9 @@ let scanMode = 'camera';
 let codeReader = null;
 let currentFacingMode = 'environment';
 let editingRecordId = null; // 수정 중인 레코드 ID
+let continuousScans = [];
+let lastScannedCode = '';
+let lastScannedTime = 0;
 
 function todayStr() {
   const d = new Date();
@@ -735,19 +747,37 @@ function switchScanMode(mode) {
   scanMode = mode;
   document.getElementById('modeCamera').classList.toggle('active', mode === 'camera');
   document.getElementById('modeManual').classList.toggle('active', mode === 'manual');
+  document.getElementById('modeContinuous').classList.toggle('active', mode === 'continuous');
   const cameraArea = document.getElementById('scanCameraArea');
   const inputArea = document.getElementById('scanInput');
   const okBtn = document.getElementById('scanOkBtn');
+  const contList = document.getElementById('continuousList');
 
-  if (mode === 'camera') {
+  if (mode === 'camera' || mode === 'continuous') {
     cameraArea.classList.add('open');
     inputArea.style.display = 'none';
     okBtn.style.display = 'none';
+    contList.style.display = mode === 'continuous' ? 'block' : 'none';
+    if (mode === 'continuous') {
+      continuousScans = [];
+      renderContinuousList();
+      document.getElementById('scanTitle').textContent = '🔄 연속 스캔 모드';
+      document.getElementById('scanSub').textContent = '바코드를 계속 스캔하세요. 자동으로 추가됩니다.';
+      okBtn.style.display = 'block';
+      okBtn.textContent = '✓ 스캔 완료 (적용)';
+      okBtn.onclick = applyContinuousScans;
+    } else {
+      document.getElementById('scanTitle').textContent = '성형 LOT No. 스캔';
+      document.getElementById('scanSub').textContent = '이동전표 하단 바코드를 스캔하세요.';
+    }
     startCamera();
   } else {
     cameraArea.classList.remove('open');
     inputArea.style.display = 'block';
     okBtn.style.display = 'block';
+    okBtn.textContent = '입력 완료';
+    okBtn.onclick = function() { confirmScan(); };
+    contList.style.display = 'none';
     stopCamera();
     setTimeout(() => inputArea.focus(), 100);
   }
@@ -764,6 +794,34 @@ async function startCamera() {
     codeReader.decodeFromConstraints(constraints, video, (result, err) => {
       if (result) {
         const text = result.getText();
+        const now = Date.now();
+
+        if (scanMode === 'continuous') {
+          // 연속 스캔: 중복 방지 (같은 코드 2초 내 재스캔 무시)
+          if (text === lastScannedCode && now - lastScannedTime < 2000) return;
+          lastScannedCode = text;
+          lastScannedTime = now;
+          // 이미 있는 코드인지 확인
+          if (continuousScans.includes(text)) {
+            document.getElementById('scanStatus').textContent = '⚠️ 이미 스캔됨: ' + text;
+            return;
+          }
+          continuousScans.push(text);
+          renderContinuousList();
+          document.getElementById('scanStatus').textContent = '✓ ' + continuousScans.length + '번째 스캔: ' + text;
+          // 비프음 + 진동
+          try { navigator.vibrate && navigator.vibrate(100); } catch(e) {}
+          try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            osc.type = 'sine'; osc.frequency.value = 1200;
+            osc.connect(ctx.destination); osc.start();
+            setTimeout(() => { osc.stop(); ctx.close(); }, 100);
+          } catch(e) {}
+          return; // 카메라 유지
+        }
+
+        // 단일 스캔 모드
         document.getElementById('scanStatus').textContent = '✓ 인식 완료: ' + text;
         setTimeout(() => {
           setLot(scanTarget, scanLotIdx, text);
@@ -807,6 +865,50 @@ function flipCamera() {
   document.getElementById('scanStatus').textContent = '🔄 카메라 전환 중...';
   stopCamera();
   setTimeout(() => startCamera(), 500);
+}
+
+// ── 연속 스캔 관련 ──
+function renderContinuousList() {
+  const items = document.getElementById('contScanItems');
+  const count = document.getElementById('contScanCount');
+  count.textContent = continuousScans.length;
+  if (continuousScans.length === 0) {
+    items.innerHTML = '<div style="color:#aaa;text-align:center;padding:8px">스캔 대기 중...</div>';
+    return;
+  }
+  items.innerHTML = continuousScans.map((code, i) =>
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:' + (i%2===0?'#f9fafb':'white') + ';border-radius:4px;margin-bottom:2px">' +
+    '<span><strong style="color:#243bb2">' + (i+1) + '.</strong> ' + code + '</span>' +
+    '<button onclick="removeContinuousScan(' + i + ')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;padding:2px 6px">×</button>' +
+    '</div>'
+  ).join('');
+}
+
+function removeContinuousScan(idx) {
+  continuousScans.splice(idx, 1);
+  renderContinuousList();
+}
+
+function clearContinuousList() {
+  continuousScans = [];
+  renderContinuousList();
+}
+
+function applyContinuousScans() {
+  if (continuousScans.length === 0) {
+    showToast('스캔된 바코드가 없어요.', 'error');
+    return;
+  }
+  // 현재 행의 LOT에 연속 스캔 결과 적용
+  const r = rows.find(r => r.id === scanTarget);
+  if (r) {
+    const existingLots = r.lots.filter(l => l.trim() !== '');
+    r.lots = [...existingLots, ...continuousScans];
+  }
+  closeModal();
+  renderRows();
+  showToast('✓ ' + continuousScans.length + '개 바코드 일괄 적용!');
+  continuousScans = [];
 }
 
 function closeModal() {
@@ -1006,6 +1108,8 @@ async function loadMyHistory() {
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">합격</th>
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">불합격</th>
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">불량유형</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">불량메모</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">비고</th>
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">제출시간</th>
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">작업</th>
           </tr>
@@ -1024,6 +1128,8 @@ async function loadMyHistory() {
               <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;color:#059669">${(r.pass_qty||0).toLocaleString()}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;color:#dc2626">${(r.fail_qty||0).toLocaleString()}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">${r.defect_type||''}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px;color:#888">${r.defect_memo||'-'}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px;color:#888">${r.remarks||'-'}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed;color:#888;font-size:11px">${time}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center;white-space:nowrap">
                 ${isEditing 
