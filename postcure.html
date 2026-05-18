@@ -377,12 +377,21 @@
     <div class="scan-mode-btns">
       <button class="scan-mode-btn active" id="modeCamera" onclick="switchScanMode('camera')">📷 카메라 스캔</button>
       <button class="scan-mode-btn" id="modeManual" onclick="switchScanMode('manual')">⌨️ 직접 입력</button>
+      <button class="scan-mode-btn" id="modeContinuous" onclick="switchScanMode('continuous')" style="background:#059669;color:white;border-color:#059669">🔄 연속 스캔</button>
     </div>
     <div class="scan-camera-area" id="scanCameraArea">
       <video id="scanVideo" playsinline autoplay muted></video>
       <div class="scan-frame"></div>
       <div class="scan-status" id="scanStatus">바코드를 사각형 안에 맞춰주세요</div>
       <button class="camera-flip-btn" onclick="flipCamera()" title="카메라 전환">🔄</button>
+    </div>
+    <!-- 연속 스캔 목록 -->
+    <div id="continuousList" style="display:none;max-height:200px;overflow-y:auto;margin:8px 0;border:1px solid #e0e4ed;border-radius:8px;padding:8px">
+      <div style="font-size:12px;color:#888;margin-bottom:6px;display:flex;justify-content:space-between">
+        <span>📋 스캔된 바코드 (<span id="contScanCount">0</span>개)</span>
+        <button onclick="clearContinuousList()" style="background:none;border:none;color:#dc2626;font-size:11px;cursor:pointer;font-weight:600">전체 삭제</button>
+      </div>
+      <div id="contScanItems" style="font-size:12px"></div>
     </div>
     <div id="scanError" style="font-size:12px;color:#c92a2a;text-align:center;margin-bottom:8px;display:none"></div>
     <input class="scan-input" id="scanInput" type="text" placeholder="예: C260424020" style="display:none"
@@ -821,6 +830,9 @@ var codeReader = null;
 var cameraDevices = [];
 var currentCameraIdx = 0;
 var scanMode = 'camera';
+var continuousScans = [];
+var lastScannedCode = '';
+var lastScannedTime = 0;
 
 function openScanModal(rowId) {
   scanTargetId = rowId;
@@ -834,19 +846,32 @@ function switchScanMode(mode) {
   scanMode = mode;
   document.getElementById('modeCamera').classList.toggle('active', mode === 'camera');
   document.getElementById('modeManual').classList.toggle('active', mode === 'manual');
+  document.getElementById('modeContinuous').classList.toggle('active', mode === 'continuous');
   var cameraArea = document.getElementById('scanCameraArea');
   var inputEl = document.getElementById('scanInput');
   var okBtn = document.getElementById('scanOkBtn');
-  if (mode === 'camera') {
+  var contList = document.getElementById('continuousList');
+
+  if (mode === 'camera' || mode === 'continuous') {
     cameraArea.classList.add('open');
     inputEl.style.display = 'none';
     okBtn.style.display = 'none';
+    contList.style.display = mode === 'continuous' ? 'block' : 'none';
+    if (mode === 'continuous') {
+      continuousScans = [];
+      renderContinuousList();
+      okBtn.style.display = 'block';
+      okBtn.textContent = '✓ 스캔 완료 (적용)';
+      okBtn.onclick = applyContinuousScans;
+    }
     startCamera();
   } else {
     cameraArea.classList.remove('open');
     inputEl.style.display = 'block';
     okBtn.style.display = 'block';
     okBtn.textContent = '입력 완료';
+    okBtn.onclick = function() { confirmScan(); };
+    contList.style.display = 'none';
     stopCamera();
     setTimeout(function() { inputEl.focus(); }, 100);
   }
@@ -869,27 +894,29 @@ async function startCamera() {
     codeReader.decodeFromVideoDevice(sel.deviceId, video, function(result, err) {
       if (result) {
         var text = result.getText();
+        var now = Date.now();
+        if (scanMode === 'continuous') {
+          if (text === lastScannedCode && now - lastScannedTime < 2000) return;
+          lastScannedCode = text; lastScannedTime = now;
+          if (continuousScans.includes(text)) { document.getElementById('scanStatus').textContent = '⚠️ 이미 스캔됨: ' + text; return; }
+          continuousScans.push(text);
+          renderContinuousList();
+          document.getElementById('scanStatus').textContent = '✓ ' + continuousScans.length + '번째 스캔: ' + text;
+          try { navigator.vibrate && navigator.vibrate(100); } catch(e) {}
+          try { var ctx = new (window.AudioContext || window.webkitAudioContext)(); var osc = ctx.createOscillator(); osc.type='sine'; osc.frequency.value=1200; osc.connect(ctx.destination); osc.start(); setTimeout(function(){osc.stop();ctx.close();},100); } catch(e) {}
+          return;
+        }
         document.getElementById('scanStatus').textContent = '✓ 인식 완료: ' + text;
-        setTimeout(function() {
-          applyScannedLot(text);
-          closeScanModal();
-          showToast('바코드 인식 ✓ ' + text);
-        }, 300);
+        setTimeout(function() { applyScannedLot(text); closeScanModal(); showToast('바코드 인식 ✓ ' + text); }, 300);
       }
     });
-  } catch (e) {
-    showCameraError(getCameraErrorMsg(e));
-  }
+  } catch (e) { showCameraError(getCameraErrorMsg(e)); }
 }
 
-function stopCamera() {
-  if (codeReader) { try { codeReader.reset(); } catch(e){} codeReader = null; }
-}
+function stopCamera() { if (codeReader) { try { codeReader.reset(); } catch(e){} codeReader = null; } }
 
 function showCameraError(msg) {
-  var errEl = document.getElementById('scanError');
-  errEl.textContent = '⚠️ ' + msg;
-  errEl.style.display = 'block';
+  var errEl = document.getElementById('scanError'); errEl.textContent = '⚠️ ' + msg; errEl.style.display = 'block';
   document.getElementById('scanCameraArea').classList.remove('open');
   setTimeout(function() { switchScanMode('manual'); }, 1500);
 }
@@ -905,16 +932,10 @@ function flipCamera() {
   if (cameraDevices.length <= 1) { showToast('전환할 카메라가 없어요.'); return; }
   currentCameraIdx = (currentCameraIdx + 1) % cameraDevices.length;
   document.getElementById('scanStatus').textContent = '🔄 전환 중...';
-  stopCamera();
-  setTimeout(function() { startCamera(); }, 500);
+  stopCamera(); setTimeout(function() { startCamera(); }, 500);
 }
 
-function confirmScan() {
-  var val = document.getElementById('scanInput').value.trim();
-  if (!val) return;
-  applyScannedLot(val);
-  closeScanModal();
-}
+function confirmScan() { var val = document.getElementById('scanInput').value.trim(); if (!val) return; applyScannedLot(val); closeScanModal(); }
 
 function applyScannedLot(lotValue) {
   if (scanTargetId === null) return;
@@ -922,11 +943,31 @@ function applyScannedLot(lotValue) {
   if (r) { r.lotNo = lotValue; renderRows(); }
 }
 
-function closeScanModal() {
-  document.getElementById('scanModal').classList.remove('open');
-  stopCamera();
-  scanTargetId = null;
+function renderContinuousList() {
+  var items = document.getElementById('contScanItems');
+  var count = document.getElementById('contScanCount');
+  count.textContent = continuousScans.length;
+  if (continuousScans.length === 0) { items.innerHTML = '<div style="color:#aaa;text-align:center;padding:8px">스캔 대기 중...</div>'; return; }
+  items.innerHTML = continuousScans.map(function(code, i) {
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:' + (i%2===0?'#f9fafb':'white') + ';border-radius:4px;margin-bottom:2px"><span><strong style="color:#243bb2">' + (i+1) + '.</strong> ' + code + '</span><button onclick="removeContinuousScan(' + i + ')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;padding:2px 6px">×</button></div>';
+  }).join('');
 }
+function removeContinuousScan(idx) { continuousScans.splice(idx, 1); renderContinuousList(); }
+function clearContinuousList() { continuousScans = []; renderContinuousList(); }
+
+function applyContinuousScans() {
+  if (continuousScans.length === 0) { showToast('스캔된 바코드가 없어요.', 'error'); return; }
+  var applied = 0;
+  for (var i = 0; i < continuousScans.length && i < rows.length; i++) {
+    rows[i].lotNo = continuousScans[i]; applied++;
+  }
+  renderRows();
+  closeScanModal();
+  showToast('✓ ' + applied + '개 행에 LOT 일괄 적용!');
+  continuousScans = [];
+}
+
+function closeScanModal() { document.getElementById('scanModal').classList.remove('open'); stopCamera(); scanTargetId = null; }
 
 function showToast(msg, type) {
   const t = document.getElementById('toast');
