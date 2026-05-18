@@ -235,18 +235,27 @@
   .lot-add:hover { text-decoration: underline; }
   .lot-del { background: none; border: none; cursor: pointer; color: #ccc; font-size: 14px; padding: 0 2px; line-height: 1; }
   .lot-del:hover { color: #c92a2a; }
-  /* 불량유형 다중선택 + 수량 */
-  .defect-selector { position:relative; }
-  .defect-display { min-height:32px;padding:4px 6px;border:1px solid #e0e4ed;border-radius:6px;background:white;cursor:pointer;font-size:11px;display:flex;flex-wrap:wrap;gap:3px;align-items:center; }
-  .defect-display:hover { border-color:#243bb2; }
-  .defect-display .dt-tag { display:inline-flex;align-items:center;gap:2px;background:#fef2f2;color:#dc2626;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600; }
-  .defect-display .dt-tag input { width:32px;border:1px solid #fca5a5;border-radius:3px;padding:1px 3px;font-size:10px;text-align:center;background:#fff;color:#dc2626;font-weight:700; }
-  .defect-display .dt-placeholder { color:#bbb;font-size:11px; }
-  .defect-dropdown { display:none;position:absolute;top:100%;left:0;right:0;z-index:60;background:white;border:1px solid #e0e4ed;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.12);padding:6px;margin-top:2px;max-height:200px;overflow-y:auto; }
-  .defect-dropdown.open { display:block; }
-  .defect-opt { padding:5px 8px;border-radius:4px;font-size:11px;cursor:pointer;margin-bottom:2px;transition:all 0.15s; }
-  .defect-opt:hover { background:#f0f3f9; }
-  .defect-opt.selected { background:#fef2f2;color:#dc2626;font-weight:600; }
+  /* 불량유형 팝업 */
+  .defect-btn { min-height:32px;padding:4px 8px;border:1px solid #e0e4ed;border-radius:6px;background:white;cursor:pointer;font-size:11px;display:flex;flex-wrap:wrap;gap:3px;align-items:center;width:100%; }
+  .defect-btn:hover { border-color:#243bb2; }
+  .defect-btn .dt-tag { display:inline-block;background:#fef2f2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600; }
+  .defect-btn .dt-placeholder { color:#bbb;font-size:11px; }
+  .defect-modal { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:center;justify-content:center; }
+  .defect-modal.open { display:flex; }
+  .defect-modal-box { background:white;border-radius:16px;padding:1.5rem;width:360px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+  .defect-modal-title { font-size:16px;font-weight:700;color:#1a1a2e;margin-bottom:4px; }
+  .defect-modal-sub { font-size:12px;color:#888;margin-bottom:16px; }
+  .defect-row { display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;margin-bottom:4px;transition:all 0.15s;cursor:pointer; }
+  .defect-row:hover { background:#f5f5f5; }
+  .defect-row.active { background:#fef2f2; }
+  .defect-row-name { font-size:13px;font-weight:500;flex:1; }
+  .defect-row-qty { width:70px;border:1px solid #e0e4ed;border-radius:6px;padding:6px 8px;font-size:14px;text-align:center;font-weight:700;color:#dc2626; }
+  .defect-row-qty:focus { border-color:#dc2626;outline:none; }
+  .defect-total { display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fef2f2;border-radius:8px;margin-top:12px;font-weight:700;color:#dc2626; }
+  .defect-modal-btns { display:flex;gap:8px;margin-top:16px; }
+  .defect-modal-btns button { flex:1;padding:10px;border-radius:8px;font-size:14px;font-weight:600;border:none;cursor:pointer;font-family:inherit; }
+  .defect-modal-btns .dm-cancel { background:#f0f3f9;color:#555; }
+  .defect-modal-btns .dm-ok { background:#243bb2;color:white; }
   .recheck-label { display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#7c3aed;cursor:pointer;margin-top:2px; }
   .recheck-label input { accent-color:#7c3aed; }
 
@@ -486,6 +495,23 @@
 
 </div>
 
+<!-- 불량유형 상세 팝업 -->
+<div class="defect-modal" id="defectModal">
+  <div class="defect-modal-box">
+    <div class="defect-modal-title">🔍 불량유형별 수량 입력</div>
+    <div class="defect-modal-sub" id="defectModalSub">유형을 선택하고 수량을 입력하세요</div>
+    <div id="defectModalBody"></div>
+    <div class="defect-total">
+      <span>불합격 합계</span>
+      <span id="defectModalTotal">0</span>
+    </div>
+    <div class="defect-modal-btns">
+      <button class="dm-cancel" onclick="closeDefectModal()">취소</button>
+      <button class="dm-ok" onclick="applyDefectModal()">적용</button>
+    </div>
+  </div>
+</div>
+
 <!-- 스캔 모달 -->
 <div class="scan-overlay" id="scanModal">
   <div class="scan-box">
@@ -618,42 +644,66 @@ function applySabun(id, val) {
   renderRows();
 }
 
-// ── 불량유형 다중선택 + 수량 ──
-function toggleDefectDropdown(rowId) {
-  var el = document.getElementById('defectDrop_' + rowId);
-  document.querySelectorAll('.defect-dropdown.open').forEach(function(d) { if (d !== el) d.classList.remove('open'); });
-  el.classList.toggle('open');
-}
+// ── 불량유형 팝업 ──
+var defectModalRowId = null;
+var defectModalData = []; // [{type, qty}]
 
-function toggleDefectType(rowId, type) {
+function openDefectModal(rowId) {
   var r = rows.find(function(x) { return x.id === rowId; });
   if (!r) return;
-  if (!Array.isArray(r.defectType)) r.defectType = [];
-  var idx = r.defectType.findIndex(function(d) { return d.type === type; });
-  if (idx >= 0) { r.defectType.splice(idx, 1); } else { r.defectType.push({type: type, qty: 0}); }
+  defectModalRowId = rowId;
+  // 기존 데이터 복사
+  defectModalData = DEFECT_TYPES.map(function(t) {
+    var existing = (r.defectType||[]).find(function(d) { return d.type === t; });
+    return { type: t, qty: existing ? (parseInt(existing.qty)||0) : 0 };
+  });
+  renderDefectModal();
+  document.getElementById('defectModal').classList.add('open');
+}
+
+function renderDefectModal() {
+  var total = 0;
+  var html = defectModalData.map(function(d, i) {
+    total += d.qty;
+    var active = d.qty > 0 ? ' active' : '';
+    return '<div class="defect-row' + active + '" onclick="focusDefectQty(' + i + ')">' +
+      '<span class="defect-row-name">' + d.type + '</span>' +
+      '<input class="defect-row-qty" type="number" min="0" value="' + (d.qty||'') + '" placeholder="0" ' +
+      'id="dq_' + i + '" oninput="updateDefectQty(' + i + ',this.value)" onclick="event.stopPropagation()" />' +
+      '</div>';
+  }).join('');
+  document.getElementById('defectModalBody').innerHTML = html;
+  document.getElementById('defectModalTotal').textContent = total + ' EA';
+}
+
+function focusDefectQty(idx) {
+  var el = document.getElementById('dq_' + idx);
+  if (el) { el.focus(); el.select(); }
+}
+
+function updateDefectQty(idx, val) {
+  defectModalData[idx].qty = parseInt(val) || 0;
+  // 합계 업데이트
+  var total = defectModalData.reduce(function(s, d) { return s + d.qty; }, 0);
+  document.getElementById('defectModalTotal').textContent = total + ' EA';
+  // 행 active 상태 업데이트
+  var row = document.getElementById('dq_' + idx).parentElement;
+  if (defectModalData[idx].qty > 0) { row.classList.add('active'); } else { row.classList.remove('active'); }
+}
+
+function applyDefectModal() {
+  var r = rows.find(function(x) { return x.id === defectModalRowId; });
+  if (!r) return;
+  // 수량 > 0인 항목만 저장
+  r.defectType = defectModalData.filter(function(d) { return d.qty > 0; }).map(function(d) { return {type: d.type, qty: d.qty}; });
   recalcFail(r);
+  closeDefectModal();
   renderRows();
 }
 
-function setDefectQty(rowId, type, val) {
-  var r = rows.find(function(x) { return x.id === rowId; });
-  if (!r) return;
-  var d = (r.defectType||[]).find(function(d) { return d.type === type; });
-  if (d) d.qty = parseInt(val) || 0;
-  recalcFail(r);
-  // DOM 직접 업데이트 (renderRows 안 부름 — focus 유지)
-  var row = document.querySelector('tr[data-row-id="' + rowId + '"]');
-  if (row) {
-    var failInput = row.querySelector('input[data-field="fail"]');
-    if (failInput) failInput.value = r.fail;
-    // 합격수량 = 검사수량 - 불합격
-    var inspect = parseInt(r.inspect) || 0;
-    r.pass = inspect - (parseInt(r.fail) || 0);
-    if (r.pass < 0) r.pass = 0;
-    var passInput = row.querySelector('input[data-field="pass"]');
-    if (passInput) passInput.value = r.pass;
-  }
-  updateSummary();
+function closeDefectModal() {
+  document.getElementById('defectModal').classList.remove('open');
+  defectModalRowId = null;
 }
 
 function recalcFail(r) {
@@ -662,18 +712,10 @@ function recalcFail(r) {
     r.defectType.forEach(function(d) { total += (parseInt(d.qty) || 0); });
   }
   r.fail = total;
-  // 합격수량도 재계산
   var inspect = parseInt(r.inspect) || 0;
   r.pass = inspect - total;
   if (r.pass < 0) r.pass = 0;
 }
-
-// 바깥 클릭 시 드롭다운 닫기
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('.defect-selector')) {
-    document.querySelectorAll('.defect-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
-  }
-});
 
 function setField(id, field, val) {
   const r = rows.find(r => r.id === id);
@@ -781,13 +823,8 @@ function renderRows() {
       <td><input type="number" data-field="fail" value="${r.fail}" placeholder="0" min="0"
         readonly style="background:#f5f5f5;color:#dc2626;font-weight:700" title="불량유형 수량 합계" /></td>
       <td>
-        <div class="defect-selector">
-          <div class="defect-display" onclick="toggleDefectDropdown(${r.id})">
-            ${(r.defectType && r.defectType.length > 0) ? r.defectType.map(function(d){ return '<span class="dt-tag">' + d.type + ' <input type="number" value="' + (d.qty||0) + '" min="0" onclick="event.stopPropagation()" oninput="setDefectQty(' + r.id + ',\x27' + d.type + '\x27,this.value)" /></span>'; }).join('') : '<span class="dt-placeholder">선택하세요</span>'}
-          </div>
-          <div class="defect-dropdown" id="defectDrop_${r.id}">
-            ${DEFECT_TYPES.map(function(t){ var sel = (r.defectType||[]).some(function(d){return d.type===t;}); return '<div class="defect-opt' + (sel?' selected':'') + '" onclick="toggleDefectType(' + r.id + ',\x27' + t + '\x27)">' + (sel?'✓ ':'') + t + '</div>'; }).join('')}
-          </div>
+        <div class="defect-btn" onclick="openDefectModal(${r.id})">
+          ${(r.defectType && r.defectType.length > 0) ? r.defectType.map(function(d){ return '<span class="dt-tag">' + d.type + '(' + (d.qty||0) + ')</span>'; }).join('') : '<span class="dt-placeholder">선택하세요</span>'}
         </div>
       </td>
       <td style="text-align:center">
