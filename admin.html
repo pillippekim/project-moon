@@ -1397,7 +1397,7 @@ function renderInspectionTable(data) {
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>NO</th><th>작업일</th><th>사번</th><th>고객품번</th><th>품명</th><th>작업자</th><th class="lot-cell">성형 LOT No.</th><th style="text-align:right">검사</th><th style="text-align:right">합격</th><th style="text-align:right">불합격</th><th>불량유형</th><th>비고</th><th>재검</th><th>특이사항</th><th>입력자</th><th>제출일시</th><th>작업</th></tr>
+            <tr><th>NO</th><th>작업일</th><th>사번</th><th>고객품번</th><th>품명</th><th>작업자</th><th class="lot-cell">성형 LOT No.</th><th style="text-align:right">검사</th><th style="text-align:right">합격</th><th style="text-align:right">불합격</th><th style="max-width:200px">불량유형</th><th>비고</th><th>재검</th><th>특이사항</th><th>입력자</th><th>제출일시</th><th>작업</th></tr>
           </thead>
           <tbody>
             ${data.map((r, i) => {
@@ -1423,7 +1423,7 @@ function renderInspectionTable(data) {
                 <td style="text-align:right;font-weight:500;color:#243bb2">${(r.inspect_qty||0).toLocaleString()}</td>
                 <td class="pass-cell" style="text-align:right">${(r.pass_qty||0).toLocaleString()}</td>
                 <td class="defect-cell" style="text-align:right">${(r.fail_qty||0).toLocaleString()}</td>
-                <td style="font-size:12px">${r.defect_type||'-'}</td>
+                <td style="font-size:12px;max-width:200px;white-space:normal;word-break:break-all">${r.defect_type||'-'}</td>
                 <td style="font-size:12px;color:#888">${r.defect_memo||'-'}</td>
                 <td style="text-align:center;font-size:11px">${r.recheck ? '<span style="color:#7c3aed;font-weight:700">✓</span>' : '-'}</td>
                 <td style="font-size:12px;color:#888">${r.remarks||'-'}</td>
