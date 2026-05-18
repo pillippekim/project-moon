@@ -918,7 +918,9 @@ function initSafetyTable() {
   // 점검항목별 행
   CHECK_ITEMS.forEach(item => {
     const tr = document.createElement('tr');
-    let html = `<td class="item-cell"><span class="item-num">${item.num}</span>${item.label}</td>`;
+    const lang = (typeof getCurrentLang === 'function') ? getCurrentLang() : 'ko';
+    const translatedLabel = (lang !== 'ko' && typeof AUTO_TRANSLATE !== 'undefined' && AUTO_TRANSLATE[item.label] && AUTO_TRANSLATE[item.label][lang]) ? AUTO_TRANSLATE[item.label][lang] : item.label;
+    let html = `<td class="item-cell"><span class="item-num">${item.num}</span>${translatedLabel}</td>`;
     
     EQUIPMENTS.forEach(eq => {
       html += `<td>
@@ -937,9 +939,11 @@ function initSafetyTable() {
   
   // 특이사항 행 (마지막)
   const remarksTr = document.createElement('tr');
-  let remarksHtml = '<td class="remarks-label-cell">📝 특이사항</td>';
+  const remarksLabel = (typeof getCurrentLang === 'function' && getCurrentLang() !== 'ko' && typeof AUTO_TRANSLATE !== 'undefined' && AUTO_TRANSLATE['📝 특이사항']) ? AUTO_TRANSLATE['📝 특이사항'][getCurrentLang()] || '📝 특이사항' : '📝 특이사항';
+  const remarksPlaceholder = (typeof getCurrentLang === 'function' && getCurrentLang() !== 'ko' && typeof AUTO_TRANSLATE !== 'undefined' && AUTO_TRANSLATE['이상 시 입력']) ? AUTO_TRANSLATE['이상 시 입력'][getCurrentLang()] || '이상 시 입력' : '이상 시 입력';
+  let remarksHtml = `<td class="remarks-label-cell">${remarksLabel}</td>`;
   EQUIPMENTS.forEach(eq => {
-    remarksHtml += `<td><input type="text" class="equipment-remarks" data-equipment="${eq.key}" placeholder="이상 시 입력" /></td>`;
+    remarksHtml += `<td><input type="text" class="equipment-remarks" data-equipment="${eq.key}" placeholder="${remarksPlaceholder}" /></td>`;
   });
   remarksTr.innerHTML = remarksHtml;
   tbody.appendChild(remarksTr);

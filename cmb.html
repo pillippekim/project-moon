@@ -1288,6 +1288,7 @@ function initSafetyTable() {
 
   // 최대 점검항목 수 = 7 (KNEADER, 고무시트복합재단기)
   const maxItems = 7;
+  const lang = (typeof getCurrentLang === 'function') ? getCurrentLang() : 'ko';
   for (let itemIdx = 1; itemIdx <= maxItems; itemIdx++) {
     const tr = document.createElement('tr');
     // 왼쪽 라벨: 항목번호
@@ -1296,7 +1297,9 @@ function initSafetyTable() {
     const firstEq = CMB_EQUIPMENTS[0];
     const firstItems = CMB_CHECK_ITEMS_MAP[firstEq.key];
     const firstItem = firstItems.find(it => it.num === itemIdx);
-    html += `${firstItem ? firstItem.label : '-'}</td>`;
+    const rawLabel = firstItem ? firstItem.label : '-';
+    const translatedLabel = (lang !== 'ko' && typeof AUTO_TRANSLATE !== 'undefined' && AUTO_TRANSLATE[rawLabel] && AUTO_TRANSLATE[rawLabel][lang]) ? AUTO_TRANSLATE[rawLabel][lang] : rawLabel;
+    html += `${translatedLabel}</td>`;
 
     CMB_EQUIPMENTS.forEach(eq => {
       const items = CMB_CHECK_ITEMS_MAP[eq.key];
@@ -1318,9 +1321,11 @@ function initSafetyTable() {
 
   // 특이사항 행
   const remarksTr = document.createElement('tr');
-  let rh = '<td class="remarks-label-cell">📝 특이사항</td>';
+  const remarksLabel = (lang !== 'ko' && typeof AUTO_TRANSLATE !== 'undefined' && AUTO_TRANSLATE['📝 특이사항']) ? AUTO_TRANSLATE['📝 특이사항'][lang] || '📝 특이사항' : '📝 특이사항';
+  const remarksPlaceholder = (lang !== 'ko' && typeof AUTO_TRANSLATE !== 'undefined' && AUTO_TRANSLATE['이상 시 입력']) ? AUTO_TRANSLATE['이상 시 입력'][lang] || '이상 시 입력' : '이상 시 입력';
+  let rh = `<td class="remarks-label-cell">${remarksLabel}</td>`;
   CMB_EQUIPMENTS.forEach(eq => {
-    rh += `<td><input type="text" class="equipment-remarks" data-equipment="${eq.key}" placeholder="이상 시 입력" /></td>`;
+    rh += `<td><input type="text" class="equipment-remarks" data-equipment="${eq.key}" placeholder="${remarksPlaceholder}" /></td>`;
   });
   remarksTr.innerHTML = rh;
   tbody.appendChild(remarksTr);
