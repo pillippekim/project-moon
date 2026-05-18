@@ -795,6 +795,7 @@ let productsCache = [];
 let materialsCache = [];
 let rowCounter = 0;
 let currentBatchSeq = 0;
+let editingRecordId = null; // 수정 중인 레코드 ID
 const TIME_SLOTS = ['09:00', '11:00', '14:00', '16:00'];
 
 // 설비 일상점검 상수
@@ -905,7 +906,10 @@ async function init() {
   await checkTodaySafety();
   
   // 작업일자 변경 시 다시 체크
-  document.getElementById('workDate').addEventListener('change', checkTodaySafety);
+  document.getElementById('workDate').addEventListener('change', () => {
+    checkTodaySafety();
+    loadMyHistory();
+  });
   
   // 점검 완료 시에만 행 추가
   if (safetyCheckCompleted) {
@@ -914,6 +918,9 @@ async function init() {
   
   // 시간대별 점검 테이블 생성
   initCheckTable();
+  
+  // 오늘 내 제출 내역 로드
+  loadMyHistory();
 }
 
 // 작업자 목록 (혼련(CMB) 공정만) + 본인 자동 추가
@@ -1191,6 +1198,90 @@ async function submitReport() {
   const rows = document.querySelectorAll('#mainRows tr');
   if (rows.length === 0) { showToast('최소 1건의 작업 내역이 필요해요.', 'error'); return; }
   
+  // ─────────────────────────────────────────────
+  // 수정 모드: 첫 번째 유효한 행만 update (check_data는 유지)
+  // ─────────────────────────────────────────────
+  if (editingRecordId) {
+    let editRow = null;
+    for (const tr of rows) {
+      const batchNo = tr.querySelector('.batch-no').value.trim();
+      const sabun = tr.querySelector('.sabun').value.trim();
+      const weight = parseFloat(tr.querySelector('.weight').value) || 0;
+      if (batchNo || sabun || weight > 0) {
+        editRow = tr;
+        break;
+      }
+    }
+    if (!editRow) { showToast('수정할 내용을 입력해주세요.', 'error'); return; }
+    
+    const batchNo = editRow.querySelector('.batch-no').value.trim();
+    const sabun = editRow.querySelector('.sabun').value.trim();
+    const material = editRow.querySelector('.material').value;
+    const weight = parseFloat(editRow.querySelector('.weight').value) || 0;
+    const isRemix = editRow.querySelector('.remix').checked;
+    const weighingOK = editRow.querySelector('.weighing-check').value === 'true';
+    const note = editRow.querySelector('.note').value.trim();
+    
+    if (!batchNo || !material || weight <= 0) {
+      showToast('BATCH No. / 재질 / 중량은 필수입니다.', 'error');
+      return;
+    }
+    
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '수정 중...';
+    
+    // check_data는 그대로 유지 (점검 데이터는 손대지 않음)
+    const updateData = {
+      worker_id: sabun || null,
+      worker_name: workerName,
+      material_name: material,
+      weight: weight,
+      lot_no: batchNo,
+      is_remix: isRemix,
+      weighing_check: weighingOK,
+      note: note || null,
+      remarks: document.getElementById('remarks').value.trim() || null
+    };
+    
+    const { error } = await db.from('cmb_reports')
+      .update(updateData)
+      .eq('id', editingRecordId)
+      .eq('created_by_name', myInfo?.name || '');
+    
+    submitBtn.disabled = false;
+    submitBtn.textContent = '수정 저장';
+    
+    if (error) {
+      console.error(error);
+      showToast('수정 실패: ' + error.message, 'error');
+      return;
+    }
+    
+    // audit_logs 기록
+    try {
+      await db.from('audit_logs').insert({
+        table_name: 'cmb_reports',
+        record_id: editingRecordId,
+        action: 'UPDATE',
+        performed_by: myInfo?.name || '-',
+        performed_at: new Date().toISOString()
+      });
+    } catch(e) {}
+    
+    showToast('✓ 수정 완료!');
+    editingRecordId = null;
+    submitBtn.textContent = '제출하기';
+    submitBtn.style.background = '#243bb2';
+    const editBadge = document.getElementById('editModeBadge');
+    if (editBadge) editBadge.style.display = 'none';
+    setTimeout(() => { resetForm(false); loadMyHistory(); }, 1200);
+    return;
+  }
+  
+  // ─────────────────────────────────────────────
+  // 신규 모드: insert (기존 로직)
+  // ─────────────────────────────────────────────
   // 행 데이터 수집
   const reportRows = [];
   for (const tr of rows) {
@@ -1255,6 +1346,16 @@ function resetForm(askConfirm = true) {
   if (askConfirm) {
     if (!confirm('입력한 내용을 모두 초기화할까요?')) return;
   }
+  
+  // 수정 모드 초기화
+  editingRecordId = null;
+  const submitBtn = document.getElementById('submitBtn');
+  if (submitBtn) {
+    submitBtn.textContent = '제출하기';
+    submitBtn.style.background = '#243bb2';
+  }
+  const editBadge = document.getElementById('editModeBadge');
+  if (editBadge) editBadge.style.display = 'none';
   
   document.getElementById('mainRows').innerHTML = '';
   rowCounter = 0;
@@ -1482,6 +1583,13 @@ async function loadMyHistory() {
 
   const body = document.getElementById('myHistoryBody');
   const countEl = document.getElementById('myHistoryCount');
+  
+  if (error) {
+    body.innerHTML = '<div style="text-align:center;color:#dc2626;font-size:13px;padding:20px">조회 실패</div>';
+    countEl.textContent = '0건';
+    return;
+  }
+  
   const list = data || [];
   countEl.textContent = list.length + '건';
 
@@ -1490,34 +1598,181 @@ async function loadMyHistory() {
     return;
   }
 
-  body.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f0f3f9">' +
-    '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">NO</th>' +
-    '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">사번/항목</th>' +
-    '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">수량</th>' +
-    '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">비고</th>' +
-    '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">제출시간</th>' +
-    '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">작업</th>' +
-    '</tr></thead><tbody>' +
-    list.map(function(r, i) {
-      var time = r.created_at ? new Date(r.created_at).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) : '';
-      var label = r.worker_id || r.sabun || r.material_name || r.equipment_no || '-';
-      var qty = r.total_weight || r.quantity || r.total_weight || r.box_count || r.production_qty || 0;
-      return '<tr>' +
-        '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center">' + (i+1) + '</td>' +
-        '<td style="padding:8px 6px;border:1px solid #e0e4ed">' + label + '</td>' +
-        '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;font-weight:600">' + Number(qty).toLocaleString() + '</td>' +
-        '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">' + (r.note||'') + '</td>' +
-        '<td style="padding:8px 6px;border:1px solid #e0e4ed;color:#888;font-size:11px">' + time + '</td>' +
-        '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center"><button onclick="deleteMyRecord(\'' + r.id + '\')" style="background:#fef2f2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">삭제</button></td>' +
-        '</tr>';
-    }).join('') +
-    '</tbody></table></div>';
+  const totalWeight = list.reduce((s, r) => s + (parseFloat(r.weight) || 0), 0);
+  const remixCount = list.filter(r => r.is_remix).length;
+
+  body.innerHTML = `
+    <div style="margin-bottom:12px;font-size:13px;color:#555">
+      오늘 총 <strong style="color:#243bb2">${list.length}건</strong>, 
+      중량 합계 <strong style="color:#243bb2">${totalWeight.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3})} kg</strong>
+      ${remixCount > 0 ? ` · 재믹싱 <strong style="color:#d97706">${remixCount}건</strong>` : ''}
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:#f0f3f9">
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">NO</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">BATCH No.</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">사번</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">재질</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">중량(kg)</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:center">재믹싱</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:center">계량</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">비고</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">제출시간</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">작업</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${list.map(function(r, i) {
+            const time = r.created_at ? new Date(r.created_at).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) : '';
+            const isEditing = editingRecordId === r.id;
+            const weight = parseFloat(r.weight) || 0;
+            return `<tr style="${isEditing ? 'background:#fff7ed;' : ''}">
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center">${i+1}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;font-family:monospace;font-size:11px;font-weight:600">${r.lot_no||'-'}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed">${r.worker_id||'-'}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">${r.material_name||'-'}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;font-weight:600">${weight.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3})}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center">${r.is_remix ? '<span style="color:#d97706;font-weight:600">✓</span>' : '-'}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center">${r.weighing_check ? '<span style="color:#059669;font-weight:700">O</span>' : '<span style="color:#dc2626;font-weight:700">X</span>'}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">${r.note||''}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;color:#888;font-size:11px">${time}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center;white-space:nowrap">
+                ${isEditing 
+                  ? '<span style="color:#d97706;font-size:11px;font-weight:600">수정 중...</span>'
+                  : `<button onclick="editMyRecord('${r.id}')" style="background:#fff7ed;color:#d97706;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;margin-right:4px">수정</button><button onclick="deleteMyRecord('${r.id}')" style="background:#fef2f2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">삭제</button>`
+                }
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// 수정 모드: 제출 내역 → 입력폼에 로드
+async function editMyRecord(id) {
+  const { data, error } = await db.from('cmb_reports')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
+  if (error || !data) {
+    showToast('데이터를 불러올 수 없습니다.', 'error');
+    return;
+  }
+  
+  // 수정 모드 설정
+  editingRecordId = id;
+  
+  // 작업자 선택 복원
+  const workerSelect = document.getElementById('workerSelect');
+  if (workerSelect && data.worker_name) {
+    workerSelect.value = data.worker_name;
+  }
+  
+  // 비고 복원
+  document.getElementById('remarks').value = data.remarks || '';
+  
+  // 행을 모두 비우고, 수정 대상 데이터 1행만 추가
+  document.getElementById('mainRows').innerHTML = '';
+  rowCounter = 0;
+  addRow();
+  
+  const editRow = document.querySelector('#mainRows tr');
+  if (editRow) {
+    editRow.querySelector('.batch-no').value = data.lot_no || '';
+    editRow.querySelector('.batch-no').style.color = '#555';
+    editRow.querySelector('.sabun').value = data.worker_id || '';
+    editRow.querySelector('.material').value = data.material_name || '';
+    editRow.querySelector('.weight').value = data.weight || '';
+    editRow.querySelector('.remix').checked = !!data.is_remix;
+    
+    // 계량 체크 O/X 버튼 상태
+    const weighingOK = data.weighing_check !== false;
+    editRow.querySelector('.weighing-check').value = weighingOK ? 'true' : 'false';
+    const oBtn = editRow.querySelector('.o-btn');
+    const xBtn = editRow.querySelector('.x-btn');
+    if (oBtn && xBtn) {
+      if (weighingOK) {
+        oBtn.classList.add('active');
+        xBtn.classList.remove('active');
+      } else {
+        xBtn.classList.add('active');
+        oBtn.classList.remove('active');
+      }
+    }
+    
+    editRow.querySelector('.note').value = data.note || '';
+  }
+  
+  updateTotal();
+  
+  // 수정 모드 UI 표시
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.textContent = '수정 저장';
+  submitBtn.style.background = '#d97706';
+  
+  // 수정 중 배지 표시
+  let editBadge = document.getElementById('editModeBadge');
+  if (!editBadge) {
+    editBadge = document.createElement('div');
+    editBadge.id = 'editModeBadge';
+    editBadge.style.cssText = 'background:#fff7ed;border:2px solid #d97706;color:#d97706;padding:10px 20px;border-radius:10px;text-align:center;font-size:14px;font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center';
+    const actionBar = document.querySelector('.action-bar');
+    actionBar.parentElement.insertBefore(editBadge, actionBar);
+  }
+  editBadge.innerHTML = '✏️ 수정 모드 — 기존 제출 내역을 수정하고 있습니다 (점검 데이터는 변경되지 않음) <button onclick="cancelEdit()" style="background:white;color:#d97706;border:1px solid #d97706;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">수정 취소</button>';
+  editBadge.style.display = 'flex';
+  
+  // 내역 테이블 갱신 (수정 중 행 강조)
+  loadMyHistory();
+  
+  // 상단으로 스크롤
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  showToast('✏️ 수정할 내용을 변경 후 "수정 저장"을 눌러주세요');
+}
+
+function cancelEdit() {
+  editingRecordId = null;
+  
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.textContent = '제출하기';
+  submitBtn.style.background = '#243bb2';
+  
+  const editBadge = document.getElementById('editModeBadge');
+  if (editBadge) editBadge.style.display = 'none';
+  
+  resetForm(false);
+  loadMyHistory();
+  showToast('수정이 취소되었습니다.');
 }
 
 async function deleteMyRecord(id) {
   if (!confirm('이 기록을 삭제할까요?')) return;
-  await db.from('cmb_reports').update({ deleted_at: new Date().toISOString() }).eq('id', id);
-  try { await db.from('audit_logs').insert({ table_name:'cmb_reports', record_id:id, action:'DELETE', performed_by:myInfo?.name||'-', performed_at:new Date().toISOString() }); } catch(e) {}
+  
+  const { error } = await db.from('cmb_reports')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('created_by_name', myInfo?.name || '');
+  
+  if (error) {
+    showToast('삭제 실패: ' + error.message, 'error');
+    return;
+  }
+  
+  try { 
+    await db.from('audit_logs').insert({ 
+      table_name:'cmb_reports', 
+      record_id:id, 
+      action:'DELETE', 
+      performed_by:myInfo?.name||'-', 
+      performed_at:new Date().toISOString() 
+    }); 
+  } catch(e) {}
+  
   loadMyHistory();
   showToast('✓ 삭제 완료');
 }
