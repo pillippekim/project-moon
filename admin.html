@@ -1130,11 +1130,63 @@ function renderStats() {
     const totalPass = ins.reduce((s,r)=>s+(r.pass_qty||0),0);
     const totalFail = ins.reduce((s,r)=>s+(r.fail_qty||0),0);
     const passRate = totalInspect > 0 ? ((totalPass/totalInspect)*100).toFixed(1) : '0.0';
+
+    // 불량유형별 수량 집계
+    const defectMap = {};
+    ins.forEach(function(r) {
+      if (!r.defect_type) return;
+      // "이물질(1), 기포(2)" 형태 파싱
+      var parts = r.defect_type.split(',');
+      parts.forEach(function(p) {
+        p = p.trim();
+        var m = p.match(/^(.+?)\((\d+)\)$/);
+        if (m) {
+          var typeName = m[1].trim();
+          var qty = parseInt(m[2]) || 0;
+          defectMap[typeName] = (defectMap[typeName] || 0) + qty;
+        } else if (p) {
+          // 수량 없이 유형만 있는 경우
+          defectMap[p] = (defectMap[p] || 0) + 1;
+        }
+      });
+    });
+
+    // 불량유형 집계 HTML (수량 많은 순 정렬)
+    var defectEntries = Object.entries(defectMap).sort(function(a,b) { return b[1] - a[1]; });
+    var defectHtml = '';
+    if (defectEntries.length > 0) {
+      var maxVal = defectEntries[0][1];
+      defectHtml = '<div style="margin-top:4px;">';
+      defectEntries.forEach(function(e) {
+        var pct = maxVal > 0 ? Math.round((e[1]/maxVal)*100) : 0;
+        defectHtml += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
+          + '<span style="font-size:12px;color:#334155;min-width:70px;font-weight:500;">' + e[0] + '</span>'
+          + '<div style="flex:1;height:16px;background:#f1f5f9;border-radius:4px;overflow:hidden;">'
+          + '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#ef4444,#f97316);border-radius:4px;min-width:2px;"></div></div>'
+          + '<span style="font-size:13px;font-weight:700;color:#dc2626;min-width:30px;text-align:right;">' + e[1] + '</span>'
+          + '</div>';
+      });
+      defectHtml += '</div>';
+    } else {
+      defectHtml = '<div style="text-align:center;color:#94a3b8;font-size:12px;padding:8px;">불량 없음</div>';
+    }
+
     statsEl.innerHTML = `
       <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">검사 건수</div><div class="stat-num blue">${ins.length} <span class="stat-unit">건</span></div></div>
       <div class="stat-card"><div class="stat-icon">🔬</div><div class="stat-label">총 검사수량</div><div class="stat-num orange">${totalInspect.toLocaleString()} <span class="stat-unit">EA</span></div></div>
       <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-label">합격 / 불합격</div><div class="stat-num green">${totalPass.toLocaleString()}<span class="stat-unit"> / </span><span style="color:#e53e3e">${totalFail.toLocaleString()}</span></div></div>
       <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-label">합격률</div><div class="stat-num green">${passRate} <span class="stat-unit">%</span></div></div>
+    `;
+    // 불량유형 집계 카드 (통계 카드 아래에 추가)
+    statsEl.innerHTML += `
+      <div class="stat-card" style="grid-column:1/-1;padding:14px 18px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+          <span style="font-size:16px;">🔴</span>
+          <span style="font-size:14px;font-weight:700;color:#1e293b;">불량유형별 집계</span>
+          <span style="font-size:11px;color:#94a3b8;margin-left:auto;">${defectEntries.length}개 유형 / 총 ${totalFail}건</span>
+        </div>
+        ${defectHtml}
+      </div>
     `;
   } else if (currentProcess === '혼련(CMB)') {
     const totalWeight = cmb.filter(r => !r.is_remix).reduce((s,r)=>s+(parseFloat(r.weight)||0),0);
