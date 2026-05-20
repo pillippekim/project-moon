@@ -2494,9 +2494,24 @@ function downloadExcel() {
 
   // 검사 데이터
   if ((currentProcess === 'all' || currentProcess === '검사') && cachedData.검사.length > 0) {
+    // 전체 불량유형 목록 수집
+    var allDefectTypes = new Set();
+    cachedData.검사.forEach(function(r) {
+      if (!r.defect_type) return;
+      r.defect_type.split(',').forEach(function(p) {
+        p = p.trim();
+        var m = p.match(/^(.+?)\((\d+)\)$/);
+        if (m) allDefectTypes.add(m[1].trim());
+        else if (p) allDefectTypes.add(p);
+      });
+    });
+    var defectTypeList = Array.from(allDefectTypes).sort();
+
     const rows = cachedData.검사.map((r, i) => {
       const prod = PRODUCTS[r.worker_id] || {};
-      return {
+
+      // 기본 컬럼
+      var row = {
         'NO': i + 1,
         '작업일': r.work_date || '',
         '사번': r.worker_id || '',
@@ -2507,14 +2522,36 @@ function downloadExcel() {
         '검사수량': r.inspect_qty || 0,
         '합격수량': r.pass_qty || 0,
         '불합격수량': r.fail_qty || 0,
-        '불량유형': r.defect_type || '',
-        '비고': r.defect_memo || '',
-        '특이사항': r.remarks || '',
-        '제출일시': fmtDatetime(r.submitted_at)
+        '불량유형(원본)': r.defect_type || ''
       };
+
+      // 불량유형별 개별 컬럼 추가
+      var parsed = {};
+      if (r.defect_type) {
+        r.defect_type.split(',').forEach(function(p) {
+          p = p.trim();
+          var m = p.match(/^(.+?)\((\d+)\)$/);
+          if (m) parsed[m[1].trim()] = parseInt(m[2]) || 0;
+          else if (p) parsed[p] = 1;
+        });
+      }
+      defectTypeList.forEach(function(t) {
+        row['[불량]' + t] = parsed[t] || 0;
+      });
+
+      row['비고'] = r.defect_memo || '';
+      row['재검'] = r.recheck ? 'Y' : '';
+      row['특이사항'] = r.remarks || '';
+      row['입력자'] = r.created_by_name || '';
+      row['제출일시'] = fmtDatetime(r.submitted_at);
+      return row;
     });
     const ws = XLSX.utils.json_to_sheet(rows);
-    ws['!cols'] = [{wch:5},{wch:11},{wch:10},{wch:15},{wch:25},{wch:10},{wch:18},{wch:9},{wch:9},{wch:9},{wch:12},{wch:18},{wch:18},{wch:18}];
+    // 컬럼 너비 설정
+    var colWidths = [{wch:5},{wch:11},{wch:10},{wch:15},{wch:25},{wch:10},{wch:18},{wch:9},{wch:9},{wch:9},{wch:20}];
+    defectTypeList.forEach(function() { colWidths.push({wch:8}); });
+    colWidths.push({wch:15},{wch:5},{wch:15},{wch:10},{wch:18});
+    ws['!cols'] = colWidths;
     XLSX.utils.book_append_sheet(wb, ws, '검사 작업일지');
     added++;
   }
