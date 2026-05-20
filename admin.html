@@ -890,17 +890,21 @@ function toggleUnifiedView() {
 function setPeriod(type) {
   const now = new Date();
   let start, end;
+  // 로컬 날짜를 YYYY-MM-DD 형식으로 (UTC 변환 없이)
+  function fmtLocal(d) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
   if (type === 'today') {
-    start = end = now.toISOString().split('T')[0];
+    start = end = fmtLocal(now);
   } else if (type === 'yesterday') {
     const y = new Date(now); y.setDate(y.getDate() - 1);
-    start = end = y.toISOString().split('T')[0];
+    start = end = fmtLocal(y);
   } else if (type === 'thisMonth') {
-    start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-    end = now.toISOString().split('T')[0];
+    start = fmtLocal(new Date(now.getFullYear(), now.getMonth(), 1));
+    end = fmtLocal(now);
   } else if (type === 'lastMonth') {
-    start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
-    end = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+    start = fmtLocal(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+    end = fmtLocal(new Date(now.getFullYear(), now.getMonth(), 0));
   }
   document.getElementById('startDate').value = start;
   document.getElementById('endDate').value = end;
