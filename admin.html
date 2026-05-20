@@ -1131,11 +1131,23 @@ function renderStats() {
     const totalFail = ins.reduce((s,r)=>s+(r.fail_qty||0),0);
     const passRate = totalInspect > 0 ? ((totalPass/totalInspect)*100).toFixed(1) : '0.0';
 
-    // 불량유형별 수량 집계
-    const defectMap = {};
+    statsEl.innerHTML = `
+      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">검사 건수</div><div class="stat-num blue">${ins.length} <span class="stat-unit">건</span></div></div>
+      <div class="stat-card"><div class="stat-icon">🔬</div><div class="stat-label">총 검사수량</div><div class="stat-num orange">${totalInspect.toLocaleString()} <span class="stat-unit">EA</span></div></div>
+      <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-label">합격 / 불합격</div><div class="stat-num green">${totalPass.toLocaleString()}<span class="stat-unit"> / </span><span style="color:#e53e3e">${totalFail.toLocaleString()}</span></div></div>
+      <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-label">합격률</div><div class="stat-num green">${passRate} <span class="stat-unit">%</span></div></div>
+    `;
+    // 불량유형 집계 카드 (사번별 × 유형별 피벗)
+    // 1단계: 전체 불량유형 목록 수집 + 사번별 집계
+    const defectMap = {};      // { 사번: { 유형: 수량 } }
+    const allTypes = new Set(); // 전체 유형 목록
+    const sabunNames = {};     // { 사번: 작업자명 }
+
     ins.forEach(function(r) {
       if (!r.defect_type) return;
-      // "이물질(1), 기포(2)" 형태 파싱
+      var sabun = r.worker_id || '미지정';
+      if (!defectMap[sabun]) defectMap[sabun] = {};
+      if (r.worker_name) sabunNames[sabun] = r.worker_name;
       var parts = r.defect_type.split(',');
       parts.forEach(function(p) {
         p = p.trim();
@@ -1143,47 +1155,74 @@ function renderStats() {
         if (m) {
           var typeName = m[1].trim();
           var qty = parseInt(m[2]) || 0;
-          defectMap[typeName] = (defectMap[typeName] || 0) + qty;
+          allTypes.add(typeName);
+          defectMap[sabun][typeName] = (defectMap[sabun][typeName] || 0) + qty;
         } else if (p) {
-          // 수량 없이 유형만 있는 경우
-          defectMap[p] = (defectMap[p] || 0) + 1;
+          allTypes.add(p);
+          defectMap[sabun][p] = (defectMap[sabun][p] || 0) + 1;
         }
       });
     });
 
-    // 불량유형 집계 HTML (수량 많은 순 정렬)
-    var defectEntries = Object.entries(defectMap).sort(function(a,b) { return b[1] - a[1]; });
+    var typeList = Array.from(allTypes).sort();
+    var sabunList = Object.keys(defectMap).sort();
+
     var defectHtml = '';
-    if (defectEntries.length > 0) {
-      var maxVal = defectEntries[0][1];
-      defectHtml = '<div style="margin-top:4px;">';
-      defectEntries.forEach(function(e) {
-        var pct = maxVal > 0 ? Math.round((e[1]/maxVal)*100) : 0;
-        defectHtml += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
-          + '<span style="font-size:12px;color:#334155;min-width:70px;font-weight:500;">' + e[0] + '</span>'
-          + '<div style="flex:1;height:16px;background:#f1f5f9;border-radius:4px;overflow:hidden;">'
-          + '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#ef4444,#f97316);border-radius:4px;min-width:2px;"></div></div>'
-          + '<span style="font-size:13px;font-weight:700;color:#dc2626;min-width:30px;text-align:right;">' + e[1] + '</span>'
-          + '</div>';
+    if (sabunList.length > 0 && typeList.length > 0) {
+      // 피벗 테이블
+      defectHtml = '<div style="overflow-x:auto;margin-top:4px;"><table style="width:100%;border-collapse:collapse;font-size:12px;">';
+      // 헤더
+      defectHtml += '<thead><tr style="background:#f8f9fc;">';
+      defectHtml += '<th style="padding:8px 10px;border:1px solid #e8ecf3;text-align:left;font-weight:700;color:#243bb2;min-width:70px;">사번</th>';
+      defectHtml += '<th style="padding:8px 10px;border:1px solid #e8ecf3;text-align:left;font-weight:600;color:#64748b;min-width:60px;">작업자</th>';
+      typeList.forEach(function(t) {
+        defectHtml += '<th style="padding:8px 10px;border:1px solid #e8ecf3;text-align:center;font-weight:600;color:#dc2626;min-width:55px;">' + t + '</th>';
       });
-      defectHtml += '</div>';
+      defectHtml += '<th style="padding:8px 10px;border:1px solid #e8ecf3;text-align:center;font-weight:700;color:#1e293b;background:#fef2f2;min-width:50px;">합계</th>';
+      defectHtml += '</tr></thead><tbody>';
+
+      // 유형별 총합 (하단 합계용)
+      var typeTotals = {};
+      typeList.forEach(function(t) { typeTotals[t] = 0; });
+      var grandTotal = 0;
+
+      // 데이터 행
+      sabunList.forEach(function(sabun) {
+        var rowTotal = 0;
+        defectHtml += '<tr>';
+        defectHtml += '<td style="padding:6px 10px;border:1px solid #e8ecf3;font-weight:600;">' + sabun + '</td>';
+        defectHtml += '<td style="padding:6px 10px;border:1px solid #e8ecf3;color:#64748b;">' + (sabunNames[sabun] || '-') + '</td>';
+        typeList.forEach(function(t) {
+          var val = defectMap[sabun][t] || 0;
+          rowTotal += val;
+          typeTotals[t] += val;
+          var cellStyle = val > 0 ? 'color:#dc2626;font-weight:700;background:#fef2f2;' : 'color:#d1d5db;';
+          defectHtml += '<td style="padding:6px 10px;border:1px solid #e8ecf3;text-align:center;' + cellStyle + '">' + (val || '-') + '</td>';
+        });
+        grandTotal += rowTotal;
+        defectHtml += '<td style="padding:6px 10px;border:1px solid #e8ecf3;text-align:center;font-weight:700;background:#fef2f2;color:#dc2626;">' + rowTotal + '</td>';
+        defectHtml += '</tr>';
+      });
+
+      // 합계 행
+      defectHtml += '<tr style="background:#f1f5f9;font-weight:700;">';
+      defectHtml += '<td style="padding:8px 10px;border:1px solid #e8ecf3;" colspan="2">합계</td>';
+      typeList.forEach(function(t) {
+        var val = typeTotals[t];
+        defectHtml += '<td style="padding:8px 10px;border:1px solid #e8ecf3;text-align:center;color:#dc2626;">' + (val || '-') + '</td>';
+      });
+      defectHtml += '<td style="padding:8px 10px;border:1px solid #e8ecf3;text-align:center;color:#dc2626;font-size:14px;">' + grandTotal + '</td>';
+      defectHtml += '</tr></tbody></table></div>';
     } else {
-      defectHtml = '<div style="text-align:center;color:#94a3b8;font-size:12px;padding:8px;">불량 없음</div>';
+      defectHtml = '<div style="text-align:center;color:#94a3b8;font-size:12px;padding:12px;">조회 기간 내 불량 데이터가 없습니다</div>';
     }
 
-    statsEl.innerHTML = `
-      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">검사 건수</div><div class="stat-num blue">${ins.length} <span class="stat-unit">건</span></div></div>
-      <div class="stat-card"><div class="stat-icon">🔬</div><div class="stat-label">총 검사수량</div><div class="stat-num orange">${totalInspect.toLocaleString()} <span class="stat-unit">EA</span></div></div>
-      <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-label">합격 / 불합격</div><div class="stat-num green">${totalPass.toLocaleString()}<span class="stat-unit"> / </span><span style="color:#e53e3e">${totalFail.toLocaleString()}</span></div></div>
-      <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-label">합격률</div><div class="stat-num green">${passRate} <span class="stat-unit">%</span></div></div>
-    `;
-    // 불량유형 집계 카드 (통계 카드 아래에 추가)
     statsEl.innerHTML += `
       <div class="stat-card" style="grid-column:1/-1;padding:14px 18px;">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
           <span style="font-size:16px;">🔴</span>
-          <span style="font-size:14px;font-weight:700;color:#1e293b;">불량유형별 집계</span>
-          <span style="font-size:11px;color:#94a3b8;margin-left:auto;">${defectEntries.length}개 유형 / 총 ${totalFail}건</span>
+          <span style="font-size:14px;font-weight:700;color:#1e293b;">사번별 불량유형 집계</span>
+          <span style="font-size:11px;color:#94a3b8;margin-left:auto;">${sabunList.length}명 / ${typeList.length}개 유형 / 총 ${totalFail}건</span>
         </div>
         ${defectHtml}
       </div>
