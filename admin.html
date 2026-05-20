@@ -119,6 +119,12 @@ tr:hover td { background: #fafafa; }
 .deleted-badge { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #fef2f2; color: #dc2626; font-weight: 500; margin-left: 4px; }
 .show-deleted-toggle { font-size: 12px; padding: 6px 12px; border-radius: 6px; background: white; color: #555; border: 1px solid #ddd; cursor: pointer; font-family: inherit; }
 .show-deleted-toggle.active { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
+/* 정렬 가능 헤더 */
+th.sortable { cursor:pointer; user-select:none; position:relative; white-space:nowrap; }
+th.sortable:hover { background:#eef0ff; }
+th.sortable::after { content:'⇅'; margin-left:4px; font-size:10px; color:#b0b8c9; }
+th.sortable.asc::after { content:'▲'; color:#243bb2; }
+th.sortable.desc::after { content:'▼'; color:#243bb2; }
 </style>
 </head>
 <body>
@@ -300,7 +306,7 @@ tr:hover td { background: #fafafa; }
         <input class="modal-input" id="ei_lot_nos" />
       </div>
       <div class="modal-field">
-        <span class="modal-label">불량 메모</span>
+        <span class="modal-label">비고</span>
         <input class="modal-input" id="ei_defect_memo" />
       </div>
       <div class="modal-field">
@@ -1017,6 +1023,49 @@ async function loadData() {
   render();
 }
 
+// ═══ 테이블 정렬 시스템 ═══
+var currentSortCol = '';
+var currentSortDir = 'asc';
+
+function sortTableData(data, col, dir) {
+    return data.slice().sort(function(a, b) {
+        var va = a[col], vb = b[col];
+        if (va == null) va = '';
+        if (vb == null) vb = '';
+        // 숫자 비교
+        if (typeof va === 'number' && typeof vb === 'number') {
+            return dir === 'asc' ? va - vb : vb - va;
+        }
+        // 문자열 비교
+        va = String(va); vb = String(vb);
+        if (dir === 'asc') return va.localeCompare(vb, 'ko');
+        return vb.localeCompare(va, 'ko');
+    });
+}
+
+function handleSort(col) {
+    if (currentSortCol === col) {
+        currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSortCol = col;
+        currentSortDir = 'asc';
+    }
+    render();
+}
+
+function makeSortTh(label, col, extra) {
+    var cls = 'sortable';
+    if (currentSortCol === col) cls += ' ' + currentSortDir;
+    return '<th class="' + cls + '" onclick="handleSort(\'' + col + '\')" ' + (extra||'') + '>' + label + '</th>';
+}
+
+function applySortIfNeeded(data) {
+    if (currentSortCol && data.length > 0 && data[0].hasOwnProperty(currentSortCol)) {
+        return sortTableData(data, currentSortCol, currentSortDir);
+    }
+    return data;
+}
+
 function render() {
   renderStats();
   if (currentProcess === 'all') {
@@ -1344,12 +1393,13 @@ function renderPackagingTable(data) {
     document.getElementById('resultArea').innerHTML = '<div class="card"><div class="empty-row" style="padding:2rem;text-align:center;color:#aaa">조회된 데이터가 없어요.</div></div>';
     return;
   }
+  data = applySortIfNeeded(data);
   document.getElementById('resultArea').innerHTML = `
     <div class="card" style="padding:0">
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>NO</th><th>작업일</th><th>사번</th><th>고객품번</th><th>품명</th><th>작업자</th><th class="lot-cell">성형 LOT No.</th><th style="text-align:right">포장수량</th><th>비고</th><th>특이사항</th><th>입력자</th><th>제출일시</th><th>작업</th></tr>
+            <tr><th>NO</th>${makeSortTh('작업일','work_date')}${makeSortTh('사번','worker_id')}${makeSortTh('고객품번','_partNo')}${makeSortTh('품명','_partName')}${makeSortTh('작업자','worker_name')}<th class="lot-cell">성형 LOT No.</th>${makeSortTh('포장수량','total_qty','style="text-align:right"')}<th>비고</th><th>특이사항</th>${makeSortTh('입력자','created_by_name')}${makeSortTh('제출일시','submitted_at')}<th>작업</th></tr>
           </thead>
           <tbody>
             ${data.map((r, i) => {
@@ -1392,12 +1442,13 @@ function renderInspectionTable(data) {
     document.getElementById('resultArea').innerHTML = '<div class="card"><div class="empty-row" style="padding:2rem;text-align:center;color:#aaa">조회된 데이터가 없어요.</div></div>';
     return;
   }
+  data = applySortIfNeeded(data);
   document.getElementById('resultArea').innerHTML = `
     <div class="card" style="padding:0">
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>NO</th><th>작업일</th><th>사번</th><th>고객품번</th><th>품명</th><th>작업자</th><th class="lot-cell">성형 LOT No.</th><th style="text-align:right">검사</th><th style="text-align:right">합격</th><th style="text-align:right">불합격</th><th style="max-width:200px">불량유형</th><th>비고</th><th>재검</th><th>특이사항</th><th>입력자</th><th>제출일시</th><th>작업</th></tr>
+            <tr><th>NO</th>${makeSortTh('작업일','work_date')}${makeSortTh('사번','worker_id')}${makeSortTh('고객품번','_partNo')}${makeSortTh('품명','_partName')}${makeSortTh('작업자','worker_name')}<th class="lot-cell">성형 LOT No.</th>${makeSortTh('검사','inspect_qty','style="text-align:right"')}${makeSortTh('합격','pass_qty','style="text-align:right"')}${makeSortTh('불합격','fail_qty','style="text-align:right"')}<th style="max-width:200px">불량유형</th><th>비고</th><th>재검</th><th>특이사항</th>${makeSortTh('입력자','created_by_name')}${makeSortTh('제출일시','submitted_at')}<th>작업</th></tr>
           </thead>
           <tbody>
             ${data.map((r, i) => {
@@ -1445,17 +1496,18 @@ function renderCmbTable(data) {
     document.getElementById('resultArea').innerHTML = '<div class="card"><div class="empty-row" style="padding:2rem;text-align:center;color:#aaa">조회된 데이터가 없어요.</div></div>';
     return;
   }
+  data = applySortIfNeeded(data);
   document.getElementById('resultArea').innerHTML = `
     <div class="card" style="padding:0">
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>NO</th><th>작업일</th><th>BATCH No.</th><th>사번<br>(제품코드)</th>
-              <th>품명</th><th>재질명</th><th style="text-align:right">중량(Kg)</th>
-              <th>재믹싱</th><th>평량투입</th><th>작업자</th>
+              <th>NO</th>${makeSortTh('작업일','work_date')}${makeSortTh('BATCH No.','batch_no')}${makeSortTh('사번<br>(제품코드)','worker_id')}
+              ${makeSortTh('품명','_partName')}${makeSortTh('재질명','material_name')}${makeSortTh('중량(Kg)','weight','style="text-align:right"')}
+              <th>재믹싱</th><th>평량투입</th>${makeSortTh('작업자','worker_name')}
               <th>비고</th><th>점검</th><th>특이사항</th>
-              <th>입력자</th><th>제출일시</th><th>작업</th>
+              ${makeSortTh('입력자','created_by_name')}${makeSortTh('제출일시','submitted_at')}<th>작업</th>
             </tr>
           </thead>
           <tbody>
@@ -1823,6 +1875,7 @@ function renderCoatingTable(data) {
     document.getElementById('resultArea').innerHTML = '<div class="card"><div style="padding:2rem;text-align:center;color:#aaa;font-size:13px">데이터가 없어요.</div></div>';
     return;
   }
+  data = applySortIfNeeded(data);
   document.getElementById('resultArea').innerHTML = `
     <div class="card" style="padding:0">
       <div class="table-wrap">
@@ -1942,6 +1995,7 @@ function renderPostcureTable(data) {
     document.getElementById('resultArea').innerHTML = '<div class="card"><div style="padding:2rem;text-align:center;color:#aaa;font-size:13px">데이터가 없어요.</div></div>';
     return;
   }
+  data = applySortIfNeeded(data);
   document.getElementById('resultArea').innerHTML = `
     <div class="card" style="padding:0">
       <div class="table-wrap">
@@ -2032,6 +2086,7 @@ async function deletePostcure(id) {
 // ── 쇼트 테이블 렌더링 ──────────────────────────────
 function renderShotTable(data) {
   if (!data.length) { document.getElementById('resultArea').innerHTML = '<div class="card"><div style="padding:2rem;text-align:center;color:#aaa;font-size:13px">데이터가 없어요.</div></div>'; return; }
+  data = applySortIfNeeded(data);
   document.getElementById('resultArea').innerHTML = `
     <div class="card" style="padding:0"><div class="table-wrap"><table><thead><tr>
       <th>NO</th><th>작업일</th><th>유형</th><th>설비</th><th>사번</th>
@@ -2119,6 +2174,7 @@ async function deleteShot(id) {
 // ── 성형 ──────────────────────────────
 function renderMoldingTable(data) {
   if (!data.length) { document.getElementById('resultArea').innerHTML = '<div class="card"><div style="padding:2rem;text-align:center;color:#aaa;font-size:13px">데이터가 없어요.</div></div>'; return; }
+  data = applySortIfNeeded(data);
   document.getElementById('resultArea').innerHTML = `
     <div class="card" style="padding:0"><div class="table-wrap"><table><thead><tr>
       <th>NO</th><th>작업일</th><th>근무</th><th>반</th><th>설비</th><th>사번</th><th>제품명</th>
@@ -2242,6 +2298,7 @@ async function saveEditMolding() {
 // ── 조립 ──────────────────────────────
 function renderAssemblyTable(data) {
   if (!data.length) { document.getElementById('resultArea').innerHTML = '<div class="card"><div style="padding:2rem;text-align:center;color:#aaa;font-size:13px">데이터가 없어요.</div></div>'; return; }
+  data = applySortIfNeeded(data);
   document.getElementById('resultArea').innerHTML = `
     <div class="card" style="padding:0"><div class="table-wrap"><table><thead><tr>
       <th>NO</th><th>작업일</th><th>근무</th><th>설비</th><th>사번</th><th>제품명</th>
@@ -2360,7 +2417,7 @@ function downloadExcel() {
         '합격수량': r.pass_qty || 0,
         '불합격수량': r.fail_qty || 0,
         '불량유형': r.defect_type || '',
-        '불량 메모': r.defect_memo || '',
+        '비고': r.defect_memo || '',
         '특이사항': r.remarks || '',
         '제출일시': fmtDatetime(r.submitted_at)
       };
