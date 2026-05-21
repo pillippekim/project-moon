@@ -15,10 +15,10 @@ const PAGE_PERMISSIONS = {
   'shot.html':        { admin: ['all'], worker: ['쇼트'] },
   'molding.html':     { admin: ['all'], worker: ['성형'] },
   'assembly.html':    { admin: ['all'], worker: ['조립'] },
-  'safety_admin.html': { admin: ['all'] },
-  'admin.html':       { admin: ['all'], worker: [] },
-  'master.html':      { admin: ['생산관리팀','경영지원팀'], worker: [] },
-  'docs_admin.html':  { admin: ['연구개발팀','품질관리팀','생산관리팀'], worker: [] },
+  'safety_viewer.html': { admin: ['all'] },
+  'data_viewer.html':       { admin: ['all'], worker: [] },
+  'master_data.html':      { admin: ['생산관리팀','경영지원팀'], worker: [] },
+  'docs_manager.html':  { admin: ['연구개발팀','품질관리팀','생산관리팀'], worker: [] },
   'docs_viewer.html': { admin: ['all'], worker: ['all'] },
   'users.html':       { admin: [], worker: [] }, // 슈퍼관리자만
   'audit.html':       { admin: [], worker: [] }, // 슈퍼관리자만
