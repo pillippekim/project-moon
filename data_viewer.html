@@ -58,6 +58,7 @@ tr:hover td { background: #fafafa; }
 .empty-row td { text-align: center; color: #aaa; padding: 2rem; font-size: 14px; }
 .lot-tag { display: inline-block; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #fef9c3; color: #ca8a04; margin: 1px; font-weight: 500; }
 .lot-cell { max-width: 420px; min-width: 250px; }
+.col-worker { min-width: 80px; white-space: nowrap; }
 .process-tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
 .process-포장 { background: #eff6ff; color: #243bb2; }
 .process-검사 { background: #f0fdf4; color: #16a34a; }
@@ -1471,7 +1472,7 @@ function renderUnifiedTable() {
                 <td><span class="process-tag process-${r._proc}">${r._proc}</span></td>
                 <td style="font-weight:500">${r.worker_id||'-'}</td>
                 <td style="font-size:12px;color:#555">${prod.partName||'-'}</td>
-                <td>${r.worker_name||'-'}</td>
+                <td style="min-width:80px">${r.worker_name||'-'}</td>
                 <td style="text-align:right;font-weight:500;color:#243bb2">${(r._qty||0).toLocaleString()}</td>
                 <td style="font-size:12px;color:#888">${r.note || r.remarks || '-'}</td>
               </tr>`;
@@ -1515,7 +1516,7 @@ function renderPackagingTable(data) {
                 <td style="font-weight:500">${r.worker_id||'-'}</td>
                 <td style="font-size:12px;color:#555">${prod.partNo||'-'}</td>
                 <td style="font-size:12px;color:#555">${prod.partName||'-'}</td>
-                <td>${r.worker_name||'-'}</td>
+                <td style="min-width:80px">${r.worker_name||'-'}</td>
                 <td class="lot-cell">${lots}</td>
                 <td style="text-align:right;font-weight:500;color:#243bb2">${(r.quantity||0).toLocaleString()}</td>
                 <td style="font-size:12px;color:#888">${r.note||'-'}</td>
@@ -1564,7 +1565,7 @@ function renderInspectionTable(data) {
                 <td style="font-weight:500">${r.worker_id||'-'}</td>
                 <td style="font-size:12px;color:#555">${prod.partNo||'-'}</td>
                 <td style="font-size:12px;color:#555">${prod.partName||'-'}</td>
-                <td>${r.worker_name||'-'}</td>
+                <td style="min-width:80px">${r.worker_name||'-'}</td>
                 <td class="lot-cell">${lots}</td>
                 <td style="text-align:right;font-weight:500;color:#243bb2">${(r.inspect_qty||0).toLocaleString()}</td>
                 <td class="pass-cell" style="text-align:right">${(r.pass_qty||0).toLocaleString()}</td>
@@ -1645,7 +1646,7 @@ function renderCmbTable(data) {
                 <td style="text-align:right;font-weight:500">${(parseFloat(r.weight)||0).toFixed(3)}</td>
                 <td style="text-align:center">${remixBadge}</td>
                 <td style="text-align:center">${weighingBadge}</td>
-                <td>${r.worker_name||'-'}</td>
+                <td style="min-width:80px">${r.worker_name||'-'}</td>
                 <td style="font-size:12px;color:#888">${r.note||'-'}</td>
                 <td style="text-align:center">${checkSummary}</td>
                 <td style="font-size:12px;color:#888">${r.remarks||'-'}</td>
@@ -1758,6 +1759,7 @@ function renderCuttingTable(data) {
     document.getElementById('resultArea').innerHTML = '<div class="card"><div class="empty-row" style="padding:2rem;text-align:center;color:#aaa">조회된 데이터가 없어요.</div></div>';
     return;
   }
+  data = applySortIfNeeded(data);
   
   // 날짜별 안전점검 매핑
   const safetyByDate = {};
@@ -1771,13 +1773,13 @@ function renderCuttingTable(data) {
         <table>
           <thead>
             <tr>
-              <th>NO</th><th>작업일</th><th>사번<br>(제품코드)</th>
-              <th>품명</th><th>재질명</th><th>뱃지 No</th>
-              <th style="text-align:right">박스수량(개)</th>
-              <th style="text-align:right">재단수량(EA)</th>
-              <th style="text-align:right">자투리(g)</th>
-              <th>작업자</th><th>비고</th><th>특이사항</th>
-              <th>안전점검</th><th>입력자</th><th>제출일시</th><th>작업</th>
+              <th>NO</th>${makeSortTh('작업일','work_date')}${makeSortTh('사번<br>(제품코드)','worker_id')}
+              ${makeSortTh('품명','_partName')}${makeSortTh('재질명','material_name')}${makeSortTh('뱃지 No','lot_no')}
+              ${makeSortTh('박스수량(개)','box_count','style="text-align:right"')}
+              ${makeSortTh('재단수량(EA)','total_qty','style="text-align:right"')}
+              ${makeSortTh('자투리(g)','scrap_weight','style="text-align:right"')}
+              ${makeSortTh('작업자','worker_name')}<th>비고</th><th>특이사항</th>
+              <th>안전점검</th>${makeSortTh('입력자','created_by_name')}${makeSortTh('제출일시','submitted_at')}<th>작업</th>
             </tr>
           </thead>
           <tbody>
@@ -1818,7 +1820,7 @@ function renderCuttingTable(data) {
                 <td style="text-align:right;font-weight:500">${(r.box_count||0).toLocaleString()}</td>
                 <td style="text-align:right;font-weight:500;color:#243bb2">${(r.total_qty||0).toLocaleString()}</td>
                 <td style="text-align:right">${(parseFloat(r.scrap_weight)||0).toFixed(2)}</td>
-                <td>${r.worker_name||'-'}</td>
+                <td style="min-width:80px">${r.worker_name||'-'}</td>
                 <td style="font-size:12px;color:#888">${r.note||'-'}</td>
                 <td style="font-size:12px;color:#888">${r.remarks||'-'}</td>
                 <td style="text-align:center">${safetyBtn}</td>
@@ -1977,10 +1979,10 @@ function renderCoatingTable(data) {
         <table>
           <thead>
             <tr>
-              <th>NO</th><th>작업일</th><th>사번</th><th>작업종류</th>
-              <th>줄당EA</th><th>줄수</th><th>총수량</th><th>불량</th>
-              <th>작업자</th><th>비고</th><th>특이사항</th>
-              <th>입력자</th><th>제출일시</th><th>작업</th>
+              <th>NO</th>${makeSortTh('작업일','work_date')}${makeSortTh('사번','worker_id')}${makeSortTh('작업종류','work_type')}
+              ${makeSortTh('줄당EA','qty_per_line')}${makeSortTh('줄수','line_count')}${makeSortTh('총수량','total_qty')}${makeSortTh('불량','defect_qty')}
+              ${makeSortTh('작업자','worker_name')}<th>비고</th><th>특이사항</th>
+              ${makeSortTh('입력자','created_by_name')}${makeSortTh('제출일시','submitted_at')}<th>작업</th>
             </tr>
           </thead>
           <tbody>
@@ -1997,7 +1999,7 @@ function renderCoatingTable(data) {
                 <td>${r.line_count||0}</td>
                 <td style="font-weight:600;color:#243bb2">${(r.total_qty||0).toLocaleString()}</td>
                 <td style="${defectStyle}">${(r.defect_qty||0).toLocaleString()}</td>
-                <td>${r.worker_name||'-'}</td>
+                <td style="min-width:80px">${r.worker_name||'-'}</td>
                 <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.note||'-'}</td>
                 <td style="font-size:11px">${r.remarks||'-'}</td>
                 <td style="font-size:11px">${r.created_by_name||'-'}</td>
@@ -2097,10 +2099,10 @@ function renderPostcureTable(data) {
         <table>
           <thead>
             <tr>
-              <th>NO</th><th>작업일</th><th>사번</th><th>재질명</th>
-              <th>온도(℃)</th><th>시간(분)</th><th>투입량</th><th>성형작업자</th>
-              <th>경도</th><th>생산LOT</th><th>작업자</th><th>비고</th>
-              <th>특이사항</th><th>입력자</th><th>제출일시</th><th>작업</th>
+              <th>NO</th>${makeSortTh('작업일','work_date')}${makeSortTh('사번','worker_id')}${makeSortTh('재질명','material_name')}
+              ${makeSortTh('온도(℃)','temperature')}${makeSortTh('시간(분)','duration_min')}${makeSortTh('투입량','input_qty')}${makeSortTh('성형작업자','molding_worker')}
+              ${makeSortTh('경도','hardness')}${makeSortTh('생산LOT','lot_no')}${makeSortTh('작업자','worker_name')}<th>비고</th>
+              <th>특이사항</th>${makeSortTh('입력자','created_by_name')}${makeSortTh('제출일시','submitted_at')}<th>작업</th>
             </tr>
           </thead>
           <tbody>
@@ -2118,7 +2120,7 @@ function renderPostcureTable(data) {
                 <td>${r.molding_worker||'-'}</td>
                 <td>${r.hardness||'-'}</td>
                 <td style="font-size:11px">${r.lot_no||'-'}</td>
-                <td>${r.worker_name||'-'}</td>
+                <td style="min-width:80px">${r.worker_name||'-'}</td>
                 <td style="font-size:11px">${r.note||'-'}</td>
                 <td style="font-size:11px">${r.remarks||'-'}</td>
                 <td style="font-size:11px">${r.created_by_name||'-'}</td>
@@ -2196,7 +2198,7 @@ function renderShotTable(data) {
       const col2 = r.shot_type==='freeze' ? (r.duration_min != null ? r.duration_min+'분' : '-') : (r.rotation_time_sec != null ? r.rotation_time_sec+'초' : '-');
       return `<tr style="${st}"><td>${i+1}</td><td>${r.work_date}</td><td>${typeTag}</td><td style="font-size:11px">${r.equipment||'-'}</td><td>${r.worker_id||'-'}</td>
         <td>${col1}</td><td>${col2}</td><td style="font-weight:600;color:#243bb2">${(r.work_qty||0).toLocaleString()}</td><td>${r.ball_size||'-'}</td><td>${r.rpm||'-'}</td>
-        <td style="font-size:11px">${r.lot_no||'-'}</td><td>${r.worker_name||'-'}</td><td style="font-size:11px">${r.note||'-'}</td>
+        <td style="font-size:11px">${r.lot_no||'-'}</td><td style="min-width:80px">${r.worker_name||'-'}</td><td style="font-size:11px">${r.note||'-'}</td>
         <td style="font-size:11px">${r.created_by_name||'-'}</td><td style="font-size:11px">${r.created_at?new Date(r.created_at).toLocaleString('ko-KR'):'-'}</td>
         <td>${del?'<span style="color:#aaa;font-size:11px">삭제됨</span>':`<div class="row-actions"><button class="btn-row btn-row-edit" onclick='openEditShot(${JSON.stringify(r).replace(/'/g, "&#39;")})'>수정</button><button class="btn-row btn-row-del" onclick="deleteShot(${r.id})">삭제</button></div>`}</td></tr>`;
     }).join('')}
@@ -2272,9 +2274,9 @@ function renderMoldingTable(data) {
   data = applySortIfNeeded(data);
   document.getElementById('resultArea').innerHTML = `
     <div class="card" style="padding:0"><div class="table-wrap"><table><thead><tr>
-      <th>NO</th><th>작업일</th><th>근무</th><th>반</th><th>설비</th><th>사번</th><th>제품명</th>
-      <th>Batch</th><th>C/V</th><th>Shot</th><th style="text-align:right">생산</th><th style="text-align:right">불량</th>
-      <th>유형</th><th>압력</th><th>상판℃</th><th>하판℃</th><th>비가동</th><th>작업자</th><th>비고</th><th>제출일시</th><th>작업</th>
+      <th>NO</th>${makeSortTh('작업일','work_date')}${makeSortTh('근무','shift')}${makeSortTh('반','team')}${makeSortTh('설비','equipment_no')}${makeSortTh('사번','worker_id')}${makeSortTh('제품명','_partName')}
+      ${makeSortTh('Batch','batch_no')}${makeSortTh('C/V','cavity')}${makeSortTh('Shot','shot_count')}${makeSortTh('생산','total_qty','style="text-align:right"')}${makeSortTh('불량','defect_qty','style="text-align:right"')}
+      ${makeSortTh('유형','work_type')}${makeSortTh('압력','pressure')}${makeSortTh('상판℃','temp_upper')}${makeSortTh('하판℃','temp_lower')}<th>비가동</th>${makeSortTh('작업자','worker_name')}<th>비고</th>${makeSortTh('제출일시','submitted_at')}<th>작업</th>
     </tr></thead><tbody>
     ${data.map((r,i) => {
       const del = r.deleted_at;
@@ -2309,7 +2311,7 @@ function renderMoldingTable(data) {
         <td><span style="background:${tc}15;color:${tc};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">${r.work_type||'표준'}</span></td>
         <td>${r.molding_pressure||''}</td><td>${r.upper_temp||''}</td><td>${r.lower_temp||''}</td>
         <td style="font-size:11px;color:#e67e22">${dtCode}</td>
-        <td>${r.worker_name||''}</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${noteText}">${noteText||'-'}</td>
+        <td style="min-width:80px">${r.worker_name||''}</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${noteText}">${noteText||'-'}</td>
         <td style="font-size:11px;color:#999">${fmtDatetime(r.created_at)}</td>
         <td>${del ? '<span style="color:#aaa;font-size:11px">삭제됨</span>' : `<div class="row-actions"><button class="btn-row btn-row-edit" onclick='openEditMolding(${JSON.stringify(r).replace(/'/g, "&#39;")})'>수정</button><button class="btn-row btn-row-del" onclick="deleteMolding('${r.id}')">삭제</button></div>`}</td>
       </tr>`;
@@ -2396,9 +2398,9 @@ function renderAssemblyTable(data) {
   data = applySortIfNeeded(data);
   document.getElementById('resultArea').innerHTML = `
     <div class="card" style="padding:0"><div class="table-wrap"><table><thead><tr>
-      <th>NO</th><th>작업일</th><th>근무</th><th>설비</th><th>사번</th><th>제품명</th>
-      <th>구분</th><th>방식</th><th style="text-align:right">생산</th><th style="text-align:right">불량</th>
-      <th>작업자</th><th>비고</th><th>제출일시</th><th>작업</th>
+      <th>NO</th>${makeSortTh('작업일','work_date')}${makeSortTh('근무','shift_type')}${makeSortTh('설비','equipment_no')}${makeSortTh('사번','sabun')}${makeSortTh('제품명','product_name')}
+      ${makeSortTh('구분','assembly_type')}${makeSortTh('방식','work_method')}${makeSortTh('생산','production_qty','style="text-align:right"')}${makeSortTh('불량','defect_qty','style="text-align:right"')}
+      ${makeSortTh('작업자','worker_name')}<th>비고</th>${makeSortTh('제출일시','created_at')}<th>작업</th>
     </tr></thead><tbody>
     ${data.map((r,i) => {
       const del = r.deleted_at;
@@ -2412,7 +2414,7 @@ function renderAssemblyTable(data) {
         <td><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;${methodColor}">${r.work_method||''}</span></td>
         <td style="text-align:right;font-weight:600">${(r.production_qty||0).toLocaleString()}</td>
         <td style="text-align:right;color:${(r.defect_qty||0)>0?'#dc2626':'#666'}">${r.defect_qty||0}</td>
-        <td>${r.worker_name||''}</td><td style="font-size:11px">${r.note||''}</td>
+        <td style="min-width:80px">${r.worker_name||''}</td><td style="font-size:11px">${r.note||''}</td>
         <td style="font-size:11px;color:#999">${fmtDatetime(r.created_at)}</td>
         <td>${del ? '<span style="color:#aaa;font-size:11px">삭제됨</span>' : `<div class="row-actions"><button class="btn-row btn-row-edit" onclick='openEditAssembly(${JSON.stringify(r).replace(/'/g, "&#39;")})'>수정</button><button class="btn-row btn-row-del" onclick="deleteAssembly('${r.id}')">삭제</button></div>`}</td>
       </tr>`;
