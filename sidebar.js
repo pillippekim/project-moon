@@ -1,23 +1,12 @@
-/* ===== 공통 사이드바 + 상단 헤더 (JS) ===== */
-/* 포탈(index.html)과 동일한 메뉴 구조 */
-/* 금형관리 4개 페이지에서 사용 */
+/* ===== PM 공통 사이드바 + 상단 헤더 (JS) ===== */
+/* project-moon 작업일지 페이지에서 사용 */
+/* 세션5: WM 메뉴 구조와 동기화 — 이동 페이지는 WM URL로 연동 */
 
 function initSidebar() {
     var page = location.pathname.split('/').pop() || 'index.html';
-    var hash = location.hash;
 
-    // 금형관리 페이지 여부
-    var isMoldPage = ['mold_dashboard.html','mold_layout.html','mold_admin.html','mold_history.html'].indexOf(page) !== -1;
-
-    // 금형관리 하위 페이지 active
-    var dashActive = (page === 'mold_dashboard.html') ? ' nav-active' : '';
-    var layoutActive = (page === 'mold_layout.html') ? ' nav-active' : '';
-    var adminActive = (page === 'mold_admin.html') ? ' nav-active' : '';
-    var historyActive = (page === 'mold_history.html') ? ' nav-active' : '';
-
-    // 금형관리 페이지면 생산관리 > 금형관리 자동 펼침
-    var prodOpen = isMoldPage ? ' open' : '';
-    var moldOpen = isMoldPage ? ' open' : '';
+    var WM = 'https://pillippekim.github.io/work-manager/';
+    var PM = 'https://pillippekim.github.io/project-moon/';
 
     /* ── 상단 헤더 바 ── */
     var headerEl = document.getElementById('top-header');
@@ -44,27 +33,26 @@ function initSidebar() {
     nav.innerHTML =
         '<div class="menu-scroll">' +
 
-        /* 업무관리 */
+        /* ═══ 1. 업무관리 ═══ */
         '<div class="menu-group">' +
             '<div class="menu-group-title">업무관리</div>' +
 
             /* 생산관리 */
-            '<div class="cat-item' + prodOpen + '" id="c-prod">' +
+            '<div class="cat-item" id="c-prod">' +
                 '<button class="cat-btn" onclick="toggleCat(\'c-prod\')">' +
                     '<span class="c-icon">🏭</span><span class="c-label">생산관리</span>' +
                     '<span class="c-badge on">운영</span><span class="c-arrow">▼</span>' +
                 '</button>' +
                 '<div class="cat-body">' +
-                    '<div class="sub-item' + moldOpen + '" id="s-mold">' +
+                    '<div class="sub-item" id="s-mold">' +
                         '<button class="sub-btn" onclick="toggleCat(\'s-mold\')">' +
                             '<span class="s-icon">🔧</span><span class="s-label">금형관리</span>' +
                             '<span class="s-badge c-badge on">1차</span><span class="s-arrow">▼</span>' +
                         '</button>' +
                         '<div class="sub-body">' +
-                            '<a class="nav-link' + dashActive + '" href="mold_dashboard.html"><span class="n-icon">📊</span>대시보드</a>' +
-                            '<a class="nav-link' + layoutActive + '" href="mold_layout.html"><span class="n-icon">🗄️</span>적치대 현황</a>' +
-                            '<a class="nav-link' + adminActive + '" href="mold_admin.html"><span class="n-icon">📋</span>금형 상세관리</a>' +
-                            '<a class="nav-link' + historyActive + '" href="mold_history.html"><span class="n-icon">🔧</span>이력 관리</a>' +
+                            '<a class="nav-link" href="' + WM + 'mold_dashboard.html"><span class="n-icon">📊</span>대시보드 / 이력</a>' +
+                            '<a class="nav-link" href="' + WM + 'mold_layout.html"><span class="n-icon">🗄️</span>적치대 현황</a>' +
+                            '<a class="nav-link" href="' + WM + 'mold_detail.html"><span class="n-icon">📋</span>금형 상세관리</a>' +
                         '</div>' +
                     '</div>' +
                     '<div class="sub-item disabled">' +
@@ -73,8 +61,26 @@ function initSidebar() {
                 '</div>' +
             '</div>' +
 
-            /* 비활성 메뉴 */
-            '<div class="cat-item disabled"><button class="cat-btn"><span class="c-icon">✅</span><span class="c-label">품질관리</span><span class="c-badge off">향후</span></button></div>' +
+            /* 품질관리 */
+            '<div class="cat-item" id="c-quality">' +
+                '<button class="cat-btn" onclick="toggleCat(\'c-quality\')">' +
+                    '<span class="c-icon">✅</span><span class="c-label">품질관리</span>' +
+                    '<span class="c-badge on">운영</span><span class="c-arrow">▼</span>' +
+                '</button>' +
+                '<div class="cat-body">' +
+                    '<div class="sub-item" id="s-insp">' +
+                        '<button class="sub-btn" onclick="toggleCat(\'s-insp\')">' +
+                            '<span class="s-icon">🔬</span><span class="s-label">공정검사</span>' +
+                            '<span class="s-arrow">▼</span>' +
+                        '</button>' +
+                        '<div class="sub-body">' +
+                            '<a class="nav-link" href="inspection_round.html"><span class="n-icon">📋</span>공정검사 작성</a>' +
+                            '<a class="nav-link" href="' + WM + 'inspection_round_viewer.html"><span class="n-icon">📂</span>공정검사 조회</a>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+
             '<div class="cat-item disabled"><button class="cat-btn"><span class="c-icon">🚚</span><span class="c-label">물류관리</span><span class="c-badge off">향후</span></button></div>' +
             '<div class="cat-item disabled"><button class="cat-btn"><span class="c-icon">🔬</span><span class="c-label">R&D</span><span class="c-badge off">향후</span></button></div>' +
             '<div class="cat-item disabled"><button class="cat-btn"><span class="c-icon">💼</span><span class="c-label">경영지원</span><span class="c-badge off">향후</span></button></div>' +
@@ -82,11 +88,29 @@ function initSidebar() {
 
         '<div class="menu-divider"></div>' +
 
-        /* 현장관리 */
+        /* ═══ 2. 데이터관리 ═══ */
+        '<div class="menu-group">' +
+            '<div class="menu-group-title">데이터관리</div>' +
+            '<div class="cat-item" id="c-data">' +
+                '<button class="cat-btn" onclick="toggleCat(\'c-data\')">' +
+                    '<span class="c-icon">📊</span><span class="c-label">데이터 관리</span>' +
+                    '<span class="c-badge on">운영</span><span class="c-arrow">▼</span>' +
+                '</button>' +
+                '<div class="cat-body">' +
+                    '<a class="nav-link" href="' + WM + 'data_viewer.html"><span class="n-icon">📊</span>데이터 조회 및 추출</a>' +
+                    '<a class="nav-link" href="' + WM + 'safety_viewer.html"><span class="n-icon">🔍</span>설비 점검 조회</a>' +
+                    '<a class="nav-link" href="' + WM + 'docs_manager.html"><span class="n-icon">📄</span>문서 관리</a>' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+
+        '<div class="menu-divider"></div>' +
+
+        /* ═══ 3. 현장관리 ═══ */
         '<div class="menu-group">' +
             '<div class="menu-group-title">현장관리</div>' +
             '<div class="cat-item">' +
-                '<a class="cat-btn" href="https://pillippekim.github.io/project-moon/index.html" style="text-decoration:none;color:inherit;">' +
+                '<a class="cat-btn" href="' + PM + 'index.html" style="text-decoration:none;color:inherit;">' +
                     '<span class="c-icon">📝</span><span class="c-label">작업일지 프로그램</span><span class="c-badge on">바로가기</span>' +
                 '</a>' +
             '</div>' +
@@ -94,7 +118,7 @@ function initSidebar() {
 
         '<div class="menu-divider"></div>' +
 
-        /* 시스템 */
+        /* ═══ 4. 시스템 ═══ */
         '<div class="menu-group">' +
             '<div class="menu-group-title">시스템</div>' +
             '<div class="cat-item" id="c-system">' +
@@ -102,12 +126,9 @@ function initSidebar() {
                     '<span class="c-icon">⚙️</span><span class="c-label">시스템 관리</span><span class="c-arrow">▼</span>' +
                 '</button>' +
                 '<div class="cat-body">' +
-                    '<a class="nav-link" href="https://pillippekim.github.io/project-moon/users.html"><span class="n-icon">👥</span>사용자 관리</a>' +
-                    '<a class="nav-link" href="https://pillippekim.github.io/project-moon/audit.html"><span class="n-icon">📋</span>변경 이력</a>' +
-                    '<a class="nav-link" href="https://pillippekim.github.io/project-moon/admin.html"><span class="n-icon">📊</span>데이터 조회</a>' +
-                    '<a class="nav-link" href="https://pillippekim.github.io/project-moon/safety_admin.html"><span class="n-icon">🔍</span>설비 점검 조회</a>' +
-                    '<a class="nav-link" href="https://pillippekim.github.io/project-moon/master.html"><span class="n-icon">🗂️</span>기준정보 관리</a>' +
-                    '<a class="nav-link" href="https://pillippekim.github.io/project-moon/docs_admin.html"><span class="n-icon">📄</span>문서 관리</a>' +
+                    '<a class="nav-link" href="' + WM + 'master_data.html"><span class="n-icon">🗂️</span>기준정보 관리</a>' +
+                    '<a class="nav-link" href="' + WM + 'users.html"><span class="n-icon">👥</span>사용자 관리</a>' +
+                    '<a class="nav-link" href="audit.html"><span class="n-icon">📋</span>변경 이력</a>' +
                 '</div>' +
             '</div>' +
         '</div>' +
