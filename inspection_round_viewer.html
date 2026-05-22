@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>순회검사 조회</title>
+<title>공정검사 조회</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth_guard.js"></script>
@@ -77,11 +77,11 @@ tr:hover td { background:#f8fafc; }
 <div class="page-header">
     <div class="header-row">
         <div>
-            <h1>📂 순회검사 조회</h1>
-            <div class="sub">공정 순회검사 이력 조회 및 추출</div>
+            <h1>📂 공정검사 조회</h1>
+            <div class="sub">공정 공정검사 이력 조회 및 추출</div>
         </div>
         <div class="header-actions">
-            <a href="index.html" class="btn-back">🏠 홈</a>
+            <a href="index.html" class="btn-back">🏠 메인으로</a>
             <a href="inspection_round.html" class="btn-new">+ 신규 작성</a>
             <button class="btn-excel" onclick="downloadExcel()">📥 엑셀</button>
         </div>
@@ -371,8 +371,8 @@ function downloadExcel() {
     });
     var ws = XLSX.utils.json_to_sheet(rows);
     var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '순회검사');
-    XLSX.writeFile(wb, '순회검사_'+fmtLocal(new Date()).replace(/-/g,'')+'.xlsx');
+    XLSX.utils.book_append_sheet(wb, ws, '공정검사');
+    XLSX.writeFile(wb, '공정검사_'+fmtLocal(new Date()).replace(/-/g,'')+'.xlsx');
 }
 </script>
 </body>
