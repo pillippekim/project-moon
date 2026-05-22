@@ -15,6 +15,8 @@ const PAGE_PERMISSIONS = {
   'shot.html':        { admin: ['all'], worker: ['쇼트'] },
   'molding.html':     { admin: ['all'], worker: ['성형'] },
   'assembly.html':    { admin: ['all'], worker: ['조립'] },
+  'inspection_round.html': { admin: ['all'], worker: ['공정순회'] },
+  'inspection_round_viewer.html': { admin: ['all'], worker: ['공정순회'] },
   'safety_viewer.html': { admin: ['all'] },
   'data_viewer.html':       { admin: ['all'], worker: [] },
   'master_data.html':      { admin: ['생산관리팀','경영지원팀'], worker: [] },
