@@ -93,6 +93,12 @@ async function checkPageAccess(pageFile) {
 }
 
 function showAccessDenied(user) {
+  var backUrl = 'index.html';
+  var backText = '← 메인으로 돌아가기';
+  if (user.process === '모니터') {
+    backUrl = 'https://pillippekim.github.io/work-manager/mold_layout.html';
+    backText = '← 적치대 현황으로 돌아가기';
+  }
   document.body.innerHTML = `
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;">
       <div style="background:white;border-radius:16px;padding:3rem 2rem;max-width:420px;width:100%;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.08);">
@@ -103,9 +109,9 @@ function showAccessDenied(user) {
           접근할 수 없어요.<br>
           <span style="font-size:11px;color:#aaa">권한이 필요하시면 관리자에게 문의해주세요.</span>
         </div>
-        <button onclick="location.href='index.html'"
+        <button onclick="location.href='${backUrl}'"
           style="font-size:14px;padding:10px 24px;border-radius:8px;background:#243bb2;color:white;border:none;cursor:pointer;font-family:inherit;font-weight:500;">
-          ← 메인으로 돌아가기
+          ${backText}
         </button>
       </div>
     </div>
