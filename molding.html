@@ -525,7 +525,7 @@
   .scan-btn:hover { background:#e3e8f5; }
   .scan-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:center;justify-content:center; }
   .scan-overlay.open { display:flex; }
-  .scan-box { background:white;border-radius:16px;padding:1.5rem;width:340px;box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+  .scan-box { background:white;border-radius:16px;padding:1.5rem;width:340px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3); }
   .scan-title { font-size:17px;font-weight:700;margin-bottom:6px;color:#1a1a2e; }
   .scan-sub { font-size:13px;color:#888;margin-bottom:1rem;line-height:1.5; }
   .scan-input-field { width:100%;font-size:14px;border:1px solid #e0e4ed;border-radius:8px;padding:10px 12px;outline:none;font-family:inherit;color:#1a1a2e; }
@@ -703,7 +703,7 @@
       <div class="scan-status" id="scanStatus">바코드를 사각형 안에 맞춰주세요</div>
       <button class="camera-flip-btn" onclick="flipCamera()" title="카메라 전환">🔄</button>
     </div>
-    <div id="continuousList" style="display:none;max-height:200px;overflow-y:auto;margin:8px 0;border:1px solid #e0e4ed;border-radius:8px;padding:8px">
+    <div id="continuousList" style="display:none;max-height:140px;overflow-y:auto;margin:8px 0;border:1px solid #e0e4ed;border-radius:8px;padding:8px">
       <div style="font-size:12px;color:#888;margin-bottom:6px;display:flex;justify-content:space-between">
         <span>📋 스캔된 바코드 (<span id="contScanCount">0</span>개)</span>
         <button onclick="clearContinuousList()" style="background:none;border:none;color:#dc2626;font-size:11px;cursor:pointer;font-weight:600">전체 삭제</button>
