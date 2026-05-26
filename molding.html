@@ -1593,15 +1593,41 @@ function switchScanMode(mode) {
   var okBtn = document.getElementById('scanOkBtn');
   var contList = document.getElementById('continuousList');
   if (mode === 'camera' || mode === 'continuous') {
-    cameraArea.classList.add('open'); inputEl.style.display = 'none'; okBtn.style.display = 'none';
+    cameraArea.classList.add('open'); okBtn.style.display = 'none';
     contList.style.display = mode === 'continuous' ? 'block' : 'none';
     if (mode === 'continuous') {
       continuousScans = []; renderContinuousList();
+      inputEl.style.display = 'block';
+      inputEl.placeholder = '블루투스 리더기 스캔 또는 직접 입력 (Enter로 추가)';
+      inputEl.value = '';
+      inputEl.onkeydown = function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          var val = inputEl.value.trim();
+          if (!val) return;
+          if (continuousScans.includes(val)) {
+            document.getElementById('scanError').textContent = '⚠️ 이미 스캔된 바코드: ' + val;
+            document.getElementById('scanError').style.display = 'block';
+            inputEl.value = '';
+            setTimeout(function() { document.getElementById('scanError').style.display = 'none'; }, 2000);
+            return;
+          }
+          continuousScans.push(val); renderContinuousList();
+          inputEl.value = ''; inputEl.focus();
+          try { navigator.vibrate && navigator.vibrate(100); } catch(ex) {}
+          try { var ctx = new (window.AudioContext || window.webkitAudioContext)(); var osc = ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 1200; osc.connect(ctx.destination); osc.start(); setTimeout(function() { osc.stop(); ctx.close(); }, 100); } catch(ex) {}
+        }
+      };
+      setTimeout(function() { inputEl.focus(); }, 200);
       okBtn.style.display = 'block'; okBtn.textContent = '✓ 스캔 완료 (적용)'; okBtn.onclick = applyContinuousScans;
+    } else {
+      inputEl.style.display = 'none';
     }
     startCamera();
   } else {
     cameraArea.classList.remove('open'); inputEl.style.display = 'block';
+    inputEl.placeholder = '';
+    inputEl.onkeydown = function(e) { if(e.key==='Enter') confirmScan(); };
     okBtn.style.display = 'block'; okBtn.textContent = '입력 완료'; okBtn.onclick = function() { confirmScan(); };
     contList.style.display = 'none'; stopCamera();
     setTimeout(function() { inputEl.focus(); }, 100);

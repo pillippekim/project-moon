@@ -715,23 +715,61 @@ function switchScanMode(mode) {
 
   if (mode === 'camera' || mode === 'continuous') {
     cameraArea.classList.add('open');
-    inputArea.style.display = 'none';
     okBtn.style.display = 'none';
     contList.style.display = mode === 'continuous' ? 'block' : 'none';
     if (mode === 'continuous') {
       continuousScans = [];
       renderContinuousList();
       document.getElementById('scanTitle').textContent = '🔄 연속 스캔 모드';
-      document.getElementById('scanSub').textContent = '바코드를 계속 스캔하세요. 자동으로 추가됩니다.';
+      document.getElementById('scanSub').textContent = '바코드를 계속 스캔하세요. 자동으로 추가됩니다.\n블루투스 리더기는 아래 입력창에 자동 입력됩니다.';
+      // 연속 모드: 입력창도 표시 (블루투스 바코드 리더기 지원)
+      inputArea.style.display = 'block';
+      inputArea.placeholder = '블루투스 리더기 스캔 또는 직접 입력 (Enter로 추가)';
+      inputArea.value = '';
+      inputArea.onkeydown = function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          var val = inputArea.value.trim();
+          if (!val) return;
+          // 중복 확인
+          if (continuousScans.includes(val)) {
+            document.getElementById('scanError').textContent = '⚠️ 이미 스캔된 바코드: ' + val;
+            document.getElementById('scanError').style.display = 'block';
+            inputArea.value = '';
+            setTimeout(function() { document.getElementById('scanError').style.display = 'none'; }, 2000);
+            return;
+          }
+          continuousScans.push(val);
+          renderContinuousList();
+          inputArea.value = '';
+          inputArea.focus();
+          // 비프음
+          try { navigator.vibrate && navigator.vibrate(100); } catch(ex) {}
+          try {
+            var ctx = new (window.AudioContext || window.webkitAudioContext)();
+            var osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = 1200;
+            osc.connect(ctx.destination);
+            osc.start();
+            setTimeout(function() { osc.stop(); ctx.close(); }, 100);
+          } catch(ex) {}
+        }
+      };
+      setTimeout(function() { inputArea.focus(); }, 200);
       // 완료 버튼 표시
       okBtn.style.display = 'block';
       okBtn.textContent = '✓ 스캔 완료 (적용)';
       okBtn.onclick = applyContinuousScans;
+    } else {
+      inputArea.style.display = 'none';
     }
     startCamera();
   } else {
     cameraArea.classList.remove('open');
     inputArea.style.display = 'block';
+    inputArea.placeholder = '';
+    inputArea.onkeydown = function(e) { if(e.key==='Enter') confirmScan(); };
     okBtn.style.display = 'block';
     okBtn.textContent = '입력 완료';
     okBtn.onclick = function() { confirmScan(); };
