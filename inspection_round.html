@@ -36,6 +36,7 @@ body { font-family:'Noto Sans KR',sans-serif; background:#f1f3f9; color:#1e293b;
 .face-tab { padding:10px 24px; font-size:14px; font-weight:600; color:#94a3b8; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; }
 .face-tab.active { color:#243bb2; border-bottom-color:#243bb2; }
 .face-tab:hover { color:#243bb2; }
+.face-tab.inactive-tab { color:#dc2626; background:#fef2f2; }
 .inspect-card { background:#f8fafc; border-radius:10px; padding:14px; margin-bottom:10px; border:1px solid #e8ecf3; }
 .inspect-card-header { display:flex; align-items:center; margin-bottom:10px; }
 .inspect-card-title { font-size:13px; font-weight:700; color:#334155; display:flex; align-items:center; gap:6px; }
@@ -80,6 +81,12 @@ body { font-family:'Noto Sans KR',sans-serif; background:#f1f3f9; color:#1e293b;
 .toast.show { opacity:1; transform:translateY(0); }
 .toast-success { background:#16a34a; }
 .toast-error { background:#dc2626; }
+.inactive-check-wrap { display:flex; align-items:center; gap:8px; padding:10px 14px; margin-bottom:14px; background:#fef2f2; border:2px solid #fca5a5; border-radius:10px; cursor:pointer; }
+.inactive-check-wrap input { width:18px; height:18px; cursor:pointer; }
+.inactive-check-wrap span { font-size:14px; font-weight:700; color:#dc2626; }
+.face-disabled .inspect-card,
+.face-disabled .form-grid-4,
+.face-disabled .row-label { opacity:0.35; pointer-events:none; }
 @media(max-width:600px) {
     .form-grid-3 { grid-template-columns:1fr; }
     .form-grid-4 { grid-template-columns:1fr 1fr; }
@@ -108,6 +115,7 @@ body { font-family:'Noto Sans KR',sans-serif; background:#f1f3f9; color:#1e293b;
 
 <div class="container">
 
+<!-- 기본정보 카드: 설비타입 + 검사일/작성자/설비만 -->
 <div class="section-card">
     <div class="section-title">📝 기본 정보</div>
     <div class="equip-toggle">
@@ -122,29 +130,9 @@ body { font-family:'Noto Sans KR',sans-serif; background:#f1f3f9; color:#1e293b;
             <select id="equipment"><option value="">-- 설비 선택 --</option></select>
         </div>
     </div>
-    <div class="row-label">제품정보</div>
-    <div class="form-grid-4">
-        <div class="form-group"><label>사번</label><input type="text" id="sabun" placeholder="502264"></div>
-        <div class="form-group"><label>Cavity 수량</label><input type="number" id="cavityCount" placeholder="4"></div>
-        <div class="form-group"><label>재질</label>
-            <select id="material"><option value="">-- 재질 선택 --</option>
-                <option>NBR(A)</option><option>EPDM(E)</option><option>NR(N)</option><option>SBR(B)</option><option>CR(C)</option>
-                <option>FMK불소고무(F)</option><option>VMQ실리콘고무(S)</option><option>U 우레탄(U)</option>
-            </select>
-        </div>
-        <div class="form-group"><label>사상 방법</label>
-            <select id="trimMethod"><option value="">-- 선택 --</option><option>바렐</option><option>냉동</option><option>수사상</option></select>
-        </div>
-    </div>
-    <div class="row-label">설비정보</div>
-    <div class="form-grid-4">
-        <div class="form-group"><label>금형온도 (℃)</label><input type="text" id="moldTemp"></div>
-        <div class="form-group"><label>가류시간 (초)</label><input type="text" id="cureTime"></div>
-        <div class="form-group"><label>성형압 (㎏f/㎠)</label><input type="text" id="moldPressure"></div>
-        <div class="form-group"><label>진공압 (Mpa)</label><input type="text" id="vacuum"></div>
-    </div>
 </div>
 
+<!-- 검사 입력 카드: 면 탭 + 면별 독립 입력 -->
 <div class="section-card">
     <div class="section-title">🔍 검사 입력</div>
     <div class="face-tabs" id="faceTabs">
@@ -153,39 +141,79 @@ body { font-family:'Noto Sans KR',sans-serif; background:#f1f3f9; color:#1e293b;
         <div class="face-tab" onclick="switchFace('C',this)">다 면</div>
     </div>
 
-    <div class="inspect-card">
-        <div class="inspect-card-header">
-            <div class="inspect-card-title">👁️ 외관 검사 <span class="inspect-card-badge badge-visual">cavity 전체 육안</span></div>
-        </div>
-        <div class="spec-info"><span>제품 전 표면에 유해한 흠 없을 것</span><span>판정: 육안검사</span></div>
-        <div id="visualInspArea"></div>
-    </div>
+    <!-- 면별 콘텐츠 영역 -->
+    <div id="faceContent">
+        <!-- 비가동 체크박스 -->
+        <label class="inactive-check-wrap" id="inactiveWrap">
+            <input type="checkbox" id="inactiveCheck" onchange="toggleInactive(this.checked)">
+            <span>🚫 비가동 (이 면은 가동하지 않음)</span>
+        </label>
 
-    <div class="inspect-card">
-        <div class="inspect-card-header">
-            <div class="inspect-card-title">📐 경도 검사 <span class="inspect-card-badge badge-measure">Shore A ±5</span></div>
-        </div>
-        <div class="spec-info"><span>SPEC: Shore A ±5</span></div>
-        <div class="measure-header"><div></div><div>X1</div><div>X2</div><div>X3</div><div>X4</div><div>X5</div></div>
-        <div class="measure-body" id="hardnessGrid">
-            <div class="measure-row"><div class="mv-label">초품</div><input type="number" placeholder="-"><input type="number" placeholder="-"><input type="number" placeholder="-"><input type="number" placeholder="-"><input type="number" placeholder="-"></div>
-            <div class="measure-row"><div class="mv-label">중품</div><input type="number" placeholder="-"><input type="number" placeholder="-"><input type="number" placeholder="-"><input type="number" placeholder="-"><input type="number" placeholder="-"></div>
-            <div class="measure-row"><div class="mv-label">종품</div><input type="number" placeholder="-"><input type="number" placeholder="-"><input type="number" placeholder="-"><input type="number" placeholder="-"><input type="number" placeholder="-"></div>
-        </div>
-    </div>
+        <!-- 면별 입력 영역 (비가동 시 비활성화됨) -->
+        <div id="faceInputArea">
+            <!-- 제품정보 (면별 독립) -->
+            <div class="row-label">제품정보</div>
+            <div class="form-grid-4">
+                <div class="form-group"><label>사번</label><input type="text" id="faceSabun" placeholder="502264"></div>
+                <div class="form-group"><label>Cavity 수량</label><input type="number" id="faceCavity" placeholder="4"></div>
+                <div class="form-group"><label>재질</label>
+                    <select id="faceMaterial"><option value="">-- 재질 선택 --</option>
+                        <option>NBR(A)</option><option>EPDM(E)</option><option>NR(N)</option><option>SBR(B)</option><option>CR(C)</option>
+                        <option>FMK불소고무(F)</option><option>VMQ실리콘고무(S)</option><option>U 우레탄(U)</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>사상 방법</label>
+                    <select id="faceTrimMethod"><option value="">-- 선택 --</option><option>바렐</option><option>냉동</option><option>수사상</option></select>
+                </div>
+            </div>
 
-    <div class="inspect-card">
-        <div class="inspect-card-header">
-            <div class="inspect-card-title">📏 중요 치수 <span class="inspect-card-badge badge-dimension">Vernier Calipers</span></div>
-        </div>
-        <div class="spec-info"><span>Vernier Calipers 측정</span></div>
-        <div class="measure-header"><div></div><div>X1</div><div>X2</div><div>X3</div><div>X4</div><div>X5</div></div>
-        <div class="measure-body" id="dimensionGrid">
-            <div class="measure-row"><div class="mv-label">초품</div><input type="text" placeholder="-"><input type="text" placeholder="-"><input type="text" placeholder="-"><input type="text" placeholder="-"><input type="text" placeholder="-"></div>
-            <div class="measure-row"><div class="mv-label">중품</div><input type="text" placeholder="-"><input type="text" placeholder="-"><input type="text" placeholder="-"><input type="text" placeholder="-"><input type="text" placeholder="-"></div>
-            <div class="measure-row"><div class="mv-label">종품</div><input type="text" placeholder="-"><input type="text" placeholder="-"><input type="text" placeholder="-"><input type="text" placeholder="-"><input type="text" placeholder="-"></div>
-        </div>
-    </div>
+            <!-- 설비정보 (면별 독립) -->
+            <div class="row-label">설비정보</div>
+            <div class="form-grid-4">
+                <div class="form-group"><label>금형온도 (℃)</label><input type="text" id="faceMoldTemp"></div>
+                <div class="form-group"><label>가류시간 (초)</label><input type="text" id="faceCureTime"></div>
+                <div class="form-group"><label>성형압 (㎏f/㎠)</label><input type="text" id="faceMoldPressure"></div>
+                <div class="form-group"><label>진공압 (Mpa)</label><input type="text" id="faceVacuum"></div>
+            </div>
+
+            <!-- 외관 검사 -->
+            <div class="inspect-card">
+                <div class="inspect-card-header">
+                    <div class="inspect-card-title">👁️ 외관 검사 <span class="inspect-card-badge badge-visual">cavity 전체 육안</span></div>
+                </div>
+                <div class="spec-info"><span>제품 전 표면에 유해한 흠 없을 것</span><span>판정: 육안검사</span></div>
+                <div id="visualInspArea"></div>
+            </div>
+
+            <!-- 경도 검사 -->
+            <div class="inspect-card">
+                <div class="inspect-card-header">
+                    <div class="inspect-card-title">📐 경도 검사 <span class="inspect-card-badge badge-measure">Shore A ±5</span></div>
+                </div>
+                <div class="spec-info"><span>SPEC: Shore A ±5</span></div>
+                <div class="measure-header"><div></div><div>X1</div><div>X2</div><div>X3</div><div>X4</div><div>X5</div></div>
+                <div class="measure-body" id="hardnessGrid">
+                    <div class="measure-row"><div class="mv-label">초품</div><input type="number" placeholder="-"><input type="number" placeholder="-"><input type="number" placeholder="-"><input type="number" placeholder="-"><input type="number" placeholder="-"></div>
+                    <div class="measure-row"><div class="mv-label">중품</div><input type="number" placeholder="-"><input type="number" placeholder="-"><input type="number" placeholder="-"><input type="number" placeholder="-"><input type="number" placeholder="-"></div>
+                    <div class="measure-row"><div class="mv-label">종품</div><input type="number" placeholder="-"><input type="number" placeholder="-"><input type="number" placeholder="-"><input type="number" placeholder="-"><input type="number" placeholder="-"></div>
+                </div>
+            </div>
+
+            <!-- 치수 검사 -->
+            <div class="inspect-card">
+                <div class="inspect-card-header">
+                    <div class="inspect-card-title">📏 중요 치수 <span class="inspect-card-badge badge-dimension">Vernier Calipers</span></div>
+                </div>
+                <div class="spec-info"><span>Vernier Calipers 측정</span></div>
+                <div class="measure-header"><div></div><div>X1</div><div>X2</div><div>X3</div><div>X4</div><div>X5</div></div>
+                <div class="measure-body" id="dimensionGrid">
+                    <div class="measure-row"><div class="mv-label">초품</div><input type="text" placeholder="-"><input type="text" placeholder="-"><input type="text" placeholder="-"><input type="text" placeholder="-"><input type="text" placeholder="-"></div>
+                    <div class="measure-row"><div class="mv-label">중품</div><input type="text" placeholder="-"><input type="text" placeholder="-"><input type="text" placeholder="-"><input type="text" placeholder="-"><input type="text" placeholder="-"></div>
+                    <div class="measure-row"><div class="mv-label">종품</div><input type="text" placeholder="-"><input type="text" placeholder="-"><input type="text" placeholder="-"><input type="text" placeholder="-"><input type="text" placeholder="-"></div>
+                </div>
+            </div>
+        </div><!-- faceInputArea -->
+    </div><!-- faceContent -->
 </div>
 
 <div class="section-card">
@@ -230,8 +258,13 @@ var myInfo = null;
 var currentEquipType = 'press';
 var currentFace = 'A';
 var DEFECT_TYPES = ['미성형','이물','Burr','찍힘','찢어짐','기타'];
-// 면별 데이터 저장
-var faceData = { A:{}, B:{}, C:{} };
+
+// 면별 데이터 저장 (제품정보 + 설비정보 + 검사데이터 + 비가동)
+var faceData = {
+    A: { inactive:false, sabun:'', cavity:'', material:'', trimMethod:'', moldTemp:'', cureTime:'', moldPressure:'', vacuum:'' },
+    B: { inactive:false, sabun:'', cavity:'', material:'', trimMethod:'', moldTemp:'', cureTime:'', moldPressure:'', vacuum:'' },
+    C: { inactive:false, sabun:'', cavity:'', material:'', trimMethod:'', moldTemp:'', cureTime:'', moldPressure:'', vacuum:'' }
+};
 
 function fmtLocal(d) { if(!d) return ''; var dt = new Date(d); return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'); }
 function showToast(msg,type) { var el=document.getElementById('toast'); el.textContent=msg; el.className='toast toast-'+type+' show'; setTimeout(function(){el.classList.remove('show');},3000); }
@@ -275,6 +308,31 @@ function switchEquipType(type, btn) {
     if (type === 'injection') { currentFace = 'A'; }
 }
 
+// 비가동 토글
+function toggleInactive(checked) {
+    var area = document.getElementById('faceInputArea');
+    if (checked) {
+        area.classList.add('face-disabled');
+    } else {
+        area.classList.remove('face-disabled');
+    }
+    // 탭에 비가동 표시
+    updateTabStyle(currentFace, checked);
+}
+
+function updateTabStyle(face, inactive) {
+    var faceMap = {A:0, B:1, C:2};
+    var idx = faceMap[face];
+    var tabs = document.querySelectorAll('.face-tab');
+    if (tabs[idx]) {
+        if (inactive) {
+            tabs[idx].classList.add('inactive-tab');
+        } else {
+            tabs[idx].classList.remove('inactive-tab');
+        }
+    }
+}
+
 // 면 전환 (데이터 저장/복원)
 function switchFace(face, tab) {
     saveFaceData(currentFace);
@@ -287,6 +345,15 @@ function switchFace(face, tab) {
 
 function saveFaceData(face) {
     faceData[face] = {
+        inactive: document.getElementById('inactiveCheck').checked,
+        sabun: document.getElementById('faceSabun').value,
+        cavity: document.getElementById('faceCavity').value,
+        material: document.getElementById('faceMaterial').value,
+        trimMethod: document.getElementById('faceTrimMethod').value,
+        moldTemp: document.getElementById('faceMoldTemp').value,
+        cureTime: document.getElementById('faceCureTime').value,
+        moldPressure: document.getElementById('faceMoldPressure').value,
+        vacuum: document.getElementById('faceVacuum').value,
         visual: collectVisualData(),
         hardness: collectGridData('hardnessGrid'),
         dimension: collectGridData('dimensionGrid')
@@ -294,17 +361,38 @@ function saveFaceData(face) {
 }
 
 function restoreFaceData(face) {
-    var d = faceData[face];
-    if (!d || !d.visual) { clearAllInputs(); return; }
-    restoreVisualData(d.visual);
-    restoreGridData('hardnessGrid', d.hardness);
-    restoreGridData('dimensionGrid', d.dimension);
+    var d = faceData[face] || {};
+
+    // 비가동 상태 복원
+    var inactiveChecked = d.inactive || false;
+    document.getElementById('inactiveCheck').checked = inactiveChecked;
+    toggleInactive(inactiveChecked);
+
+    // 제품정보 복원
+    document.getElementById('faceSabun').value = d.sabun || '';
+    document.getElementById('faceCavity').value = d.cavity || '';
+    document.getElementById('faceMaterial').value = d.material || '';
+    document.getElementById('faceTrimMethod').value = d.trimMethod || '';
+
+    // 설비정보 복원
+    document.getElementById('faceMoldTemp').value = d.moldTemp || '';
+    document.getElementById('faceCureTime').value = d.cureTime || '';
+    document.getElementById('faceMoldPressure').value = d.moldPressure || '';
+    document.getElementById('faceVacuum').value = d.vacuum || '';
+
+    // 검사 데이터 복원
+    if (d.visual) { restoreVisualData(d.visual); } else { clearVisualInputs(); }
+    if (d.hardness) { restoreGridData('hardnessGrid', d.hardness); } else { clearGridInputs('hardnessGrid'); }
+    if (d.dimension) { restoreGridData('dimensionGrid', d.dimension); } else { clearGridInputs('dimensionGrid'); }
 }
 
-function clearAllInputs() {
+function clearVisualInputs() {
     var cbs = document.querySelectorAll('#visualInspArea input[type="checkbox"]');
     for(var i=0;i<cbs.length;i++) { cbs[i].checked=false; cbs[i].parentElement.classList.remove('checked'); }
-    var inputs = document.querySelectorAll('#hardnessGrid input, #dimensionGrid input');
+}
+
+function clearGridInputs(gridId) {
+    var inputs = document.querySelectorAll('#'+gridId+' input');
     for(var i=0;i<inputs.length;i++) inputs[i].value='';
 }
 
@@ -410,28 +498,50 @@ async function submitForm() {
     var records = [];
     for (var f=0;f<faces.length;f++) {
         var fd = faceData[faces[f]] || {};
-        records.push({
+        var isInactive = fd.inactive || false;
+
+        var rec = {
             inspect_date: inspDate,
             inspector: document.getElementById('inspector').value,
             equip_type: currentEquipType,
             equipment: equipment,
-            sabun: document.getElementById('sabun').value.trim(),
-            cavity_count: parseInt(document.getElementById('cavityCount').value) || null,
-            material: document.getElementById('material').value,
-            trim_method: document.getElementById('trimMethod').value,
-            mold_temp: document.getElementById('moldTemp').value,
-            cure_time: document.getElementById('cureTime').value,
-            mold_pressure: document.getElementById('moldPressure').value,
-            vacuum_pressure: document.getElementById('vacuum').value,
             face: faces[f],
-            visual_data: fd.visual || {},
-            hardness_data: fd.hardness || {},
-            dimension_data: fd.dimension || {},
+            is_inactive: isInactive,
             change_mold: collectChangeMold(),
             change_equip: collectChangeEquip(),
             action_detail: document.getElementById('actionDetail').value.trim(),
             created_by: myInfo ? myInfo.name : null
-        });
+        };
+
+        if (isInactive) {
+            // 비가동 면: 빈 값으로 저장
+            rec.sabun = '';
+            rec.cavity_count = null;
+            rec.material = '';
+            rec.trim_method = '';
+            rec.mold_temp = '';
+            rec.cure_time = '';
+            rec.mold_pressure = '';
+            rec.vacuum_pressure = '';
+            rec.visual_data = {};
+            rec.hardness_data = {};
+            rec.dimension_data = {};
+        } else {
+            // 가동 면: 면별 데이터 사용
+            rec.sabun = (fd.sabun || '').trim();
+            rec.cavity_count = parseInt(fd.cavity) || null;
+            rec.material = fd.material || '';
+            rec.trim_method = fd.trimMethod || '';
+            rec.mold_temp = fd.moldTemp || '';
+            rec.cure_time = fd.cureTime || '';
+            rec.mold_pressure = fd.moldPressure || '';
+            rec.vacuum_pressure = fd.vacuum || '';
+            rec.visual_data = fd.visual || {};
+            rec.hardness_data = fd.hardness || {};
+            rec.dimension_data = fd.dimension || {};
+        }
+
+        records.push(rec);
     }
 
     // 수정 모드
@@ -444,7 +554,6 @@ async function submitForm() {
             var oldRec = await fetch(SU+'/rest/v1/inspection_rounds?id=eq.'+editId, {headers:HR});
             var oldData = await oldRec.json();
             if (oldData && oldData[0]) {
-                // 같은 날짜+설비+검사자의 레코드 모두 삭제
                 await fetch(SU+'/rest/v1/inspection_rounds?inspect_date=eq.'+oldData[0].inspect_date+'&equipment=eq.'+oldData[0].equipment+'&inspector=eq.'+oldData[0].inspector, {method:'DELETE',headers:HR});
             }
         }
@@ -466,14 +575,6 @@ async function loadForEdit(id) {
 
         document.getElementById('inspDate').value = rec.inspect_date || '';
         document.getElementById('inspector').value = rec.inspector || '';
-        document.getElementById('sabun').value = rec.sabun || '';
-        document.getElementById('cavityCount').value = rec.cavity_count || '';
-        document.getElementById('material').value = rec.material || '';
-        document.getElementById('trimMethod').value = rec.trim_method || '';
-        document.getElementById('moldTemp').value = rec.mold_temp || '';
-        document.getElementById('cureTime').value = rec.cure_time || '';
-        document.getElementById('moldPressure').value = rec.mold_pressure || '';
-        document.getElementById('vacuum').value = rec.vacuum_pressure || '';
         document.getElementById('actionDetail').value = rec.action_detail || '';
 
         // 설비 타입
@@ -502,10 +603,21 @@ async function loadForEdit(id) {
         for (var i=0;i<facesArr.length;i++) {
             var f = facesArr[i];
             faceData[f.face] = {
+                inactive: f.is_inactive || false,
+                sabun: f.sabun || '',
+                cavity: f.cavity_count || '',
+                material: f.material || '',
+                trimMethod: f.trim_method || '',
+                moldTemp: f.mold_temp || '',
+                cureTime: f.cure_time || '',
+                moldPressure: f.mold_pressure || '',
+                vacuum: f.vacuum_pressure || '',
                 visual: f.visual_data || {},
                 hardness: f.hardness_data || {},
                 dimension: f.dimension_data || {}
             };
+            // 비가동 탭 스타일 업데이트
+            updateTabStyle(f.face, f.is_inactive || false);
         }
         restoreFaceData('A');
 
