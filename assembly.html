@@ -239,7 +239,7 @@
   <!-- 오늘 내 제출 내역 -->
   <div style="background:white;border-radius:12px;box-shadow:0 2px 8px rgba(36,59,178,0.08);margin-top:20px;overflow:hidden">
     <div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center;background:#f0f3f9;border-bottom:1px solid #e0e4ed">
-      <h2 style="font-size:15px;font-weight:700;margin:0">📋 오늘 내 제출 내역</h2>
+      <h2 style="font-size:15px;font-weight:700;margin:0" id="myHistoryTitle">📋 내 제출 내역</h2>
       <span id="myHistoryCount" style="font-size:13px;color:#243bb2;font-weight:600">0건</span>
     </div>
     <div id="myHistoryBody" style="padding:16px 24px">
@@ -748,13 +748,20 @@ async function loadMyHistory() {
   if (!body || !countEl) return;
   if (!workDate || !myName) { body.innerHTML = '<div style="text-align:center;color:#aaa;font-size:13px;padding:20px">로그인 정보를 확인 중...</div>'; return; }
 
+  // 타이틀 업데이트
+  var titleEl = document.getElementById('myHistoryTitle');
+  if (titleEl) {
+    var todayVal = new Date().toISOString().split('T')[0];
+    titleEl.textContent = workDate === todayVal ? '📋 오늘 내 제출 내역' : '📋 ' + workDate + ' 제출 내역';
+  }
+
   try {
     var { data, error } = await db.from('assembly_reports').select('*').eq('work_date', workDate).eq('created_by_name', myName).is('deleted_at', null).order('created_at', { ascending: false });
     if (error) { body.innerHTML = '<div style="text-align:center;color:#dc2626;font-size:13px;padding:20px">조회 실패: ' + error.message + '</div>'; countEl.textContent = '0건'; return; }
 
     var list = data || [];
     countEl.textContent = list.length + '건';
-    if (list.length === 0) { body.innerHTML = '<div style="text-align:center;color:#aaa;font-size:13px;padding:20px">오늘 제출한 내역이 없습니다.</div>'; return; }
+    if (list.length === 0) { body.innerHTML = '<div style="text-align:center;color:#aaa;font-size:13px;padding:20px">' + workDate + ' 제출 내역이 없습니다.</div>'; return; }
 
     var totalProd = list.reduce(function(s,r){return s+(parseInt(r.production_qty)||0);},0);
     var totalDefect = list.reduce(function(s,r){return s+(parseInt(r.defect_qty)||0);},0);

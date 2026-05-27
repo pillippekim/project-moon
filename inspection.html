@@ -485,7 +485,7 @@
   <!-- 오늘 내 제출 내역 -->
   <div id="myHistorySection" style="margin-top:20px;background:white;border-radius:12px;box-shadow:0 2px 8px rgba(36,59,178,0.08);overflow:hidden">
     <div style="padding:16px 24px;background:#243bb2;color:white;display:flex;justify-content:space-between;align-items:center">
-      <h2 style="font-size:15px;font-weight:700;margin:0">📋 오늘 내 제출 내역</h2>
+      <h2 style="font-size:15px;font-weight:700;margin:0" id="myHistoryTitle">📋 내 제출 내역</h2>
       <span id="myHistoryCount" style="font-size:12px;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:6px">0건</span>
     </div>
     <div id="myHistoryBody" style="padding:16px 24px">
@@ -1202,6 +1202,13 @@ async function loadMyHistory() {
     return;
   }
 
+  // 타이틀 업데이트
+  var titleEl = document.getElementById('myHistoryTitle');
+  if (titleEl) {
+    var isToday = workDate === todayStr();
+    titleEl.textContent = isToday ? '📋 오늘 내 제출 내역' : '📋 ' + workDate + ' 제출 내역';
+  }
+
   const { data, error } = await db.from('inspection_reports')
     .select('*')
     .eq('work_date', workDate)
@@ -1222,7 +1229,7 @@ async function loadMyHistory() {
   countEl.textContent = list.length + '건';
 
   if (list.length === 0) {
-    body.innerHTML = '<div style="text-align:center;color:#aaa;font-size:13px;padding:20px">오늘 제출한 내역이 없습니다.</div>';
+    body.innerHTML = '<div style="text-align:center;color:#aaa;font-size:13px;padding:20px">' + workDate + ' 제출 내역이 없습니다.</div>';
     return;
   }
 
