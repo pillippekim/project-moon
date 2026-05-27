@@ -381,7 +381,7 @@ async function init() {
     document.getElementById('startTime').value = this.value === '주간' ? '08:00' : '17:30';
     document.getElementById('endTime').value = this.value === '주간' ? '17:00' : '20:30';
   });
-  document.getElementById('workDate').addEventListener('change', () => { if (selectedEquipment) checkTodaySafety(); });
+  document.getElementById('workDate').addEventListener('change', () => { if (selectedEquipment) checkTodaySafety(); loadMyHistory(); });
 }
 
 async function loadWorkers() {
