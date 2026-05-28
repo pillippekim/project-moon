@@ -525,6 +525,27 @@ async function submitForm() {
         var fd = faceData[faces[f]] || {};
         var isInactive = fd.inactive || false;
 
+        // 빈 면 판별: 비가동이 아닌데, 사번도 없고 주요 데이터도 없으면 건너뛰기
+        if (!isInactive) {
+            var hasSabun = (fd.sabun || '').trim() !== '';
+            var hasMaterial = (fd.material || '') !== '';
+            var hasVisual = false;
+            if (fd.visual) {
+                var vTimings = ['first','mid','last'];
+                for (var vt=0;vt<vTimings.length;vt++) {
+                    if (fd.visual[vTimings[vt]] && fd.visual[vTimings[vt]].length > 0) { hasVisual = true; break; }
+                }
+            }
+            var hasAction = (fd.actionDetail || '').trim() !== '';
+            var hasMoldTemp = (fd.moldTemp || '') !== '';
+            var hasCureTime = (fd.cureTime || '') !== '';
+
+            // 사번, 재질, 외관불량, 비고, 금형온도, 가류시간 모두 없으면 빈 면
+            if (!hasSabun && !hasMaterial && !hasVisual && !hasAction && !hasMoldTemp && !hasCureTime) {
+                continue; // 이 면은 저장 안 함
+            }
+        }
+
         var rec = {
             inspect_date: inspDate,
             inspector: document.getElementById('inspector').value,
@@ -567,6 +588,11 @@ async function submitForm() {
         }
 
         records.push(rec);
+    }
+
+    if (records.length === 0) {
+        showToast('입력된 면이 없습니다. 최소 1개 면의 데이터를 입력해주세요.','error');
+        return;
     }
 
     // 수정 모드
