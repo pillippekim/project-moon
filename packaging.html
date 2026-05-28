@@ -1121,6 +1121,7 @@ async function loadMyHistory() {
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">LOT No.</th>
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">포장수량</th>
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">비고</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">특이사항</th>
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">제출시간</th>
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">작업</th>
           </tr>
@@ -1137,6 +1138,7 @@ async function loadMyHistory() {
               <td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">${lots}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;font-weight:600">${(r.quantity||0).toLocaleString()}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">${r.note||''}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px;color:#7c3aed;">${r.remarks||''}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed;color:#888;font-size:11px">${time}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center;white-space:nowrap">
                 ${isEditing 
