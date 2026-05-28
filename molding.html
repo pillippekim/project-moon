@@ -738,33 +738,86 @@ let safetyCheckCompleted = false;
 let existingSafetyId = null;
 
 // ═══════════════════════════════════════════════
-// 설비 마스터 데이터
+// 설비 마스터 데이터 (DB에서 로드)
 // ═══════════════════════════════════════════════
-const EQUIPMENTS = {
-  'A반': [
-    { no: 'A반-01호기', id: '생-A-01', name: '성형가류기(트랜스퍼)', spec: '350t 1U3P (650×650)', type: 'transfer' },
-    { no: 'A반-02호기', id: '생-A-15', name: '성형가류기(진공)', spec: '250t 1U3P (550×550)', type: 'vacuum' },
-    { no: 'A반-03호기', id: '생-A-05', name: '성형가류기(인젝션)', spec: '350t 1U1P (700×700)', type: 'injection' },
-    { no: 'A반-05호기', id: '생-A-06', name: '성형가류기(인젝션)', spec: '300t 1U1P (650×700) 2000cc', type: 'injection' },
-    { no: 'A반-06호기', id: '생-A-07', name: '성형가류기(인젝션)', spec: '300t 1U1P (650×700) 2000cc', type: 'injection' },
-    { no: 'A반-07호기', id: '생-A-32', name: '성형가류기(인젝션진공)', spec: '350t 1U1P (700×700) 3000cc', type: 'inj-vacuum' },
-    { no: 'A반-08호기', id: '생-A-33', name: '성형가류기(인젝션진공)', spec: '350t 1U1P (700×700) 3000cc', type: 'inj-vacuum' },
-    { no: 'A반-09호기', id: '생-A-10', name: '성형가류기(인젝션진공)', spec: '350t 1U1P (650×650) 3000cc', type: 'inj-vacuum' },
-    { no: 'A반-10호기', id: '생-A-21', name: '성형가류기(인젝션진공)', spec: '350t 1U1P (650×650) 2000cc', type: 'inj-vacuum' },
-    { no: '수입검사실', id: '생-A-20', name: '성형가류기(일반)', spec: '150t 1U2P (400×400)', type: 'general', dormant: true }
-  ],
-  'B반': [
-    { no: 'B반-01호기', id: '생-A-11', name: '성형가류기(진공)', spec: '330t 1U3P (600×660)', type: 'vacuum' },
-    { no: 'B반-02호기', id: '생-A-12', name: '성형가류기(진공)', spec: '330t 1U3P (600×660)', type: 'vacuum' },
-    { no: 'B반-03호기', id: '생-A-13', name: '성형가류기(진공)', spec: '330t 1U3P (600×660)', type: 'vacuum' },
-    { no: 'B반-04호기', id: '생-A-02', name: '성형가류기(진공)', spec: '330t 1U3P (600×660)', type: 'vacuum' },
-    { no: 'B반-05호기', id: '생-A-03', name: '성형가류기(진공)', spec: '330t 1U3P (600×660)', type: 'vacuum' },
-    { no: 'B반-06호기', id: '생-A-04', name: '성형가류기(진공)', spec: '330t 1U3P (600×660)', type: 'vacuum' },
-    { no: 'B반-07호기', id: '생-A-17', name: '성형가류기(진공)', spec: '330t 1U3P (600×660)', type: 'vacuum' },
-    { no: 'B반-08호기', id: '생-A-18', name: '성형가류기(진공)', spec: '330t 1U3P (600×660)', type: 'vacuum' },
-    { no: 'B반-09호기', id: '생-A-19', name: '성형가류기(진공)', spec: '330t 1U3P (600×660)', type: 'vacuum' }
-  ]
-};
+var EQUIPMENTS = { 'A반': [], 'B반': [] };
+
+// DB에서 설비 목록 로드
+async function loadEquipmentsFromDB() {
+  try {
+    var res = await db.from('equipments')
+      .select('*')
+      .eq('process', '성형')
+      .eq('is_active', true)
+      .order('sort_order');
+
+    var data = res.data || [];
+    if (data.length === 0) {
+      // DB에 데이터 없으면 fallback (하드코딩)
+      console.warn('DB에 설비 데이터 없음, fallback 사용');
+      EQUIPMENTS = {
+        'A반': [
+          { no: 'A반-01호기', id: '생-A-01', name: '성형가류기(트랜스퍼)', spec: '350t 1U3P (650×650)', type: 'transfer' },
+          { no: 'A반-02호기', id: '생-A-15', name: '성형가류기(진공)', spec: '250t 1U3P (550×550)', type: 'vacuum' },
+          { no: 'A반-03호기', id: '생-A-05', name: '성형가류기(인젝션)', spec: '350t 1U1P (700×700)', type: 'injection' },
+          { no: 'A반-05호기', id: '생-A-06', name: '성형가류기(인젝션)', spec: '300t 1U1P (650×700) 2000cc', type: 'injection' },
+          { no: 'A반-06호기', id: '생-A-07', name: '성형가류기(인젝션)', spec: '300t 1U1P (650×700) 2000cc', type: 'injection' },
+          { no: 'A반-07호기', id: '생-A-32', name: '성형가류기(인젝션진공)', spec: '350t 1U1P (700×700) 3000cc', type: 'inj-vacuum' },
+          { no: 'A반-08호기', id: '생-A-33', name: '성형가류기(인젝션진공)', spec: '350t 1U1P (700×700) 3000cc', type: 'inj-vacuum' },
+          { no: 'A반-09호기', id: '생-A-10', name: '성형가류기(인젝션진공)', spec: '350t 1U1P (650×650) 3000cc', type: 'inj-vacuum' },
+          { no: 'A반-10호기', id: '생-A-21', name: '성형가류기(인젝션진공)', spec: '350t 1U1P (650×650) 2000cc', type: 'inj-vacuum' },
+          { no: '수입검사실', id: '생-A-20', name: '성형가류기(일반)', spec: '150t 1U2P (400×400)', type: 'general', dormant: true }
+        ],
+        'B반': [
+          { no: 'B반-01호기', id: '생-A-11', name: '성형가류기(진공)', spec: '330t 1U3P (600×660)', type: 'vacuum' },
+          { no: 'B반-02호기', id: '생-A-12', name: '성형가류기(진공)', spec: '330t 1U3P (600×660)', type: 'vacuum' },
+          { no: 'B반-03호기', id: '생-A-13', name: '성형가류기(진공)', spec: '330t 1U3P (600×660)', type: 'vacuum' },
+          { no: 'B반-04호기', id: '생-A-02', name: '성형가류기(진공)', spec: '330t 1U3P (600×660)', type: 'vacuum' },
+          { no: 'B반-05호기', id: '생-A-03', name: '성형가류기(진공)', spec: '330t 1U3P (600×660)', type: 'vacuum' },
+          { no: 'B반-06호기', id: '생-A-04', name: '성형가류기(진공)', spec: '330t 1U3P (600×660)', type: 'vacuum' },
+          { no: 'B반-07호기', id: '생-A-17', name: '성형가류기(진공)', spec: '330t 1U3P (600×660)', type: 'vacuum' },
+          { no: 'B반-08호기', id: '생-A-18', name: '성형가류기(진공)', spec: '330t 1U3P (600×660)', type: 'vacuum' },
+          { no: 'B반-09호기', id: '생-A-19', name: '성형가류기(진공)', spec: '330t 1U3P (600×660)', type: 'vacuum' }
+        ]
+      };
+      return;
+    }
+
+    // DB 데이터를 기존 구조로 변환
+    EQUIPMENTS = {};
+    for (var i = 0; i < data.length; i++) {
+      var eq = data[i];
+      var group = eq.group_name || 'A반';
+      if (!EQUIPMENTS[group]) EQUIPMENTS[group] = [];
+      EQUIPMENTS[group].push({
+        no: eq.equipment_no,
+        id: eq.equipment_id || '',
+        name: eq.equipment_name || '',
+        spec: eq.spec || '',
+        type: eq.equip_type || '',
+        dormant: eq.is_dormant || false
+      });
+    }
+
+    // 팀 탭 동적 생성 (그룹이 2개 이상일 수 있으므로)
+    var teamTabsEl = document.querySelector('.team-tabs');
+    if (teamTabsEl) {
+      var groups = Object.keys(EQUIPMENTS);
+      var tabHtml = '';
+      for (var g = 0; g < groups.length; g++) {
+        var grp = groups[g];
+        var activeClass = (g === 0) ? ' active' : '';
+        tabHtml += '<button class="team-tab' + activeClass + '" data-team="' + grp + '" onclick="selectTeam(\'' + grp + '\')">' + grp + ' (' + EQUIPMENTS[grp].length + '대)</button>';
+      }
+      teamTabsEl.innerHTML = tabHtml;
+      selectedTeam = groups[0];
+    }
+
+    console.log('DB에서 설비 ' + data.length + '대 로드 완료');
+  } catch(e) {
+    console.error('설비 DB 로드 실패:', e);
+  }
+}
 
 // 설비 점검 항목 (모든 설비 동일 8개)
 const SAFETY_CHECK_ITEMS = [
@@ -1014,6 +1067,7 @@ async function init() {
   
   await loadWorkers();
   await loadProducts();
+  await loadEquipmentsFromDB();
   
   renderEquipmentGrid();
   
