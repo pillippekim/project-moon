@@ -213,6 +213,12 @@ body { font-family:'Noto Sans KR',sans-serif; background:#f1f3f9; color:#1e293b;
                 </div>
             </div>
         </div><!-- faceInputArea -->
+
+        <!-- 원인 및 조치 (면별 독립) -->
+        <div style="margin-top:10px;">
+            <div class="row-label">원인 및 조치 (이 면에 대한 비고)</div>
+            <textarea class="free-textarea" id="actionDetail" placeholder="불량 원인, 조치 사항, 특이사항 등 자유롭게 기재해주세요." style="min-height:70px;"></textarea>
+        </div>
     </div><!-- faceContent -->
 </div>
 
@@ -235,12 +241,9 @@ body { font-family:'Noto Sans KR',sans-serif; background:#f1f3f9; color:#1e293b;
     </div>
 </div>
 
-<div class="section-card">
-    <div class="section-title">📝 원인 및 조치 (상세)</div>
-    <textarea class="free-textarea" id="actionDetail" placeholder="불량 원인, 조치 사항, 특이사항 등 자유롭게 기재해주세요."></textarea>
-</div>
 
-</div>
+
+</div><!-- container -->
 
 <div class="bottom-actions">
     <button class="btn-submit" onclick="submitForm()">✅ 검사 완료 제출</button>
@@ -261,9 +264,9 @@ var DEFECT_TYPES = ['미성형','이물','Burr','찍힘','찢어짐','기타'];
 
 // 면별 데이터 저장 (제품정보 + 설비정보 + 검사데이터 + 비가동)
 var faceData = {
-    A: { inactive:false, sabun:'', cavity:'', material:'', trimMethod:'', moldTemp:'', cureTime:'', moldPressure:'', vacuum:'' },
-    B: { inactive:false, sabun:'', cavity:'', material:'', trimMethod:'', moldTemp:'', cureTime:'', moldPressure:'', vacuum:'' },
-    C: { inactive:false, sabun:'', cavity:'', material:'', trimMethod:'', moldTemp:'', cureTime:'', moldPressure:'', vacuum:'' }
+    A: { inactive:false, sabun:'', cavity:'', material:'', trimMethod:'', moldTemp:'', cureTime:'', moldPressure:'', vacuum:'', actionDetail:'' },
+    B: { inactive:false, sabun:'', cavity:'', material:'', trimMethod:'', moldTemp:'', cureTime:'', moldPressure:'', vacuum:'', actionDetail:'' },
+    C: { inactive:false, sabun:'', cavity:'', material:'', trimMethod:'', moldTemp:'', cureTime:'', moldPressure:'', vacuum:'', actionDetail:'' }
 };
 
 function fmtLocal(d) { if(!d) return ''; var dt = new Date(d); return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'); }
@@ -356,7 +359,8 @@ function saveFaceData(face) {
         vacuum: document.getElementById('faceVacuum').value,
         visual: collectVisualData(),
         hardness: collectGridData('hardnessGrid'),
-        dimension: collectGridData('dimensionGrid')
+        dimension: collectGridData('dimensionGrid'),
+        actionDetail: document.getElementById('actionDetail').value
     };
 }
 
@@ -384,6 +388,9 @@ function restoreFaceData(face) {
     if (d.visual) { restoreVisualData(d.visual); } else { clearVisualInputs(); }
     if (d.hardness) { restoreGridData('hardnessGrid', d.hardness); } else { clearGridInputs('hardnessGrid'); }
     if (d.dimension) { restoreGridData('dimensionGrid', d.dimension); } else { clearGridInputs('dimensionGrid'); }
+
+    // 비고 복원 (면별 개별)
+    document.getElementById('actionDetail').value = d.actionDetail || '';
 }
 
 function clearVisualInputs() {
@@ -509,7 +516,7 @@ async function submitForm() {
             is_inactive: isInactive,
             change_mold: collectChangeMold(),
             change_equip: collectChangeEquip(),
-            action_detail: document.getElementById('actionDetail').value.trim(),
+            action_detail: (fd.actionDetail || '').trim(),
             created_by: myInfo ? myInfo.name : null
         };
 
@@ -575,7 +582,6 @@ async function loadForEdit(id) {
 
         document.getElementById('inspDate').value = rec.inspect_date || '';
         document.getElementById('inspector').value = rec.inspector || '';
-        document.getElementById('actionDetail').value = rec.action_detail || '';
 
         // 설비 타입
         if (rec.equip_type === 'injection') {
@@ -614,7 +620,8 @@ async function loadForEdit(id) {
                 vacuum: f.vacuum_pressure || '',
                 visual: f.visual_data || {},
                 hardness: f.hardness_data || {},
-                dimension: f.dimension_data || {}
+                dimension: f.dimension_data || {},
+                actionDetail: f.action_detail || ''
             };
             // 비가동 탭 스타일 업데이트
             updateTabStyle(f.face, f.is_inactive || false);
