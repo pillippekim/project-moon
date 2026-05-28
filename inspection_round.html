@@ -287,35 +287,57 @@ function showToast(msg,type) { var el=document.getElementById('toast'); el.textC
     if (editId) loadForEdit(editId);
 })();
 
-// 설비 목록 로딩 (작업일지와 동일한 설비 마스터)
+// 설비 목록 로딩 (equipments DB 테이블에서 로드)
 async function loadEquipments() {
-    var EQUIPMENTS = {
-        'A반': [
-            { no: 'A반-01호기' }, { no: 'A반-02호기' }, { no: 'A반-03호기' },
-            { no: 'A반-05호기' }, { no: 'A반-06호기' }, { no: 'A반-07호기' },
-            { no: 'A반-08호기' }, { no: 'A반-09호기' }, { no: 'A반-10호기' },
-            { no: '수입검사실' }
-        ],
-        'B반': [
-            { no: 'B반-01호기' }, { no: 'B반-02호기' }, { no: 'B반-03호기' },
-            { no: 'B반-04호기' }, { no: 'B반-05호기' }, { no: 'B반-06호기' },
-            { no: 'B반-07호기' }, { no: 'B반-08호기' }, { no: 'B반-09호기' }
-        ]
-    };
-
     var sel = document.getElementById('equipment');
-    var groups = Object.keys(EQUIPMENTS);
-    for (var g = 0; g < groups.length; g++) {
-        var grpName = groups[g];
-        var optgroup = document.createElement('optgroup');
-        optgroup.label = grpName + ' (' + EQUIPMENTS[grpName].length + '대)';
-        for (var i = 0; i < EQUIPMENTS[grpName].length; i++) {
-            var o = document.createElement('option');
-            o.value = EQUIPMENTS[grpName][i].no;
-            o.textContent = EQUIPMENTS[grpName][i].no;
-            optgroup.appendChild(o);
+    try {
+        var r = await fetch(SU+'/rest/v1/equipments?process=eq.성형&is_active=eq.true&order=sort_order', {headers:HR});
+        var data = await r.json();
+        if (data && data.length > 0) {
+            // 그룹별 분류
+            var groups = {};
+            for (var i = 0; i < data.length; i++) {
+                var eq = data[i];
+                var grp = eq.group_name || 'A반';
+                if (!groups[grp]) groups[grp] = [];
+                groups[grp].push(eq);
+            }
+            var grpNames = Object.keys(groups);
+            for (var g = 0; g < grpNames.length; g++) {
+                var grpName = grpNames[g];
+                var optgroup = document.createElement('optgroup');
+                optgroup.label = grpName + ' (' + groups[grpName].length + '대)';
+                for (var j = 0; j < groups[grpName].length; j++) {
+                    var eq2 = groups[grpName][j];
+                    if (eq2.is_dormant) continue; // 휴면설비 제외
+                    var o = document.createElement('option');
+                    o.value = eq2.equipment_no;
+                    o.textContent = eq2.equipment_no;
+                    optgroup.appendChild(o);
+                }
+                sel.appendChild(optgroup);
+            }
+            return;
         }
-        sel.appendChild(optgroup);
+    } catch(e) { console.error('설비 DB 로드 실패:', e); }
+
+    // fallback: DB 실패 시 하드코딩
+    var FALLBACK = {
+        'A반': ['A반-01호기','A반-02호기','A반-03호기','A반-05호기','A반-06호기','A반-07호기','A반-08호기','A반-09호기','A반-10호기'],
+        'B반': ['B반-01호기','B반-02호기','B반-03호기','B반-04호기','B반-05호기','B반-06호기','B반-07호기','B반-08호기','B반-09호기']
+    };
+    var fGroups = Object.keys(FALLBACK);
+    for (var fg = 0; fg < fGroups.length; fg++) {
+        var fGrp = fGroups[fg];
+        var fOg = document.createElement('optgroup');
+        fOg.label = fGrp;
+        for (var fi = 0; fi < FALLBACK[fGrp].length; fi++) {
+            var fo = document.createElement('option');
+            fo.value = FALLBACK[fGrp][fi];
+            fo.textContent = FALLBACK[fGrp][fi];
+            fOg.appendChild(fo);
+        }
+        sel.appendChild(fOg);
     }
 }
 
