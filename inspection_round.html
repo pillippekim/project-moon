@@ -287,18 +287,52 @@ function showToast(msg,type) { var el=document.getElementById('toast'); el.textC
     if (editId) loadForEdit(editId);
 })();
 
-// 설비 목록 로딩
+// 설비 목록 로딩 (equipments 테이블 우선, 없으면 molding_reports에서)
 async function loadEquipments() {
+    var sel = document.getElementById('equipment');
     try {
-        var r = await fetch(SU+'/rest/v1/molding_reports?select=equipment_no&limit=2000', {headers:HR});
-        var d = await r.json();
+        // 1차: equipments 테이블에서 로드
+        var r = await fetch(SU+'/rest/v1/equipments?select=equipment_no,display_name,group_name,equip_type&is_active=eq.true&order=group_name,sort_order', {headers:HR});
+        if (r.ok) {
+            var eqList = await r.json();
+            if (eqList && eqList.length > 0) {
+                var currentGroup = '';
+                var optgroup = null;
+                for (var i = 0; i < eqList.length; i++) {
+                    var eq = eqList[i];
+                    var name = eq.display_name || eq.equipment_no || '';
+                    if (!name) continue;
+
+                    // 그룹별 optgroup
+                    var grp = eq.group_name || '';
+                    if (grp && grp !== currentGroup) {
+                        optgroup = document.createElement('optgroup');
+                        optgroup.label = grp;
+                        sel.appendChild(optgroup);
+                        currentGroup = grp;
+                    }
+
+                    var o = document.createElement('option');
+                    o.value = name;
+                    o.textContent = name;
+                    if (optgroup) { optgroup.appendChild(o); }
+                    else { sel.appendChild(o); }
+                }
+                return; // 성공 시 여기서 종료
+            }
+        }
+    } catch(e) {}
+
+    // 2차 fallback: molding_reports에서 설비명 추출
+    try {
+        var r2 = await fetch(SU+'/rest/v1/molding_reports?select=equipment_no&limit=2000', {headers:HR});
+        var d = await r2.json();
         var set = {};
         for (var i=0;i<d.length;i++) { var e=d[i].equipment_no; if(e&&e.trim()) set[e.trim()]=true; }
-        var sel = document.getElementById('equipment');
         Object.keys(set).sort().forEach(function(eq) {
             var o = document.createElement('option'); o.value=eq; o.textContent=eq; sel.appendChild(o);
         });
-    } catch(e) {}
+    } catch(e2) {}
 }
 
 // 설비 타입 전환
