@@ -107,7 +107,7 @@ body { font-family:'Noto Sans KR',sans-serif; background:#f1f3f9; color:#1e293b;
         </div>
         <div class="header-actions">
             <a href="index.html" class="btn-list" style="padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;">🏠 메인으로</a>
-            <a href="inspection_round_viewer.html" class="btn-list" style="padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;">📂 조회</a>
+            <a href="https://pillippekim.github.io/work-manager/inspection_round_viewer.html" class="btn-list" style="padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;">&#128194; 조회</a>
             <button class="btn-save" onclick="submitForm()">제출</button>
         </div>
     </div>
@@ -611,7 +611,7 @@ async function submitForm() {
         var r = await fetch(SU+'/rest/v1/inspection_rounds', {method:'POST',headers:H,body:JSON.stringify(records)});
         if (r.ok) {
             showToast(editId ? '수정 완료!' : '검사 제출 완료!','success');
-            setTimeout(function(){ location.href='inspection_round_viewer.html'; }, 1500);
+            setTimeout(function(){ location.href='https://pillippekim.github.io/work-manager/inspection_round_viewer.html'; }, 1500);
         } else { showToast('저장 실패','error'); }
     } catch(e) { showToast('오류: '+e.message,'error'); }
 }
