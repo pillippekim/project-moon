@@ -456,6 +456,11 @@ function selectEquipment(eqNo) {
     initSafetyTable();
     checkTodaySafety();
   }
+  // 기존 행의 작업방식 표시 갱신
+  document.querySelectorAll('#mainRows tr').forEach(function(tr) {
+    var sabunInput = tr.querySelector('.sabun-input');
+    if (sabunInput && sabunInput.value.trim()) { onSabunChange(tr.id); }
+  });
 }
 
 // ═══════════════════════════════════════════════
@@ -612,16 +617,23 @@ function onSabunChange(rowId) {
 
   // BOM 정보 자동
   const bom = ASSEMBLY_BOM[sabun];
+  const isManualEquip = selectedEquipment && selectedEquipment.type === 'manual';
   if (bom) {
     typeSpan.textContent = bom.type;
     typeSpan.style.color = bom.type === 'ROD' ? '#9a3412' : bom.type === 'STRIKER' ? '#243bb2' : '#666';
-    methodSpan.innerHTML = `<span class="method-badge ${bom.method === '수작업' ? 'method-manual' : 'method-auto'}">${bom.method}</span>`;
+    const actualMethod = isManualEquip ? '수작업' : bom.method;
+    methodSpan.innerHTML = '<span class="method-badge ' + (actualMethod === '수작업' ? 'method-manual' : 'method-auto') + '">' + actualMethod + '</span>';
     tr.querySelector('.prod-qty').disabled = false;
     tr.querySelector('.prod-qty').style.background = '#fafbfd';
     calcBom(rowId);
   } else {
     typeSpan.textContent = '-';
-    methodSpan.innerHTML = '-';
+    const fallbackMethod = isManualEquip ? '수작업' : '-';
+    if (isManualEquip) {
+      methodSpan.innerHTML = '<span class="method-badge method-manual">수작업</span>';
+    } else {
+      methodSpan.innerHTML = '-';
+    }
     document.getElementById('bom_' + rowId).innerHTML = '<span style="color:#dc2626;font-size:11px">🚫 BOM 미등록 — 기준정보에서 등록 후 사용하세요</span>';
     // 수량 입력 차단
     tr.querySelector('.prod-qty').disabled = true;
@@ -696,7 +708,7 @@ async function submitReport() {
       equipment_no: selectedEquipment.no, equipment_id: selectedEquipment.id,
       start_time: startTime, end_time: endTime, worker_name: workerName,
       sabun, product_name: productName || null,
-      assembly_type: bom ? bom.type : null, work_method: bom ? bom.method : '자동',
+      assembly_type: bom ? bom.type : null, work_method: (selectedEquipment && selectedEquipment.type === 'manual') ? '수작업' : (bom ? bom.method : '자동'),
       production_qty: prodQty, defect_qty: defectQty, lot_no: lotNo || null,
       material_usage: materialUsage,
       note: note || remarks, created_by_emp_code: myInfo?.emp_code, created_by_name: myInfo?.name
