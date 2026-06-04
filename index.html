@@ -593,10 +593,10 @@ function noticeItemHtml(n) {
   return '<div class="mn-item">'
     + '<div class="mn-dot ' + dotClass + '"></div>'
     + pinBadge
-    + '<div class="mn-title" onclick="viewNotice(' + n.id + ')">' + (n.title || '') + '</div>'
+    + '<div class="mn-title" onclick="viewNotice(\'' + n.id + '\')">' + (n.title || '') + '</div>'
     + targetBadge + newBadge
     + '<div class="mn-date">' + dateStr + '</div>'
-    + '<button class="mn-detail" onclick="viewNotice(' + n.id + ')">자세히</button>'
+    + '<button class="mn-detail" onclick="viewNotice(\'' + n.id + '\')">자세히</button>'
     + '</div>';
 }
 
@@ -604,12 +604,16 @@ async function loadNotices() {
   try {
     var res = await db.from('notices')
       .select('*')
-      .in('target', ['all', 'field'])
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(50);
-    var notices = res.data || [];
+      .limit(100);
     var listEl = document.getElementById('moonNoticeList');
+    if (res.error) {
+      listEl.innerHTML = '<div style="text-align:center;padding:16px;color:#94a3b8;font-size:13px;">공지사항을 불러올 수 없습니다 (' + res.error.message + ')</div>';
+      return;
+    }
+    // 작업일지(현장) 대시보드: 전체 + 현장직 + 대상 미지정 공지를 표시 (관리직 전용만 제외)
+    var notices = (res.data || []).filter(function(n){ return n.target !== 'office'; });
     if (notices.length === 0) {
       listEl.innerHTML = '<div style="text-align:center;padding:16px;color:#94a3b8;font-size:13px;">등록된 공지사항이 없습니다</div>';
       return;
@@ -627,7 +631,7 @@ async function loadNotices() {
 }
 
 function viewNotice(id) {
-  var n = _allNotices.find(function(x){ return x.id === id; });
+  var n = _allNotices.find(function(x){ return String(x.id) === String(id); });
   if (!n) return;
   var created = new Date(n.created_at);
   var dateStr = created.getFullYear() + '.' + String(created.getMonth()+1).padStart(2,'0') + '.' + String(created.getDate()).padStart(2,'0');
