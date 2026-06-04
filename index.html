@@ -36,6 +36,30 @@ body { font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI
 .welcome-text p { font-size: 14px; color: #888; line-height: 1.6; }
 .welcome-icon { font-size: 56px; }
 
+/* 공지사항 (현장직) */
+.moon-notice-section { background:#fff; border-radius:16px; border:1px solid #e5e5e5; padding:1.25rem 1.5rem; margin-bottom:1.5rem; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+.moon-notice-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.moon-notice-title { font-size:16px; font-weight:700; color:#111; }
+.moon-notice-body { display:flex; flex-direction:column; gap:2px; }
+.mn-item { display:flex; align-items:center; gap:8px; padding:10px 4px; border-bottom:1px solid #f1f5f9; }
+.mn-item:last-child { border-bottom:none; }
+.mn-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.mn-dot.red { background:#ef4444; } .mn-dot.blue { background:#3b82f6; } .mn-dot.gray { background:#cbd5e1; }
+.mn-pin { font-size:12px; flex-shrink:0; }
+.mn-title { font-size:14px; color:#334155; font-weight:500; cursor:pointer; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mn-title:hover { color:#243bb2; }
+.mn-new { font-size:10px; font-weight:700; background:#fee2e2; color:#dc2626; padding:1px 6px; border-radius:8px; flex-shrink:0; }
+.mn-target { font-size:10px; font-weight:700; padding:1px 7px; border-radius:8px; flex-shrink:0; background:#dcfce7; color:#166534; }
+.mn-date { font-size:12px; color:#94a3b8; flex-shrink:0; min-width:40px; text-align:right; }
+.mn-detail { font-size:11px; padding:3px 10px; border-radius:5px; border:none; background:#e0e7ff; color:#3730a3; cursor:pointer; font-weight:600; flex-shrink:0; }
+.mn-detail:hover { background:#c7d2fe; }
+/* 공지 상세 모달 */
+.mn-modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:flex-start; padding-top:80px; }
+.mn-modal-overlay.show { display:flex; }
+.mn-modal { background:#fff; border-radius:16px; padding:24px; width:90%; max-width:560px; max-height:70vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.25); }
+.mn-modal h3 { display:flex; justify-content:space-between; align-items:center; font-size:17px; font-weight:700; margin-bottom:8px; }
+.mn-modal-close { background:none; border:none; font-size:20px; cursor:pointer; color:#94a3b8; }
+
 /* 작업자용 - 큰 액션 카드 */
 .worker-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .worker-card { background: white; border-radius: 16px; border: 1px solid #e5e5e5; padding: 2rem; cursor: pointer; transition: all 0.2s; text-decoration: none; color: inherit; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
@@ -105,6 +129,17 @@ body { font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI
       <p id="welcomeMsg">작업일보 시스템에 오신 것을 환영합니다.</p>
     </div>
     <div class="welcome-icon" id="welcomeIcon">🏭</div>
+  </div>
+
+  <!-- 공지사항 (현장직) -->
+  <div class="moon-notice-section">
+    <div class="moon-notice-head">
+      <div class="moon-notice-title">📢 공지사항</div>
+      <a href="#" id="moonNoticeMore" onclick="openAllNotices(event)" style="display:none;font-size:12px;color:#243bb2;font-weight:600;text-decoration:none;">전체 보기 →</a>
+    </div>
+    <div class="moon-notice-body" id="moonNoticeList">
+      <div style="text-align:center;padding:16px;color:#94a3b8;font-size:13px;">불러오는 중...</div>
+    </div>
   </div>
 
   <!-- 작업자 화면 -->
@@ -317,6 +352,23 @@ body { font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI
   <div class="loading-text">로딩 중...</div>
 </div>
 
+<!-- 공지 상세 모달 -->
+<div class="mn-modal-overlay" id="mnDetailModal">
+  <div class="mn-modal">
+    <h3><span id="mnDetailTitle">공지</span><button class="mn-modal-close" onclick="closeNoticeDetail()">&#10005;</button></h3>
+    <div id="mnDetailDate" style="font-size:12px;color:#94a3b8;margin-bottom:12px;">-</div>
+    <div id="mnDetailContent" style="font-size:14px;color:#334155;line-height:1.7;white-space:pre-wrap;">-</div>
+  </div>
+</div>
+
+<!-- 전체 공지 모달 -->
+<div class="mn-modal-overlay" id="mnAllModal">
+  <div class="mn-modal" style="max-width:620px;">
+    <h3><span>📢 전체 공지사항</span><button class="mn-modal-close" onclick="closeAllNotices()">&#10005;</button></h3>
+    <div class="moon-notice-body" id="mnAllList" style="max-height:55vh;overflow-y:auto;"></div>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL = 'https://vpaixxlhzkwtgcllimvn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwYWl4eGxoemt3dGdjbGxpbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNzk4NjMsImV4cCI6MjA5MTk1NTg2M30.V8Bj0cMbM0E2TFhklYYa7TM-vO6Fi70ctACA7uUf4Ig';
@@ -513,7 +565,82 @@ async function renderAdminView() {
 
   // 통계 로드
   loadStats();
+  // 공지사항 로드 (현장직)
+  loadNotices();
 }
+
+// =============================================
+// 공지사항 (현장직: 전체 + 현장직 대상)
+// =============================================
+var _allNotices = [];
+
+function noticeItemHtml(n) {
+  var now = new Date();
+  var dotClass = 'gray';
+  if (n.priority === 'high') dotClass = 'red';
+  else if (n.category === 'update' || n.category === 'system') dotClass = 'blue';
+  var created = new Date(n.created_at);
+  var diffDays = Math.floor((now - created) / (1000 * 60 * 60 * 24));
+  var newBadge = diffDays <= 3 ? '<span class="mn-new">NEW</span>' : '';
+  var pinBadge = n.is_pinned ? '<span class="mn-pin">📌</span>' : '';
+  var targetBadge = (n.target === 'field') ? '<span class="mn-target">현장</span>' : '';
+  var dateStr = String(created.getMonth() + 1).padStart(2, '0') + '.' + String(created.getDate()).padStart(2, '0');
+  return '<div class="mn-item">'
+    + '<div class="mn-dot ' + dotClass + '"></div>'
+    + pinBadge
+    + '<div class="mn-title" onclick="viewNotice(' + n.id + ')">' + (n.title || '') + '</div>'
+    + targetBadge + newBadge
+    + '<div class="mn-date">' + dateStr + '</div>'
+    + '<button class="mn-detail" onclick="viewNotice(' + n.id + ')">자세히</button>'
+    + '</div>';
+}
+
+async function loadNotices() {
+  try {
+    var res = await db.from('notices')
+      .select('*')
+      .in('target', ['all', 'field'])
+      .order('is_pinned', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(50);
+    var notices = res.data || [];
+    var listEl = document.getElementById('moonNoticeList');
+    if (notices.length === 0) {
+      listEl.innerHTML = '<div style="text-align:center;padding:16px;color:#94a3b8;font-size:13px;">등록된 공지사항이 없습니다</div>';
+      return;
+    }
+    _allNotices = notices;
+    var shown = notices.slice(0, 5);
+    var html = '';
+    for (var i = 0; i < shown.length; i++) { html += noticeItemHtml(shown[i]); }
+    listEl.innerHTML = html;
+    var moreBtn = document.getElementById('moonNoticeMore');
+    if (moreBtn) moreBtn.style.display = notices.length > 5 ? '' : 'none';
+  } catch(e) {
+    document.getElementById('moonNoticeList').innerHTML = '<div style="text-align:center;padding:16px;color:#94a3b8;font-size:13px;">공지사항을 불러올 수 없습니다</div>';
+  }
+}
+
+function viewNotice(id) {
+  var n = _allNotices.find(function(x){ return x.id === id; });
+  if (!n) return;
+  var created = new Date(n.created_at);
+  var dateStr = created.getFullYear() + '.' + String(created.getMonth()+1).padStart(2,'0') + '.' + String(created.getDate()).padStart(2,'0');
+  document.getElementById('mnDetailTitle').textContent = n.title || '';
+  document.getElementById('mnDetailDate').textContent = dateStr;
+  document.getElementById('mnDetailContent').textContent = n.content || '(내용 없음)';
+  document.getElementById('mnDetailModal').classList.add('show');
+}
+function closeNoticeDetail() { document.getElementById('mnDetailModal').classList.remove('show'); }
+
+function openAllNotices(e) {
+  if (e) e.preventDefault();
+  var html = '';
+  for (var i = 0; i < _allNotices.length; i++) { html += noticeItemHtml(_allNotices[i]); }
+  document.getElementById('mnAllList').innerHTML = html || '<div style="text-align:center;padding:20px;color:#94a3b8;">공지사항이 없습니다</div>';
+  document.getElementById('mnAllModal').classList.add('show');
+}
+function closeAllNotices() { document.getElementById('mnAllModal').classList.remove('show'); }
 
 async function loadStats() {
   const today = new Date();
