@@ -651,7 +651,7 @@ async function loadStats() {
   // 포장
   const { data: pkgReports } = await db.from('packaging_reports')
     .select('quantity, worker_name')
-    .eq('work_date', todayStr);
+    .eq('work_date', todayStr).is('deleted_at', null);
 
   const pkgCount = pkgReports ? pkgReports.length : 0;
   const totalQty = pkgReports ? pkgReports.reduce((s,r) => s+(r.quantity||0), 0) : 0;
@@ -659,7 +659,7 @@ async function loadStats() {
   // 검사
   const { data: insReports } = await db.from('inspection_reports')
     .select('inspect_qty, pass_qty, worker_name')
-    .eq('work_date', todayStr);
+    .eq('work_date', todayStr).is('deleted_at', null);
 
   const insCount = insReports ? insReports.length : 0;
   const totalInspect = insReports ? insReports.reduce((s,r) => s+(r.inspect_qty||0), 0) : 0;
@@ -668,7 +668,7 @@ async function loadStats() {
   // 혼련(CMB)
   const { data: cmbReports } = await db.from('cmb_reports')
     .select('weight, is_remix, worker_name')
-    .eq('work_date', todayStr);
+    .eq('work_date', todayStr).is('deleted_at', null);
 
   const cmbCount = cmbReports ? cmbReports.length : 0;
   const totalCmb = cmbReports ? cmbReports.filter(r => !r.is_remix).reduce((s,r) => s+(r.weight||0), 0) : 0;
@@ -676,7 +676,7 @@ async function loadStats() {
   // 재단
   const { data: cutReports } = await db.from('cutting_reports')
     .select('box_count, worker_name')
-    .eq('work_date', todayStr);
+    .eq('work_date', todayStr).is('deleted_at', null);
 
   const cutCount = cutReports ? cutReports.length : 0;
   const totalCutBox = cutReports ? cutReports.reduce((s,r) => s+(r.box_count||0), 0) : 0;
@@ -684,19 +684,29 @@ async function loadStats() {
   // 성형
   const { data: moldReports } = await db.from('molding_reports')
     .select('production_qty, worker_name')
-    .eq('work_date', todayStr);
+    .eq('work_date', todayStr).is('deleted_at', null);
 
   const moldCount = moldReports ? moldReports.length : 0;
   const totalMoldQty = moldReports ? moldReports.reduce((s,r) => s+(r.production_qty||0), 0) : 0;
 
+  // 도포 / 2차가류 / 쇼트 / 조립 (건수만 합산 — 데이터 조회 페이지와 동일하게 9개 공정 전체 집계)
+  const { data: coatReports } = await db.from('coating_reports').select('worker_name').eq('work_date', todayStr).is('deleted_at', null);
+  const { data: pcReports }   = await db.from('postcure_reports').select('worker_name').eq('work_date', todayStr).is('deleted_at', null);
+  const { data: shotReports } = await db.from('shot_reports').select('worker_name').eq('work_date', todayStr).is('deleted_at', null);
+  const { data: asmReports }  = await db.from('assembly_reports').select('worker_name').eq('work_date', todayStr).is('deleted_at', null);
+  const coatCount = coatReports ? coatReports.length : 0;
+  const pcCount   = pcReports ? pcReports.length : 0;
+  const shotCount = shotReports ? shotReports.length : 0;
+  const asmCount  = asmReports ? asmReports.length : 0;
+
   // 전체 작업자 수 (모든 공정 합산)
   const allWorkers = new Set();
-  [pkgReports, insReports, cmbReports, cutReports, moldReports].forEach(arr => {
+  [pkgReports, insReports, cmbReports, cutReports, moldReports, coatReports, pcReports, shotReports, asmReports].forEach(arr => {
     if (arr) arr.forEach(r => { if (r.worker_name) allWorkers.add(r.worker_name); });
   });
 
-  // 전체 건수
-  const totalCount = pkgCount + insCount + cmbCount + cutCount + moldCount;
+  // 전체 건수 (9개 공정 전체)
+  const totalCount = pkgCount + insCount + cmbCount + cutCount + moldCount + coatCount + pcCount + shotCount + asmCount;
 
   // 화면 업데이트
   document.getElementById('todayCount').innerHTML = totalCount + ' <span class="stat-unit">건</span>';
