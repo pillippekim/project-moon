@@ -3,37 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>문서 관리 - Project Moon</title>
+<title>문서 관리 - HKHT</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sidebar.css">
+<link rel="stylesheet" href="common.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth_guard.js"></script>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 1rem; }
+/* ── docs_manager 고유 스타일 ── */
 .app { max-width: 980px; margin: 0 auto; }
-.top-nav { display: flex; align-items: center; justify-content: space-between; background: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(36,59,178,0.08); margin-bottom: 20px; }
-.back-btn { background: #f0f3f9; color: #243bb2; border: none; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; font-family: inherit; }
-.back-btn:hover { background: #e3e8f5; text-decoration: none; }
-.nav-title { font-size: 20px; font-weight: 700; color: #243bb2; }
-.nav-sep { display: none; }
-.nav-cur { display: none; }
-.card { background: white; border-radius: 12px; border: 1px solid #e5e5e5; padding: 1rem 1.25rem; margin-bottom: 1rem; }
 
-/* 업로드 */
+/* 업로드 토글 */
 .upload-toggle { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
 .upload-toggle-title { font-size: 14px; color: #888; }
-.btn-toggle-upload { font-size: 13px; padding: 8px 18px; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; }
-.upload-area { display: none; background: #f9f9f9; border: 1.5px dashed #ddd; border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem; }
+.btn-toggle-upload { font-size: 13px; padding: 8px 18px; border-radius: 8px; background: #243bb2; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; }
+.upload-area { display: none; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem; }
 .upload-area.open { display: block; }
 
 /* 파일명 규칙 안내 */
-.rule-box { background: #eff6ff; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: #2563eb; line-height: 1.7; }
+.rule-box { background: #eef0ff; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: #243bb2; line-height: 1.7; }
 .rule-box strong { font-weight: 600; }
-
-/* 다중 파일 드롭존 */
-.file-zone { border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; background: white; transition: border-color 0.15s; margin-bottom: 12px; }
-.file-zone:hover, .file-zone.dragover { border-color: #2563eb; background: #eff6ff; }
-.file-zone-icon { font-size: 28px; margin-bottom: 6px; }
-.file-zone-text { font-size: 13px; color: #888; }
 
 /* 파일 파싱 결과 */
 .parsed-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
@@ -45,48 +34,38 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .parsed-fields { display: grid; grid-template-columns: repeat(4, 1fr) 1fr; gap: 8px; align-items: end; }
 .pf-group { display: flex; flex-direction: column; gap: 4px; }
 .pf-label { font-size: 11px; color: #888; }
-.pf-input, .pf-select { font-size: 13px; border: 1px solid #e5e5e5; border-radius: 6px; padding: 6px 8px; outline: none; font-family: inherit; color: #111; background: white; width: 100%; }
-.pf-input:focus, .pf-select:focus { border-color: #2563eb; }
+.pf-input, .pf-select { font-size: 13px; border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 8px; outline: none; font-family: inherit; color: #111; background: white; width: 100%; }
+.pf-input:focus, .pf-select:focus { border-color: #243bb2; }
 .upload-mode { display: flex; gap: 8px; }
 .mode-btn { flex: 1; font-size: 12px; padding: 6px; border-radius: 6px; border: 1.5px solid #e5e5e5; background: white; cursor: pointer; font-family: inherit; color: #555; text-align: center; }
-.mode-btn.selected { border-color: #2563eb; background: #eff6ff; color: #2563eb; font-weight: 500; }
+.mode-btn.selected { border-color: #243bb2; background: #eef0ff; color: #243bb2; font-weight: 500; }
 .btn-remove-file { background: none; border: none; cursor: pointer; color: #aaa; font-size: 18px; padding: 0 4px; }
 .btn-remove-file:hover { color: #e53e3e; }
-
 .upload-footer { display: flex; justify-content: space-between; align-items: center; }
 .upload-info { font-size: 12px; color: #aaa; }
-.btn-upload-all { font-size: 13px; padding: 9px 24px; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; }
+.btn-upload-all { font-size: 13px; padding: 9px 24px; border-radius: 8px; background: #243bb2; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; }
 .btn-upload-all:disabled { background: #aaa; cursor: not-allowed; }
 .progress-bar { width: 100%; height: 4px; background: #e5e5e5; border-radius: 2px; margin-top: 10px; display: none; }
-.progress-fill { height: 100%; background: #2563eb; border-radius: 2px; transition: width 0.3s; }
+.progress-fill { height: 100%; background: #243bb2; border-radius: 2px; transition: width 0.3s; }
 
-/* 탭 */
+/* 문서 유형 탭 */
 .tab-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1rem; }
 .tab-btn { display: flex; flex-direction: column; align-items: center; padding: 10px 16px; border-radius: 10px; border: 1.5px solid #e5e5e5; background: white; cursor: pointer; font-family: inherit; transition: all 0.15s; min-width: 100px; }
-.tab-btn:hover { border-color: #2563eb; }
-.tab-btn.active { border-color: #2563eb; background: #eff6ff; }
+.tab-btn:hover { border-color: #243bb2; }
+.tab-btn.active { border-color: #243bb2; background: #eef0ff; }
 .tab-label { font-size: 12px; color: #888; margin-bottom: 4px; }
-.tab-btn.active .tab-label { color: #2563eb; }
+.tab-btn.active .tab-label { color: #243bb2; }
 .tab-count { font-size: 20px; font-weight: 700; color: #111; }
-.tab-btn.active .tab-count { color: #2563eb; }
+.tab-btn.active .tab-count { color: #243bb2; }
 .tab-unit { font-size: 11px; color: #aaa; }
 
-/* 검색 */
-.search-bar { display: flex; gap: 10px; margin-bottom: 1rem; align-items: center; }
-.search-input { font-size: 13px; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 12px; outline: none; font-family: inherit; color: #111; width: 180px; }
-.search-input:focus { border-color: #2563eb; }
+/* 구버전 필터 */
 .filter-toggle { font-size: 12px; padding: 7px 12px; border-radius: 8px; border: 1px solid #e5e5e5; background: white; cursor: pointer; font-family: inherit; color: #555; }
-.filter-toggle.active { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
+.filter-toggle.active { border-color: #243bb2; color: #243bb2; background: #eef0ff; }
 
-/* 테이블 */
-.table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th { font-size: 12px; font-weight: 500; color: #888; padding: 9px 12px; background: #f9f9f9; border-bottom: 1px solid #eee; text-align: left; white-space: nowrap; ; position: sticky; top: 0; z-index: 10; }
-td { padding: 9px 12px; border-bottom: 1px solid #f0f0f0; color: #111; vertical-align: middle; }
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: #fafafa; }
+/* 문서 유형 배지 */
 .doc-type-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
-.type-검사기준서 { background: #eff6ff; color: #2563eb; }
+.type-검사기준서 { background: #eff6ff; color: #243bb2; }
 .type-작업표준서 { background: #f0fdf4; color: #16a34a; }
 .type-검사협정서 { background: #fff7ed; color: #ea580c; }
 .type-관리계획서 { background: #fdf4ff; color: #9333ea; }
@@ -94,62 +73,70 @@ tr:hover td { background: #fafafa; }
 .version-badge { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 6px; background: #f3f4f6; color: #555; font-weight: 500; }
 .current-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #f0fdf4; color: #16a34a; font-weight: 500; }
 .old-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #f9f9f9; color: #aaa; }
-.action-btns { display: flex; gap: 4px; }
-.btn-view { font-size: 12px; padding: 4px 10px; border-radius: 6px; background: #eff6ff; color: #2563eb; border: none; cursor: pointer; font-family: inherit; }
+.btn-view { font-size: 12px; padding: 4px 10px; border-radius: 6px; background: #eff6ff; color: #243bb2; border: none; cursor: pointer; font-family: inherit; }
 .btn-edit { font-size: 12px; padding: 4px 10px; border-radius: 6px; background: #f0fdf4; color: #16a34a; border: none; cursor: pointer; font-family: inherit; }
-.btn-del { font-size: 12px; padding: 4px 10px; border-radius: 6px; background: transparent; color: #e53e3e; border: 1px solid #fca5a5; cursor: pointer; font-family: inherit; }
-.btn-del:hover { background: #fff0f0; }
-.empty-row td { text-align: center; color: #aaa; padding: 2.5rem; font-size: 14px; }
+.inactive-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #fef2f2; color: #b91c1c; font-weight: 600; }
+.btn-deact { font-size: 12px; padding: 4px 10px; border-radius: 6px; background: #fff7ed; color: #c2410c; border: none; cursor: pointer; font-family: inherit; }
+.btn-react { font-size: 12px; padding: 4px 10px; border-radius: 6px; background: #ecfdf5; color: #047857; border: none; cursor: pointer; font-family: inherit; }
+.btn-hist  { font-size: 12px; padding: 4px 10px; border-radius: 6px; background: #f5f3ff; color: #6d28d9; border: none; cursor: pointer; font-family: inherit; }
+.action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+th.doc-sortable { cursor: pointer; user-select: none; white-space: nowrap; transition: background .12s; }
+th.doc-sortable:hover { background: #eef1fb; }
+th.doc-sortable .sind { font-size: 10px; margin-left: 3px; color: #c2c7d0; }
+th.doc-sortable.sorted { color: #243bb2; }
+th.doc-sortable.sorted .sind { color: #243bb2; font-size: 11px; }
+tr.inactive-row td { background: #fcfcfc !important; opacity: 0.72; }
+.hist-item { display: grid; grid-template-columns: 92px 1fr auto; gap: 10px; align-items: center; padding: 9px 4px; border-bottom: 1px solid #f1f1f1; font-size: 13px; }
+.hist-action { font-weight: 600; }
+.hist-act-비활성화 { color: #c2410c; } .hist-act-재활성화 { color: #047857; }
+.hist-act-신규등록, .hist-act-리비전등록 { color: #243bb2; } .hist-act-삭제 { color: #b91c1c; } .hist-act-수정 { color: #6d28d9; }
 
-/* 수정 모달 */
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
-.modal-overlay.open { display: flex; }
-.modal-box { background: white; border-radius: 12px; padding: 1.5rem; width: 480px; }
-.modal-title { font-size: 16px; font-weight: 600; color: #111; margin-bottom: 1rem; }
-.modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
+/* 모달 파일 업로드 */
+.modal-file-zone { border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 1rem; text-align: center; cursor: pointer; background: #f8fafc; margin-bottom: 1rem; font-size: 13px; color: #888; }
+.modal-file-zone:hover { border-color: #243bb2; }
+.modal-file-selected { font-size: 13px; color: #243bb2; font-weight: 500; margin-top: 4px; }
 .modal-field { display: flex; flex-direction: column; gap: 5px; }
-.modal-label { font-size: 12px; color: #888; }
-.modal-input, .modal-select { font-size: 13px; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 10px; outline: none; font-family: inherit; color: #111; }
-.modal-input:focus, .modal-select:focus { border-color: #2563eb; }
-.modal-file-zone { border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 1rem; text-align: center; cursor: pointer; background: #f9f9f9; margin-bottom: 1rem; font-size: 13px; color: #888; }
-.modal-file-zone:hover { border-color: #2563eb; }
-.modal-file-selected { font-size: 13px; color: #2563eb; font-weight: 500; margin-top: 4px; }
-.modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
-.btn-modal-cancel { font-size: 13px; padding: 9px 18px; border-radius: 8px; background: transparent; color: #888; border: 1px solid #ddd; cursor: pointer; font-family: inherit; }
-.btn-modal-save { font-size: 13px; padding: 9px 18px; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; font-family: inherit; font-weight: 500; }
-
-.toast { display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #111; color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; z-index: 999; white-space: nowrap; }
-.toast.show { display: block; }
-
-/* 테이블 헤더 고정 */
-.table-scroll-wrap { max-height: 600px; overflow-y: auto; overflow-x: auto; border-radius: 8px; border: 1px solid #f0f0f0; }
-.table-scroll-wrap table { margin: 0; }
-.table-scroll-wrap thead th { position: sticky; top: 0; z-index: 10; background: #f9f9f9; box-shadow: inset 0 -1px 0 #eee; }
-
 </style>
 </head>
 <body>
 <!-- 권한 체크 로딩 화면 -->
-<div id="authCheckOverlay" style="position:fixed;inset:0;background:#f5f5f5;z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+<div id="authCheckOverlay" style="position:fixed;inset:0;background:#f1f3f9;z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
   <div style="width:36px;height:36px;border:3px solid #e5e5e5;border-top-color:#243bb2;border-radius:50%;animation:authSpin 0.8s linear infinite"></div>
-  <div style="font-size:13px;color:#888;font-family:-apple-system,sans-serif">권한 확인 중...</div>
+  <div style="font-size:13px;color:#888;font-family:inherit">권한 확인 중...</div>
   <style>@keyframes authSpin { to { transform: rotate(360deg); } }</style>
 </div>
 <script>
 (async function() {
-  const user = await checkPageAccess('docs_admin.html');
-  if (!user) return; // 권한 없으면 함수 내부에서 화면 교체됨
+  var user = await checkAuth();
+  if (!user) return;
+  // worker는 문서 관리 접근 불가
+  if (user.user_type === 'worker') {
+    location.href = 'mold_dashboard.html';
+    return;
+  }
   document.getElementById('authCheckOverlay').style.display = 'none';
 })();
 </script>
 
-<div class="app">
+<!-- WM 레이아웃 -->
+<div id="top-header" class="top-header"></div>
+<nav id="sidebar-nav" class="sidebar"></nav>
 
-  <div class="top-nav">
-    <a href="index.html" class="back-btn">← 메인으로</a>
-    <span class="nav-title">📄 문서 관리 (관리자)</span>
-    <span style="width:100px"></span>
+<div class="main">
+
+<div class="page-header">
+    <div class="header-row">
+      <div>
+        <h1>📄 문서 관리</h1>
+        <div class="sub">검사기준서, 작업표준서 PDF 업로드 및 이력 관리</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-toggle-upload" onclick="toggleUpload()">+ 문서 업로드</button>
+      </div>
+    </div>
   </div>
+
+<div class="app">
 
   <!-- 업로드 토글 -->
   <div class="upload-toggle">
@@ -223,7 +210,7 @@ tr:hover td { background: #fafafa; }
   <!-- 검색 -->
   <div class="search-bar">
     <input class="search-input" id="filterSabun" placeholder="🔍 사번 검색" oninput="renderTable()" />
-    <button class="filter-toggle" id="toggleOld" onclick="toggleOldDocs()">구버전 포함</button>
+    <button class="filter-toggle" id="toggleOld" onclick="toggleOldDocs()">구버전·비활성 포함</button>
   </div>
 
   <!-- 목록 -->
@@ -232,13 +219,13 @@ tr:hover td { background: #fafafa; }
       <table>
         <thead>
           <tr>
-            <th>사번</th>
-            <th>문서유형</th>
-            <th>문서명</th>
-            <th>버전</th>
-            <th>상태</th>
-            <th>담당자</th>
-            <th>등록일</th>
+            <th class="doc-sortable" data-key="sabun"       onclick="sortDocs('sabun')">사번<span class="sind">↕</span></th>
+            <th class="doc-sortable" data-key="doc_type"    onclick="sortDocs('doc_type')">문서유형<span class="sind">↕</span></th>
+            <th class="doc-sortable" data-key="doc_name"    onclick="sortDocs('doc_name')">문서명<span class="sind">↕</span></th>
+            <th class="doc-sortable" data-key="version"     onclick="sortDocs('version')">버전<span class="sind">↕</span></th>
+            <th class="doc-sortable" data-key="status"      onclick="sortDocs('status')">상태<span class="sind">↕</span></th>
+            <th class="doc-sortable" data-key="uploaded_by" onclick="sortDocs('uploaded_by')">담당자<span class="sind">↕</span></th>
+            <th class="doc-sortable" data-key="created_at"  onclick="sortDocs('created_at')">등록일<span class="sind">↕</span></th>
             <th></th>
           </tr>
         </thead>
@@ -294,6 +281,17 @@ tr:hover td { background: #fafafa; }
     <div class="modal-btns">
       <button class="btn-modal-cancel" onclick="closeEditModal()">취소</button>
       <button class="btn-modal-save" onclick="saveEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 변경 이력 모달 -->
+<div class="modal-overlay" id="histModal">
+  <div class="modal-box" style="max-width:560px;width:92%;">
+    <div class="modal-title" id="hist_title">📜 변경 이력</div>
+    <div id="hist_body" style="max-height:55vh;overflow-y:auto;margin-top:8px;"></div>
+    <div class="modal-btns">
+      <button class="btn-modal-cancel" onclick="closeHistModal()">닫기</button>
     </div>
   </div>
 </div>
@@ -433,6 +431,21 @@ function removeFile(i) {
 
 async function uploadAll() {
   if (!parsedFiles.length) return;
+
+  // 업로드 전 중복 확인: 같은 사번+문서유형의 '활성' 문서가 이미 있으면 한 번 확인
+  const conflicts = [];
+  for (const p of parsedFiles) {
+    if (!p.sabun) continue;
+    const { data } = await db.from('documents').select('id')
+      .eq('sabun', p.sabun).eq('doc_type', p.docType).eq('is_active', true).limit(1);
+    if (data && data.length) conflicts.push(p.sabun + ' / ' + p.docType);
+  }
+  if (conflicts.length) {
+    const msg = '동일한 사번 문서가 이미 등록돼 있어요:\n\n· ' + conflicts.join('\n· ')
+      + '\n\n계속 업로드하면 위 기존 문서는 비활성(구버전)으로 보관되고, 새 버전으로 등록됩니다.\n업로드하시겠습니까?';
+    if (!confirm(msg)) { showToast('업로드를 취소했어요.'); return; }
+  }
+
   const btn = document.getElementById('uploadAllBtn');
   btn.disabled = true; btn.textContent = '업로드 중...';
   document.getElementById('progressBar').style.display = 'block';
@@ -441,20 +454,25 @@ async function uploadAll() {
   for (const p of parsedFiles) {
     if (!p.sabun) { showToast('사번을 입력해주세요.'); continue; }
 
+    // 기존 문서 조회 (이력/비활성화 처리용)
+    const { data: existingDocs } = await db.from('documents').select('*')
+      .eq('sabun', p.sabun).eq('doc_type', p.docType);
+    const hadActive = !!(existingDocs && existingDocs.some(d => d.is_active !== false));
+
     let version;
     if (p.mode === 'overwrite') {
-      // 덮어쓰기: 기존 버전 유지
-      const { data } = await db.from('documents').select('version')
-        .eq('sabun', p.sabun).eq('doc_type', p.docType).eq('is_current', true).limit(1);
-      version = data && data.length ? data[0].version : 'v1.0';
-      // 기존 파일 구버전 처리
-      await db.from('documents').update({ is_current: false })
-        .eq('sabun', p.sabun).eq('doc_type', p.docType);
+      const cur = existingDocs && existingDocs.find(d => d.is_current);
+      version = cur ? cur.version : 'v1.0';
     } else {
-      // 신규 버전: 버전 자동 증가
       version = await getNextVersion(p.sabun, p.docType);
-      await db.from('documents').update({ is_current: false })
-        .eq('sabun', p.sabun).eq('doc_type', p.docType);
+    }
+    // 기존 문서: 삭제하지 않고 구버전 + 비활성화로 보관
+    await db.from('documents').update({ is_current: false, is_active: false })
+      .eq('sabun', p.sabun).eq('doc_type', p.docType);
+    if (existingDocs) {
+      for (const ex of existingDocs) {
+        if (ex.is_active !== false) await logDocHistory(ex, '비활성화', `리비전 ${version} 등록으로 자동 비활성화`);
+      }
     }
 
     const safeFileName = p.file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -469,8 +487,10 @@ async function uploadAll() {
     await db.from('documents').insert({
       sabun: p.sabun, doc_type: p.docType, doc_name: p.docName,
       version, file_url: urlData.publicUrl, file_path: filePath,
-      is_current: true, uploaded_by: p.uploader || '관리자'
+      is_current: true, is_active: true, uploaded_by: p.uploader || '관리자'
     });
+    await logDocHistory({ sabun: p.sabun, doc_type: p.docType, doc_name: p.docName, version },
+      hadActive ? '리비전 등록' : '신규 등록', hadActive ? '리비전 업로드' : '최초 업로드');
 
     done++;
     document.getElementById('progressFill').style.width = Math.round((done/parsedFiles.length)*100) + '%';
@@ -509,32 +529,42 @@ function renderTable() {
   const sabun = document.getElementById('filterSabun').value.trim().toLowerCase();
   let filtered = allDocs;
   if (activeTab) filtered = filtered.filter(d => d.doc_type === activeTab);
-  if (!showOld)  filtered = filtered.filter(d => d.is_current);
+  if (!showOld)  filtered = filtered.filter(d => d.is_current && d.is_active !== false);
   if (sabun)     filtered = filtered.filter(d => d.sabun.toLowerCase().includes(sabun));
+  filtered = applyDocSort(filtered);
 
   const tbody = document.getElementById('docTable');
   if (!filtered.length) {
     tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${activeTab?activeTab+' 문서가 없어요.':'등록된 문서가 없어요.'}</td></tr>`;
     return;
   }
-  tbody.innerHTML = filtered.map(r => `
-    <tr>
+  tbody.innerHTML = filtered.map(r => {
+    const inactive = (r.is_active === false);
+    const statusHtml = inactive ? '<span class="inactive-badge">비활성</span>'
+      : (r.is_current ? '<span class="current-badge">적용중</span>' : '<span class="old-badge">구버전</span>');
+    const toggleBtn = inactive
+      ? `<button class="btn-react" onclick="setDocActive('${r.id}',true)">재활성화</button>`
+      : `<button class="btn-deact" onclick="setDocActive('${r.id}',false)">비활성화</button>`;
+    return `
+    <tr class="${inactive?'inactive-row':''}">
       <td style="font-weight:500">${r.sabun}</td>
       <td><span class="doc-type-badge type-${r.doc_type}">${r.doc_type}</span></td>
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.doc_name}">${r.doc_name}</td>
       <td><span class="version-badge">${r.version}</span></td>
-      <td>${r.is_current?'<span class="current-badge">적용중</span>':'<span class="old-badge">구버전</span>'}</td>
+      <td>${statusHtml}</td>
       <td style="color:#888;font-size:12px">${r.uploaded_by||'-'}</td>
       <td style="color:#aaa;font-size:12px">${fmtDate(r.created_at)}</td>
       <td>
         <div class="action-btns">
           <button class="btn-view" onclick="window.open('${r.file_url}','_blank')">보기</button>
           <button class="btn-edit" onclick="openEditModal(${JSON.stringify(r).replace(/"/g,'&quot;')})">수정</button>
-          <button class="btn-del" onclick="deleteDoc(${r.id},'${r.file_path}')">삭제</button>
+          <button class="btn-hist" onclick="showDocHistory('${r.sabun}','${r.doc_type}')">이력</button>
+          ${toggleBtn}
+          <button class="btn-del" onclick="deleteDoc('${r.id}','${r.file_path}')">삭제</button>
         </div>
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 }
 
 async function loadDocs() {
@@ -610,15 +640,102 @@ async function saveEdit() {
 }
 
 async function deleteDoc(id, filePath) {
-  if (!confirm('삭제하시겠습니까?\n삭제된 파일은 복구할 수 없습니다.')) return;
-  await db.storage.from('documents').remove([filePath]);
+  if (!confirm('완전히 삭제할까요?\n삭제하면 파일과 기록이 사라져 복구할 수 없어요.\n(이력 보관이 필요하면 "비활성화"를 권장합니다.)')) return;
+  const d = allDocs.find(x => String(x.id) === String(id));
+  if (d) await logDocHistory(d, '삭제', '문서 완전 삭제');
+  if (filePath) await db.storage.from('documents').remove([filePath]);
   await db.from('documents').delete().eq('id', id);
   showToast('삭제됐어요.');
   loadDocs();
 }
 
+// ── 변경 이력 기록 ──
+async function logDocHistory(d, action, note) {
+  try {
+    await db.from('document_history').insert({
+      sabun: d.sabun, doc_type: d.doc_type, doc_name: d.doc_name || null,
+      version: d.version || null, action: action, note: note || null,
+      performed_by: MY_NAME || '관리자', performed_at: new Date().toISOString()
+    });
+  } catch (e) { /* 이력 기록 실패가 본 작업을 막지 않도록 */ }
+}
+
+// ── 비활성화 / 재활성화 ──
+async function setDocActive(id, makeActive) {
+  const d = allDocs.find(x => String(x.id) === String(id));
+  if (!d) return;
+  const msg = makeActive
+    ? '이 문서를 다시 활성화할까요?'
+    : '이 문서를 비활성화할까요?\n삭제되지 않고 보관되며, 나중에 다시 활성화할 수 있어요.';
+  if (!confirm(msg)) return;
+  const patch = makeActive ? { is_active: true } : { is_active: false, is_current: false };
+  const { error } = await db.from('documents').update(patch).eq('id', id);
+  if (error) { showToast('처리 실패: ' + error.message); return; }
+  await logDocHistory(d, makeActive ? '재활성화' : '비활성화', makeActive ? '수동 재활성화' : '수동 비활성화');
+  showToast(makeActive ? '재활성화됐어요 ✓' : '비활성화됐어요 (보관됨) ✓');
+  loadDocs();
+}
+
+// ── 변경 이력 보기 ──
+async function showDocHistory(sabun, docType) {
+  const body = document.getElementById('hist_body');
+  document.getElementById('hist_title').textContent = '📜 변경 이력 — ' + sabun + ' / ' + docType;
+  body.innerHTML = '<div style="text-align:center;color:#aaa;padding:18px;font-size:13px">불러오는 중...</div>';
+  document.getElementById('histModal').classList.add('open');
+  const { data, error } = await db.from('document_history').select('*')
+    .eq('sabun', sabun).eq('doc_type', docType)
+    .order('performed_at', { ascending: false });
+  if (error) { body.innerHTML = '<div style="text-align:center;color:#aaa;padding:18px;font-size:13px">이력을 불러올 수 없어요. (이력 테이블이 아직 없을 수 있어요)</div>'; return; }
+  if (!data || !data.length) { body.innerHTML = '<div style="text-align:center;color:#aaa;padding:18px;font-size:13px">기록된 이력이 없어요.</div>'; return; }
+  body.innerHTML = data.map(h => {
+    const dt = h.performed_at ? h.performed_at.slice(0,16).replace('T',' ') : '';
+    const cls = 'hist-act-' + (h.action || '').replace(/\s/g,'');
+    return '<div class="hist-item">'
+      + '<span class="version-badge">' + (h.version || '-') + '</span>'
+      + '<div><span class="hist-action ' + cls + '">' + (h.action || '') + '</span>'
+      + (h.note ? ' <span style="color:#999;font-size:12px">· ' + h.note + '</span>' : '')
+      + '<div style="color:#bbb;font-size:11px;margin-top:2px">' + (h.performed_by || '-') + '</div></div>'
+      + '<span style="color:#aaa;font-size:11px;white-space:nowrap">' + dt + '</span>'
+      + '</div>';
+  }).join('');
+}
+function closeHistModal() { document.getElementById('histModal').classList.remove('open'); }
+
+// ── 정렬 ──
+var docSort = { key: null, dir: 1 };
+function statusRank(r) { return (r.is_active === false) ? 2 : (r.is_current ? 0 : 1); }
+function applyDocSort(list) {
+  if (!docSort.key) return list;
+  const k = docSort.key, dir = docSort.dir;
+  const arr = list.slice();
+  arr.sort((a, b) => {
+    if (k === 'status') return (statusRank(a) - statusRank(b)) * dir;
+    let va = a[k], vb = b[k];
+    va = (va === null || va === undefined) ? '' : va;
+    vb = (vb === null || vb === undefined) ? '' : vb;
+    return String(va).localeCompare(String(vb), 'ko', { numeric: true, sensitivity: 'base' }) * dir;
+  });
+  return arr;
+}
+function sortDocs(key) {
+  if (docSort.key === key) docSort.dir = -docSort.dir;
+  else { docSort.key = key; docSort.dir = 1; }
+  updateDocSortInd();
+  renderTable();
+}
+function updateDocSortInd() {
+  document.querySelectorAll('th.doc-sortable').forEach(th => {
+    const ind = th.querySelector('.sind');
+    if (!ind) return;
+    if (th.getAttribute('data-key') === docSort.key) { ind.textContent = docSort.dir === 1 ? '▲' : '▼'; th.classList.add('sorted'); }
+    else { ind.textContent = '↕'; th.classList.remove('sorted'); }
+  });
+}
+
 loadMyName();
 loadDocs();
 </script>
+<script src="sidebar.js"></script>
+</div><!-- main -->
 </body>
 </html>
