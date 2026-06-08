@@ -260,6 +260,8 @@ var HR = {'apikey':SK,'Authorization':'Bearer '+SK};
 var myInfo = null;
 var currentEquipType = 'press';
 var currentFace = 'A';
+var editRecordId = null;   // 수정 모드: 클릭한 단일 레코드 id
+var editFace = null;       // 수정 모드: 그 레코드의 면(A/B/C)
 var DEFECT_TYPES = ['미성형','이물','Burr','찍힘','찢어짐','기타'];
 
 // 면별 데이터 저장 (제품정보 + 설비정보 + 검사데이터 + 비가동)
@@ -619,20 +621,26 @@ async function submitForm() {
 
     // 수정 모드
     var params = new URLSearchParams(location.search);
-    var editId = params.get('edit');
+    var editId = params.get('edit') || editRecordId;
 
     try {
         if (editId) {
-            // 수정: 기존 레코드 삭제 후 재삽입 (면별 데이터)
-            var oldRec = await fetch(SU+'/rest/v1/inspection_rounds?id=eq.'+editId, {headers:HR});
-            var oldData = await oldRec.json();
-            if (oldData && oldData[0]) {
-                await fetch(SU+'/rest/v1/inspection_rounds?inspect_date=eq.'+oldData[0].inspect_date+'&equipment=eq.'+oldData[0].equipment+'&inspector=eq.'+oldData[0].inspector, {method:'DELETE',headers:HR});
-            }
+            // 수정: 클릭한 한 건(id)만 갱신 — 같은 설비/면의 다른 기록(금형교체분 등)은 절대 건드리지 않음
+            var targetFace = editFace || (records[0] && records[0].face);
+            var target = records.find(function(x){ return x.face === targetFace; }) || records[0];
+            if (!target) { showToast('수정할 면 데이터가 비어 있습니다.','error'); return; }
+            delete target.created_by; // 원래 작성자 유지
+            var r = await fetch(SU+'/rest/v1/inspection_rounds?id=eq.'+editId, {method:'PATCH',headers:H,body:JSON.stringify(target)});
+            if (r.ok) {
+                showToast('수정 완료!','success');
+                setTimeout(function(){ location.href='https://pillippekim.github.io/work-manager/inspection_round_viewer.html'; }, 1500);
+            } else { showToast('수정 실패','error'); }
+            return;
         }
+        // 신규: 면별 개별 레코드로 저장
         var r = await fetch(SU+'/rest/v1/inspection_rounds', {method:'POST',headers:H,body:JSON.stringify(records)});
         if (r.ok) {
-            showToast(editId ? '수정 완료!' : '검사 제출 완료!','success');
+            showToast('검사 제출 완료!','success');
             setTimeout(function(){ location.href='https://pillippekim.github.io/work-manager/inspection_round_viewer.html'; }, 1500);
         } else { showToast('저장 실패','error'); }
     } catch(e) { showToast('오류: '+e.message,'error'); }
@@ -669,30 +677,34 @@ async function loadForEdit(id) {
             });
         }
 
-        // 같은 검사의 모든 면 데이터 로드
-        var allFaces = await fetch(SU+'/rest/v1/inspection_rounds?inspect_date=eq.'+rec.inspect_date+'&equipment=eq.'+rec.equipment+'&inspector=eq.'+rec.inspector+'&order=face.asc', {headers:HR});
-        var facesArr = await allFaces.json();
-        for (var i=0;i<facesArr.length;i++) {
-            var f = facesArr[i];
-            faceData[f.face] = {
-                inactive: f.is_inactive || false,
-                sabun: f.sabun || '',
-                cavity: f.cavity_count || '',
-                material: f.material || '',
-                trimMethod: f.trim_method || '',
-                moldTemp: f.mold_temp || '',
-                cureTime: f.cure_time || '',
-                moldPressure: f.mold_pressure || '',
-                vacuum: f.vacuum_pressure || '',
-                visual: f.visual_data || {},
-                hardness: f.hardness_data || {},
-                dimension: f.dimension_data || {},
-                actionDetail: f.action_detail || ''
-            };
-            // 비가동 탭 스타일 업데이트
-            updateTabStyle(f.face, f.is_inactive || false);
-        }
-        restoreFaceData('A');
+        // 수정 모드: 클릭한 단일 레코드(한 건)만 로드 — 같은 설비/면의 다른 기록은 불러오지 않음
+        editRecordId = id;
+        editFace = rec.face;
+        faceData[rec.face] = {
+            inactive: rec.is_inactive || false,
+            sabun: rec.sabun || '',
+            cavity: rec.cavity_count || '',
+            material: rec.material || '',
+            trimMethod: rec.trim_method || '',
+            moldTemp: rec.mold_temp || '',
+            cureTime: rec.cure_time || '',
+            moldPressure: rec.mold_pressure || '',
+            vacuum: rec.vacuum_pressure || '',
+            visual: rec.visual_data || {},
+            hardness: rec.hardness_data || {},
+            dimension: rec.dimension_data || {},
+            actionDetail: rec.action_detail || ''
+        };
+        updateTabStyle(rec.face, rec.is_inactive || false);
+
+        // 수정은 한 건만 다루므로, 클릭한 면 탭만 보이게 한다
+        var faceOrder = ['A','B','C'];
+        document.querySelectorAll('#faceTabs .face-tab').forEach(function(t, idx){
+            if (faceOrder[idx] === rec.face) { t.style.display=''; t.classList.add('active'); }
+            else { t.style.display='none'; t.classList.remove('active'); }
+        });
+        currentFace = rec.face;
+        restoreFaceData(rec.face);
 
         document.querySelector('.page-header h1').textContent = '📋 공정검사 수정';
     } catch(e) { showToast('데이터 로드 실패','error'); }
