@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>통합 작업일지 | 한국하이테크</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth_guard.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif; background: #f4f6fb; color: #1a1a2e; }
+  .top-bar { background: linear-gradient(135deg,#243bb2,#1a2a8a); color: white; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .top-bar .title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .top-bar .right { display: flex; align-items: center; gap: 14px; font-size: 13px; }
+  .top-bar .back-btn { background: rgba(255,255,255,0.15); color: white; border: none; padding: 9px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; }
+  .container { max-width: 980px; margin: 0 auto; padding: 20px 20px 60px; }
+  .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(36,59,178,0.07); padding: 20px 24px; margin-bottom: 18px; }
+  .card h2 { font-size: 15px; color: #243bb2; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .fld label { display: block; font-size: 12px; color: #888; margin-bottom: 5px; font-weight: 600; }
+  .fld input, .fld select, .fld textarea { width: 100%; padding: 9px 11px; border: 1px solid #e0e4ed; border-radius: 8px; font-size: 14px; font-family: inherit; background: #fafbfd; }
+  .fld input:focus, .fld select:focus, .fld textarea:focus { outline: none; border-color: #243bb2; background: white; }
+  .req { color: #dc2626; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 4px; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; padding: 10px 18px; border: 2px solid #e0e4ed; border-radius: 10px; background: white; color: #888; cursor: pointer; font-size: 14px; font-weight: 600; font-family: inherit; transition: all 0.15s; }
+  .chip.on { background: #eef0ff; color: #243bb2; border-color: #243bb2; }
+  .chip .dot { width: 9px; height: 9px; border-radius: 50%; background: #d1d5db; }
+  .chip.on .dot { background: #243bb2; }
+  .methods { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 14px; }
+  .method-row { display: flex; align-items: center; gap: 10px; }
+  .method-row > span { font-size: 13px; color: #555; font-weight: 600; }
+  .seg { display: inline-flex; border: 1px solid #e0e4ed; border-radius: 8px; overflow: hidden; }
+  .seg button { border: none; background: white; color: #666; padding: 8px 14px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 600; }
+  .seg button.sel { background: #243bb2; color: white; }
+  .qsec { border: 1px solid #eef0f5; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+  .qsec.off { display: none; }
+  .qsec .qhead { font-size: 13px; font-weight: 700; color: #243bb2; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .qsec .qhead .tagm { font-size: 11px; background: #eef0ff; color: #243bb2; padding: 2px 8px; border-radius: 4px; }
+  .qgrid { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+  .qgrid .fld { min-width: 110px; }
+  .hint { font-size: 12px; color: #16a34a; margin-top: 8px; display: flex; align-items: center; gap: 5px; }
+  .defect-btn { min-height: 40px; padding: 6px 10px; border: 1px solid #e0e4ed; border-radius: 8px; background: white; cursor: pointer; font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-width: 160px; }
+  .defect-btn:hover { border-color: #243bb2; }
+  .defect-btn .dt-tag { display: inline-block; background: #fef2f2; color: #dc2626; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+  .defect-btn .dt-ph { color: #bbb; font-size: 12px; }
+  .actions { display: flex; gap: 12px; justify-content: center; margin-top: 8px; }
+  .btn-submit { background: #243bb2; color: white; border: none; padding: 14px 48px; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; }
+  .btn-submit:disabled { opacity: 0.5; cursor: default; }
+  .btn-reset { background: #f0f3f9; color: #243bb2; border: none; padding: 14px 28px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .savenote { font-size: 12px; color: #888; text-align: center; margin-top: 14px; }
+  /* 불량유형 팝업 */
+  .defect-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
+  .defect-modal.open { display: flex; }
+  .defect-modal-box { background: white; border-radius: 16px; padding: 1.5rem; width: 360px; max-height: 80vh; overflow-y: auto; }
+  .defect-modal-title { font-size: 16px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+  .defect-modal-sub { font-size: 12px; color: #888; margin-bottom: 16px; }
+  .defect-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 8px; margin-bottom: 4px; cursor: pointer; }
+  .defect-row:hover { background: #f5f5f5; }
+  .defect-row.active { background: #fef2f2; }
+  .defect-row-name { font-size: 13px; font-weight: 500; flex: 1; }
+  .defect-row-qty { width: 70px; border: 1px solid #e0e4ed; border-radius: 6px; padding: 6px 8px; font-size: 14px; text-align: center; font-weight: 700; color: #dc2626; }
+  .defect-row-qty:focus { border-color: #dc2626; outline: none; }
+  .defect-total { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #fef2f2; border-radius: 8px; margin-top: 12px; font-weight: 700; color: #dc2626; }
+  .defect-modal-btns { display: flex; gap: 8px; margin-top: 16px; }
+  .defect-modal-btns button { flex: 1; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; font-family: inherit; }
+  .dm-cancel { background: #f0f3f9; color: #555; }
+  .dm-ok { background: #243bb2; color: white; }
+  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(120px); background: #243bb2; color: white; padding: 14px 28px; border-radius: 10px; font-size: 14px; font-weight: 600; opacity: 0; transition: all 0.3s; z-index: 999; }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  .toast.error { background: #dc2626; }
+  #authCheckOverlay { position: fixed; inset: 0; background: #f4f6fb; display: flex; align-items: center; justify-content: center; z-index: 9999; color: #888; font-size: 14px; }
+  @media (max-width: 700px) { .grid { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<div id="authCheckOverlay">권한 확인 중...</div>
+
+<div class="top-bar">
+  <div class="title">🧩 통합 작업일지 <span style="font-size:12px;font-weight:500;opacity:0.8">(병행 작업 입력)</span></div>
+  <div class="right">
+    <span id="userInfo"></span>
+    <a href="#" class="back-btn" onclick="confirmLeave(event)">← 메인</a>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="card">
+    <h2>📋 공통 정보</h2>
+    <div class="grid">
+      <div class="fld"><label>작업일 <span class="req">*</span></label><input type="date" id="workDate"></div>
+      <div class="fld"><label>근무</label><select id="shiftType"><option value="주간">주간</option><option value="야간">야간</option></select></div>
+      <div class="fld"><label>작업자</label><input type="text" id="workerName" placeholder="작업자명"></div>
+      <div class="fld"><label>사번 / 품번 <span class="req">*</span></label><input type="text" id="sabun" placeholder="예) 502209"></div>
+      <div class="fld"><label>제품명</label><input type="text" id="productName" placeholder="(선택)"></div>
+      <div class="fld"><label>성형 LOT</label><input type="text" id="lotNo" placeholder="LOT 번호"></div>
+      <div class="fld"><label>설비</label><input type="text" id="equipment" placeholder="예) LM 사상기"></div>
+      <div class="fld"><label>시작 시간</label><input type="time" id="startTime"></div>
+      <div class="fld"><label>종료 시간</label><input type="time" id="endTime"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🔧 진행한 공정 선택</h2>
+    <div class="chips">
+      <button type="button" class="chip" data-proc="sasang" onclick="toggleProc('sasang')"><span class="dot"></span> 사상</button>
+      <button type="button" class="chip" data-proc="assembly" onclick="toggleProc('assembly')"><span class="dot"></span> 조립</button>
+      <button type="button" class="chip on" data-proc="inspect" onclick="toggleProc('inspect')"><span class="dot"></span> 검사</button>
+      <button type="button" class="chip on" data-proc="pack" onclick="toggleProc('pack')"><span class="dot"></span> 포장</button>
+    </div>
+    <div class="methods">
+      <div class="method-row" id="m_sasang" style="display:none">
+        <span>사상 방식</span>
+        <div class="seg" id="sasangMethod">
+          <button type="button" class="sel" data-v="수사상" onclick="pickMethod('sasangMethod',this)">수사상</button>
+          <button type="button" data-v="기계사상" onclick="pickMethod('sasangMethod',this)">기계사상</button>
+        </div>
+        <span style="font-size:11px;color:#aaa;font-weight:500">기계사상 = LM 사상기</span>
+      </div>
+      <div class="method-row" id="m_assembly" style="display:none">
+        <span>조립 방식</span>
+        <div class="seg" id="assemblyMethod">
+          <button type="button" class="sel" data-v="수동조립" onclick="pickMethod('assemblyMethod',this)">수동조립</button>
+          <button type="button" data-v="자동조립" onclick="pickMethod('assemblyMethod',this)">자동조립</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🔢 수량 입력 <span style="font-size:12px;font-weight:500;color:#888">— 앞 공정 입력 시 뒤 공정 자동 제안 (수정 가능)</span></h2>
+
+    <div class="qsec off" id="sec_sasang">
+      <div class="qhead">사상 <span class="tagm" id="lbl_sasang">수사상</span></div>
+      <div class="qgrid">
+        <div class="fld"><label>생산 수량</label><input type="number" id="sasangProd" min="0" oninput="onSasangProd()"></div>
+        <div class="fld"><label>불량 수량</label><input type="number" id="sasangDefect" min="0" value="0"></div>
+      </div>
+    </div>
+
+    <div class="qsec off" id="sec_assembly">
+      <div class="qhead">조립 <span class="tagm" id="lbl_assembly">수동조립</span></div>
+      <div class="qgrid">
+        <div class="fld"><label>생산 수량</label><input type="number" id="assemblyProd" min="0" oninput="onAssemblyProd()"></div>
+        <div class="fld"><label>불량 수량</label><input type="number" id="assemblyDefect" min="0" value="0"></div>
+      </div>
+    </div>
+
+    <div class="qsec" id="sec_inspect">
+      <div class="qhead">검사</div>
+      <div class="qgrid">
+        <div class="fld"><label>검사 수량</label><input type="number" id="inspectQty" min="0" oninput="recalcInspect()"></div>
+        <div class="fld"><label>합격</label><input type="number" id="passQty" min="0"></div>
+        <div class="fld"><label>불량</label><input type="number" id="failQty" min="0" value="0" oninput="onFailManual()"></div>
+        <div class="fld"><label>불량유형 (유형별 수량)</label>
+          <div class="defect-btn" id="defectBtn" onclick="openDefectModal()"><span class="dt-ph">불량 발생 시 선택</span></div>
+        </div>
+        <div class="fld"><label>비고(검사)</label><input type="text" id="defectMemo" placeholder="(선택)"></div>
+        <div class="fld" style="min-width:90px"><label>재검사</label><input type="checkbox" id="recheck" style="width:20px;height:20px;margin-top:6px"></div>
+      </div>
+    </div>
+
+    <div class="qsec" id="sec_pack">
+      <div class="qhead">포장</div>
+      <div class="qgrid">
+        <div class="fld"><label>포장 수량</label><input type="number" id="packQty" min="0"></div>
+      </div>
+    </div>
+
+    <div class="hint">🪄 사상·조립 생산수량을 넣으면 검사·포장 수량이 같은 값으로 따라오고, 불량 입력 시 포장은 합격 수량으로 제안됩니다.</div>
+  </div>
+
+  <div class="card">
+    <div class="fld"><label>비고 (공통)</label><textarea id="note" rows="2" placeholder="(선택) 사상·조립·포장 일지에 함께 기록됩니다"></textarea></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn-submit" id="submitBtn" onclick="submitAll()">제출하기</button>
+    <button class="btn-reset" onclick="resetForm()">초기화</button>
+  </div>
+  <div class="savenote">💾 저장 시 → 선택한 공정의 작업일지(사상·조립·검사·포장)에 각각 한 건씩 기록되고 같은 LOT로 연결됩니다.</div>
+
+</div>
+
+<!-- 불량유형 팝업 -->
+<div class="defect-modal" id="defectModal">
+  <div class="defect-modal-box">
+    <div class="defect-modal-title">🔍 불량유형별 수량 입력</div>
+    <div class="defect-modal-sub">유형을 선택하고 수량을 입력하세요</div>
+    <div id="defectModalBody"></div>
+    <div class="defect-total"><span>합계 (불량 수량)</span><span id="defectModalTotal">0</span></div>
+    <div class="defect-modal-btns">
+      <button class="dm-cancel" onclick="closeDefectModal()">취소</button>
+      <button class="dm-ok" onclick="applyDefectModal()">적용</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://vpaixxlhzkwtgcllimvn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwYWl4eGxoemt3dGdjbGxpbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNzk4NjMsImV4cCI6MjA5MTk1NTg2M30.V8Bj0cMbM0E2TFhklYYa7TM-vO6Fi70ctACA7uUf4Ig';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let myInfo = null;
+const DEFECT_TYPES = ['기포','미성형','형상불량','이물질','찢어짐','깨짐','찍힘','뜯김','사상','미가류','접착불량','Burr','홀막힘','찐드기','기타'];
+const procState = { sasang:false, assembly:false, inspect:true, pack:true };
+let defectData = [];           // [{type, qty}]
+let failManual = false;        // 사용자가 불량 수량을 직접 입력했는지
+
+// ── 초기화 ──
+window.onload = async () => {
+  if (typeof checkPageAccess === 'function') {
+    myInfo = await checkPageAccess('unified.html');
+  } else if (typeof checkAuth === 'function') {
+    myInfo = await checkAuth();
+  }
+  if (!myInfo) return;
+  document.getElementById('authCheckOverlay').style.display = 'none';
+  document.getElementById('userInfo').textContent = myInfo ? `${myInfo.name} (${myInfo.emp_code})` : '';
+  document.getElementById('workerName').value = myInfo.name || '';
+  document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
+};
+
+// ── 공정 토글 ──
+function toggleProc(p) {
+  procState[p] = !procState[p];
+  const chip = document.querySelector('.chip[data-proc="'+p+'"]');
+  chip.classList.toggle('on', procState[p]);
+  const sec = document.getElementById('sec_' + p);
+  if (sec) sec.classList.toggle('off', !procState[p]);
+  if (p === 'sasang') document.getElementById('m_sasang').style.display = procState[p] ? 'flex' : 'none';
+  if (p === 'assembly') document.getElementById('m_assembly').style.display = procState[p] ? 'flex' : 'none';
+}
+
+// ── 방식 선택 ──
+function pickMethod(segId, btn) {
+  document.querySelectorAll('#' + segId + ' button').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  if (segId === 'sasangMethod') document.getElementById('lbl_sasang').textContent = btn.dataset.v;
+  if (segId === 'assemblyMethod') document.getElementById('lbl_assembly').textContent = btn.dataset.v;
+}
+function getMethod(segId) {
+  const b = document.querySelector('#' + segId + ' button.sel');
+  return b ? b.dataset.v : '';
+}
+
+// ── 수량 자동 제안 ──
+function num(id) { const v = parseInt(document.getElementById(id).value, 10); return isNaN(v) ? 0 : v; }
+function setVal(id, v) { document.getElementById(id).value = v; }
+function onSasangProd() {
+  const v = num('sasangProd');
+  if (procState.assembly && document.getElementById('assemblyProd').value === '') setVal('assemblyProd', v);
+  setVal('inspectQty', v);
+  recalcInspect();
+}
+function onAssemblyProd() {
+  const v = num('assemblyProd');
+  setVal('inspectQty', v);
+  recalcInspect();
+}
+function recalcInspect() {
+  const inspect = num('inspectQty');
+  const fail = failManual ? num('failQty') : (defectData.length ? defectData.reduce((s,d)=>s+(parseInt(d.qty)||0),0) : num('failQty'));
+  const pass = Math.max(0, inspect - fail);
+  if (!failManual) setVal('failQty', fail);
+  setVal('passQty', pass);
+  if (procState.pack) setVal('packQty', pass);
+}
+function onFailManual() { failManual = true; recalcInspect(); }
+
+// ── 불량유형 팝업 ──
+function openDefectModal() {
+  const body = document.getElementById('defectModalBody');
+  body.innerHTML = DEFECT_TYPES.map(function(t) {
+    const ex = defectData.find(function(d){ return d.type === t; });
+    const qty = ex ? ex.qty : '';
+    return '<div class="defect-row' + (qty ? ' active' : '') + '" data-type="' + t + '">' +
+           '<span class="defect-row-name">' + t + '</span>' +
+           '<input type="number" min="0" class="defect-row-qty" value="' + qty + '" placeholder="0" ' +
+           'oninput="onDefectInput(this)" onclick="event.stopPropagation()"></div>';
+  }).join('');
+  // 행 클릭 시 입력칸 포커스
+  body.querySelectorAll('.defect-row').forEach(function(row){
+    row.addEventListener('click', function(){ row.querySelector('.defect-row-qty').focus(); });
+  });
+  updateDefectTotal();
+  document.getElementById('defectModal').classList.add('open');
+}
+function onDefectInput(inp) {
+  const row = inp.closest('.defect-row');
+  row.classList.toggle('active', (parseInt(inp.value)||0) > 0);
+  updateDefectTotal();
+}
+function updateDefectTotal() {
+  let total = 0;
+  document.querySelectorAll('#defectModalBody .defect-row-qty').forEach(function(i){ total += (parseInt(i.value)||0); });
+  document.getElementById('defectModalTotal').textContent = total;
+}
+function closeDefectModal() { document.getElementById('defectModal').classList.remove('open'); }
+function applyDefectModal() {
+  defectData = [];
+  document.querySelectorAll('#defectModalBody .defect-row').forEach(function(row){
+    const q = parseInt(row.querySelector('.defect-row-qty').value) || 0;
+    if (q > 0) defectData.push({ type: row.dataset.type, qty: q });
+  });
+  // 버튼 표시 갱신
+  const btn = document.getElementById('defectBtn');
+  btn.innerHTML = defectData.length
+    ? defectData.map(function(d){ return '<span class="dt-tag">' + d.type + '(' + d.qty + ')</span>'; }).join('')
+    : '<span class="dt-ph">불량 발생 시 선택</span>';
+  // 불량 합계 → 불량 수량 자동 반영
+  failManual = false;
+  recalcInspect();
+  closeDefectModal();
+}
+
+// ── 제출 ──
+async function submitAll() {
+  const anyProc = procState.sasang || procState.assembly || procState.inspect || procState.pack;
+  if (!anyProc) { showToast('진행한 공정을 1개 이상 선택하세요.', 'error'); return; }
+
+  const workDate = document.getElementById('workDate').value;
+  const sabun = document.getElementById('sabun').value.trim();
+  if (!workDate) { showToast('작업일을 입력하세요.', 'error'); return; }
+  if (!sabun) { showToast('사번/품번을 입력하세요.', 'error'); return; }
+
+  const shiftType = document.getElementById('shiftType').value;
+  const workerName = document.getElementById('workerName').value.trim() || (myInfo && myInfo.name) || '';
+  const productName = document.getElementById('productName').value.trim() || null;
+  const lotNo = document.getElementById('lotNo').value.trim();
+  const equipment = document.getElementById('equipment').value.trim() || null;
+  const startTime = document.getElementById('startTime').value || null;
+  const endTime = document.getElementById('endTime').value || null;
+  const note = document.getElementById('note').value.trim() || null;
+  const empCode = myInfo ? myInfo.emp_code : null;
+  const myName = myInfo ? myInfo.name : workerName;
+  const lotArr = lotNo ? [lotNo] : [];
+
+  const tasks = [];   // {table, record}
+
+  if (procState.sasang) {
+    tasks.push({ table: 'sasang_reports', record: {
+      work_date: workDate, shift_type: shiftType,
+      equipment_no: equipment, equipment_id: null,
+      start_time: startTime, end_time: endTime, worker_name: workerName,
+      sabun: sabun, product_name: productName,
+      work_method: getMethod('sasangMethod'),
+      production_qty: num('sasangProd'), defect_qty: num('sasangDefect'), lot_no: lotNo || null,
+      note: note, created_by_emp_code: empCode, created_by_name: myName
+    }});
+  }
+  if (procState.assembly) {
+    tasks.push({ table: 'assembly_reports', record: {
+      work_date: workDate, shift_type: shiftType,
+      equipment_no: equipment, equipment_id: null,
+      start_time: startTime, end_time: endTime, worker_name: workerName,
+      sabun: sabun, product_name: productName,
+      assembly_type: null, work_method: getMethod('assemblyMethod'),
+      production_qty: num('assemblyProd'), defect_qty: num('assemblyDefect'), lot_no: lotNo || null,
+      material_usage: null,
+      note: note, created_by_emp_code: empCode, created_by_name: myName
+    }});
+  }
+  if (procState.inspect) {
+    const defectStr = defectData.length ? defectData.map(function(d){ return d.type + '(' + d.qty + ')'; }).join(', ') : '';
+    tasks.push({ table: 'inspection_reports', record: {
+      work_date: workDate, worker_id: sabun, worker_name: workerName,
+      lot_nos: lotArr, inspect_qty: num('inspectQty'), pass_qty: num('passQty'), fail_qty: num('failQty'),
+      defect_type: defectStr, defect_memo: document.getElementById('defectMemo').value.trim(),
+      recheck: document.getElementById('recheck').checked, remarks: note || '',
+      created_by_emp_code: empCode, created_by_name: myName
+    }});
+  }
+  if (procState.pack) {
+    tasks.push({ table: 'packaging_reports', record: {
+      work_date: workDate, worker_id: sabun, worker_name: workerName,
+      lot_nos: lotArr, badge_nos: [], quantity: num('packQty'),
+      note: note, remarks: '',
+      created_by_emp_code: empCode, created_by_name: myName
+    }});
+  }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = '저장 중...';
+
+  const done = [];
+  for (const t of tasks) {
+    const { error } = await db.from(t.table).insert([t.record]);
+    if (error) {
+      btn.disabled = false; btn.textContent = '제출하기';
+      showToast('저장 실패 (' + t.table + '): ' + error.message, 'error');
+      return;
+    }
+    done.push(t.table);
+  }
+
+  btn.disabled = false; btn.textContent = '제출하기';
+  showToast('✓ ' + done.length + '개 공정 일지에 저장 완료!');
+  setTimeout(function(){ resetForm(true); }, 1400);
+}
+
+// ── 초기화 ──
+function resetForm(keepCommon) {
+  ['sasangProd','sasangDefect','assemblyProd','assemblyDefect','inspectQty','passQty','packQty','defectMemo'].forEach(function(id){ document.getElementById(id).value = ''; });
+  document.getElementById('sasangDefect').value = '0';
+  document.getElementById('assemblyDefect').value = '0';
+  document.getElementById('failQty').value = '0';
+  document.getElementById('recheck').checked = false;
+  defectData = []; failManual = false;
+  document.getElementById('defectBtn').innerHTML = '<span class="dt-ph">불량 발생 시 선택</span>';
+  if (!keepCommon) {
+    document.getElementById('sabun').value = '';
+    document.getElementById('productName').value = '';
+    document.getElementById('lotNo').value = '';
+    document.getElementById('note').value = '';
+  } else {
+    document.getElementById('lotNo').value = '';
+    document.getElementById('note').value = '';
+  }
+}
+
+function confirmLeave(e) {
+  e.preventDefault();
+  const hasInput = ['sasangProd','assemblyProd','inspectQty','packQty'].some(function(id){ return document.getElementById(id).value !== ''; });
+  if (!hasInput) { location.href = 'index.html'; return; }
+  if (confirm('작성 중인 내용이 있어요.\n제출하지 않고 메인으로 이동할까요?')) location.href = 'index.html';
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type === 'error' ? ' error' : '');
+  setTimeout(function(){ t.className = 'toast' + (type === 'error' ? ' error' : ''); }, 2600);
+}
+</script>
+</body>
+</html>
