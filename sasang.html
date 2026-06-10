@@ -359,6 +359,9 @@ async function init() {
     document.getElementById('endTime').value = this.value === '주간' ? '17:00' : '20:30';
   });
   document.getElementById('workDate').addEventListener('change', () => { if (selectedEquipment) checkTodaySafety(); loadMyHistory(); });
+
+  // 페이지 진입 시에도 내 제출 내역을 바로 불러옴 (재진입 시 '로딩 중'에서 멈추는 문제 방지)
+  loadMyHistory();
 }
 
 async function loadWorkers() {
