@@ -635,13 +635,16 @@ function clearContinuousList() { continuousScans = []; renderContinuousList(); }
 
 function applyContinuousScans() {
   if (continuousScans.length === 0) { showToast('스캔된 바코드가 없어요.', 'error'); return; }
-  var applied = 0;
-  for (var i = 0; i < continuousScans.length && i < rows.length; i++) {
-    rows[i].lot = continuousScans[i]; applied++;
+  var r = rows.find(function(x) { return x.id === scanTargetId; });
+  if (!r) { closeScanModal(); return; }
+  var existing = (r.lot || '').split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+  for (var i = 0; i < continuousScans.length; i++) {
+    if (existing.indexOf(continuousScans[i]) === -1) existing.push(continuousScans[i]);
   }
+  r.lot = existing.join(', ');
   renderRows();
   closeScanModal();
-  showToast('✓ ' + applied + '개 행에 LOT 일괄 적용!');
+  showToast('✓ ' + continuousScans.length + '개 LOT을 한 항목에 입력!');
   continuousScans = [];
 }
 
