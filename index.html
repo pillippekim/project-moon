@@ -400,6 +400,7 @@ const PROCESS_PAGES = {
   '도포': 'coating.html',
   '검사': 'inspection.html',
   '쇼트': 'shot.html',
+  '사상': 'sasang.html',
   '2차가류': 'postcure.html',
   '성형': 'molding.html',
   '조립': 'assembly.html',
@@ -517,6 +518,19 @@ async function renderWorkerView() {
     }
     actionsDiv.appendChild(card);
   });
+
+  // 통합작업일지 카드 (권한 부여된 작업자만)
+  if (userInfo.use_unified) {
+    const uCard = document.createElement('a');
+    uCard.href = 'unified.html';
+    uCard.className = 'worker-card';
+    uCard.innerHTML = `
+      <div class="wc-icon">🧩</div>
+      <div class="wc-name">통합 작업일지 입력</div>
+      <div class="wc-desc">병행 작업(사상·조립·검사·포장)을 한 번에 기록</div>
+    `;
+    actionsDiv.appendChild(uCard);
+  }
 
   // 문서 조회 카드 추가
   const docCard = document.createElement('a');

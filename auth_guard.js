@@ -62,6 +62,13 @@ async function checkPageAccess(pageFile) {
   // 슈퍼관리자는 모든 페이지 접근 가능
   if (user.user_type === 'super') return user;
 
+  // 통합작업일지: 사용자별 권한(use_unified)으로 제어
+  if (pageFile === 'unified.html') {
+    if (user.user_type === 'admin' || user.use_unified) return user;
+    showAccessDenied(user);
+    return null;
+  }
+
   // 페이지별 권한 체크
   const perm = PAGE_PERMISSIONS[pageFile];
   if (!perm) return user; // 매트릭스 없으면 통과
