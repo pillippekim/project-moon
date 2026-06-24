@@ -25,6 +25,7 @@ body { font-family:'Noto Sans KR',sans-serif; background:#f1f3f9; color:#1e293b;
 .section-title { font-size:14px; font-weight:700; color:#243bb2; margin-bottom:14px; display:flex; align-items:center; gap:6px; padding-bottom:10px; border-bottom:2px solid #e8ecf3; }
 .form-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:10px; }
 .form-grid-4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px; margin-bottom:10px; }
+.form-grid-5 { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:10px; }
 .row-label { font-size:10px; font-weight:600; color:#94a3b8; letter-spacing:0.5px; margin-bottom:6px; padding-left:2px; }
 .form-group label { display:block; font-size:11px; font-weight:600; color:#64748b; margin-bottom:3px; }
 .form-group input, .form-group select { width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:7px; font-size:13px; outline:none; background:#fff; }
@@ -90,6 +91,7 @@ body { font-family:'Noto Sans KR',sans-serif; background:#f1f3f9; color:#1e293b;
 @media(max-width:600px) {
     .form-grid-3 { grid-template-columns:1fr; }
     .form-grid-4 { grid-template-columns:1fr 1fr; }
+    .form-grid-5 { grid-template-columns:1fr 1fr; }
     .change-section { grid-template-columns:1fr; }
     .face-tab { padding:10px 16px; font-size:13px; }
     .defect-check { font-size:11px; padding:4px 8px; }
@@ -160,6 +162,7 @@ body { font-family:'Noto Sans KR',sans-serif; background:#f1f3f9; color:#1e293b;
                     <select id="faceMaterial"><option value="">-- 재질 선택 --</option>
                         <option>NBR(A)</option><option>EPDM(E)</option><option>NR(N)</option><option>SBR(B)</option><option>CR(C)</option>
                         <option>FMK불소고무(F)</option><option>VMQ실리콘고무(S)</option><option>U 우레탄(U)</option>
+                        <option>아크릴(T)</option>
                     </select>
                 </div>
                 <div class="form-group"><label>사상 방법</label>
@@ -169,8 +172,9 @@ body { font-family:'Noto Sans KR',sans-serif; background:#f1f3f9; color:#1e293b;
 
             <!-- 설비정보 (면별 독립) -->
             <div class="row-label">설비정보</div>
-            <div class="form-grid-4">
-                <div class="form-group"><label>금형온도 (℃)</label><input type="text" id="faceMoldTemp"></div>
+            <div class="form-grid-5">
+                <div class="form-group"><label>금형온도 상판 (℃)</label><input type="text" id="faceMoldTemp"></div>
+                <div class="form-group"><label>금형온도 하판 (℃)</label><input type="text" id="faceMoldTempLower"></div>
                 <div class="form-group"><label>가류시간 (초)</label><input type="text" id="faceCureTime"></div>
                 <div class="form-group"><label>성형압 (㎏f/㎠)</label><input type="text" id="faceMoldPressure"></div>
                 <div class="form-group"><label>진공압 (Mpa)</label><input type="text" id="faceVacuum"></div>
@@ -266,9 +270,9 @@ var DEFECT_TYPES = ['미성형','이물','Burr','찍힘','찢어짐','기타'];
 
 // 면별 데이터 저장 (제품정보 + 설비정보 + 검사데이터 + 비가동)
 var faceData = {
-    A: { inactive:false, sabun:'', cavity:'', material:'', trimMethod:'', moldTemp:'', cureTime:'', moldPressure:'', vacuum:'', actionDetail:'' },
-    B: { inactive:false, sabun:'', cavity:'', material:'', trimMethod:'', moldTemp:'', cureTime:'', moldPressure:'', vacuum:'', actionDetail:'' },
-    C: { inactive:false, sabun:'', cavity:'', material:'', trimMethod:'', moldTemp:'', cureTime:'', moldPressure:'', vacuum:'', actionDetail:'' }
+    A: { inactive:false, sabun:'', cavity:'', material:'', trimMethod:'', moldTemp:'', moldTempLower:'', cureTime:'', moldPressure:'', vacuum:'', actionDetail:'' },
+    B: { inactive:false, sabun:'', cavity:'', material:'', trimMethod:'', moldTemp:'', moldTempLower:'', cureTime:'', moldPressure:'', vacuum:'', actionDetail:'' },
+    C: { inactive:false, sabun:'', cavity:'', material:'', trimMethod:'', moldTemp:'', moldTempLower:'', cureTime:'', moldPressure:'', vacuum:'', actionDetail:'' }
 };
 
 function fmtLocal(d) { if(!d) return ''; var dt = new Date(d); return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'); }
@@ -396,6 +400,7 @@ function saveFaceData(face) {
         material: document.getElementById('faceMaterial').value,
         trimMethod: document.getElementById('faceTrimMethod').value,
         moldTemp: document.getElementById('faceMoldTemp').value,
+        moldTempLower: document.getElementById('faceMoldTempLower').value,
         cureTime: document.getElementById('faceCureTime').value,
         moldPressure: document.getElementById('faceMoldPressure').value,
         vacuum: document.getElementById('faceVacuum').value,
@@ -422,6 +427,7 @@ function restoreFaceData(face) {
 
     // 설비정보 복원
     document.getElementById('faceMoldTemp').value = d.moldTemp || '';
+    document.getElementById('faceMoldTempLower').value = d.moldTempLower || '';
     document.getElementById('faceCureTime').value = d.cureTime || '';
     document.getElementById('faceMoldPressure').value = d.moldPressure || '';
     document.getElementById('faceVacuum').value = d.vacuum || '';
@@ -561,7 +567,7 @@ async function submitForm() {
                 }
             }
             var hasAction = (fd.actionDetail || '').trim() !== '';
-            var hasMoldTemp = (fd.moldTemp || '') !== '';
+            var hasMoldTemp = (fd.moldTemp || '') !== '' || (fd.moldTempLower || '') !== '';
             var hasCureTime = (fd.cureTime || '') !== '';
 
             // 사번, 재질, 외관불량, 비고, 금형온도, 가류시간 모두 없으면 빈 면
@@ -590,6 +596,7 @@ async function submitForm() {
             rec.material = '';
             rec.trim_method = '';
             rec.mold_temp = '';
+            rec.mold_temp_lower = '';
             rec.cure_time = '';
             rec.mold_pressure = '';
             rec.vacuum_pressure = '';
@@ -603,6 +610,7 @@ async function submitForm() {
             rec.material = fd.material || '';
             rec.trim_method = fd.trimMethod || '';
             rec.mold_temp = fd.moldTemp || '';
+            rec.mold_temp_lower = fd.moldTempLower || '';
             rec.cure_time = fd.cureTime || '';
             rec.mold_pressure = fd.moldPressure || '';
             rec.vacuum_pressure = fd.vacuum || '';
@@ -687,6 +695,7 @@ async function loadForEdit(id) {
             material: rec.material || '',
             trimMethod: rec.trim_method || '',
             moldTemp: rec.mold_temp || '',
+            moldTempLower: rec.mold_temp_lower || '',
             cureTime: rec.cure_time || '',
             moldPressure: rec.mold_pressure || '',
             vacuum: rec.vacuum_pressure || '',
