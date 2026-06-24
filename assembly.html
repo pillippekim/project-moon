@@ -630,22 +630,27 @@ function onSabunChange(rowId) {
   // BOM 정보 자동
   const bom = ASSEMBLY_BOM[sabun];
   const isManualEquip = selectedEquipment && selectedEquipment.type === 'manual';
+  const isSanderEquip = selectedEquipment && selectedEquipment.type === 'sander';
+  const isNoBomEquip = isManualEquip || isSanderEquip; // 부자재(BOM)를 쓰지 않는 공정
+  const noBomLabel = isSanderEquip ? '사상' : '수작업';
   if (bom) {
     typeSpan.textContent = bom.type;
     typeSpan.style.color = bom.type === 'ROD' ? '#9a3412' : bom.type === 'STRIKER' ? '#243bb2' : '#666';
-    const actualMethod = isManualEquip ? '수작업' : bom.method;
-    methodSpan.innerHTML = '<span class="method-badge ' + (actualMethod === '수작업' ? 'method-manual' : 'method-auto') + '">' + actualMethod + '</span>';
+    const actualMethod = isNoBomEquip ? noBomLabel : bom.method;
+    methodSpan.innerHTML = '<span class="method-badge ' + (isNoBomEquip ? 'method-manual' : 'method-auto') + '">' + actualMethod + '</span>';
     tr.querySelector('.prod-qty').disabled = false;
     tr.querySelector('.prod-qty').style.background = '#fafbfd';
     calcBom(rowId);
+  } else if (isNoBomEquip) {
+    // 사상기·수작업: 부자재(BOM) 없이도 수량 입력 허용
+    typeSpan.textContent = '-';
+    methodSpan.innerHTML = '<span class="method-badge method-manual">' + noBomLabel + '</span>';
+    document.getElementById('bom_' + rowId).innerHTML = '<span style="color:#64748b;font-size:11px">부자재 없음 — ' + noBomLabel + ' 공정 (수량만 입력)</span>';
+    tr.querySelector('.prod-qty').disabled = false;
+    tr.querySelector('.prod-qty').style.background = '#fafbfd';
   } else {
     typeSpan.textContent = '-';
-    const fallbackMethod = isManualEquip ? '수작업' : '-';
-    if (isManualEquip) {
-      methodSpan.innerHTML = '<span class="method-badge method-manual">수작업</span>';
-    } else {
-      methodSpan.innerHTML = '-';
-    }
+    methodSpan.innerHTML = '-';
     document.getElementById('bom_' + rowId).innerHTML = '<span style="color:#dc2626;font-size:11px">🚫 BOM 미등록 — 기준정보에서 등록 후 사용하세요</span>';
     // 수량 입력 차단
     tr.querySelector('.prod-qty').disabled = true;
@@ -720,7 +725,7 @@ async function submitReport() {
       equipment_no: selectedEquipment.no, equipment_id: selectedEquipment.id,
       start_time: startTime, end_time: endTime, worker_name: workerName,
       sabun, product_name: productName || null,
-      assembly_type: bom ? bom.type : null, work_method: (selectedEquipment && selectedEquipment.type === 'manual') ? '수작업' : (bom ? bom.method : '자동'),
+      assembly_type: bom ? bom.type : null, work_method: (selectedEquipment && selectedEquipment.type === 'sander') ? '사상' : (selectedEquipment && selectedEquipment.type === 'manual') ? '수작업' : (bom ? bom.method : '자동'),
       production_qty: prodQty, defect_qty: defectQty, lot_no: lotNo || null,
       material_usage: materialUsage,
       note: note || remarks, created_by_emp_code: myInfo?.emp_code, created_by_name: myInfo?.name
