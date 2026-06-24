@@ -305,12 +305,12 @@ const EQUIPMENTS = [
   { no: 'LM GUIDE 조립기', id: '검-A-02', type: 'guide' },
   { no: 'C200 GUIDE 조립기', id: '검-A-09', type: 'guide' },
   { no: 'AI3 GUIDE 조립기', id: '검-A-10', type: 'guide' },
-  { no: 'YB GUIDE 조립기', id: '검-A-04', type: 'guide' },
   { no: 'IG/YG 와샤조립기', id: '생-B-21', type: 'washer' },
   { no: 'NE 부쉬 조립기', id: '검-A-09', type: 'washer' },
   { no: 'BOOT&ROD 조립기', id: '검-A-01', type: 'rod' },
   { no: 'LM 사상기', id: '생-B-36', type: 'sander' },
-  { no: '호스 절단기', id: '검-A-11', type: 'cutter' },
+  { no: '댐퍼 사상기', id: '검-A-05', type: 'sander' },
+  { no: '호스 절단기', id: '검-A-11', type: 'cutter', dormant: true },
   { no: '수작업', id: '-', type: 'manual' }
 ];
 
@@ -337,11 +337,11 @@ const EQUIPMENT_SAFETY_MAP = {
   'LM GUIDE 조립기':    [1,2,3,4,5,6],
   'C200 GUIDE 조립기':  [1,2,3,4,5,6],
   'AI3 GUIDE 조립기':   [1,2,3,4,5,6],
-  'YB GUIDE 조립기':    [1,2,3,7,4,5,6],
   'IG/YG 와샤조립기':   [1,2,10,11,6],
   'NE 부쉬 조립기':     [1,2,10,11,6],
   'BOOT&ROD 조립기':    [1,9,2,7,3,4,8,5,6],
   'LM 사상기':          [1,11,10,12,14],
+  '댐퍼 사상기':         [1,2,11,5,6],
   '호스 절단기':         [1,10,12,13,5,6]
 };
 
@@ -428,13 +428,22 @@ async function loadBomData() {
 function renderEquipmentGrid() {
   const grid = document.getElementById('equipmentGrid');
   const typeLabels = { guide:'GUIDE 조립', washer:'와샤/부쉬', rod:'ROD 조립', sander:'사상기', cutter:'절단기', manual:'수작업' };
-  grid.innerHTML = EQUIPMENTS.map(eq => `
+  grid.innerHTML = EQUIPMENTS.map(eq => {
+    if (eq.dormant) {
+      return `
+    <div class="eq-card eq-dormant" data-no="${eq.no}" title="유휴 설비 — 현재 사용하지 않습니다" style="opacity:0.5;background:#f3f4f6;border-style:dashed;border-color:#cbd5e1;cursor:not-allowed">
+      <div class="eq-name" style="color:#94a3b8">${eq.no}</div>
+      <div class="eq-detail">${eq.id}</div>
+      <span class="eq-badge" style="background:#e5e7eb;color:#6b7280">⏸ 유휴</span>
+    </div>`;
+    }
+    return `
     <div class="eq-card" data-no="${eq.no}" onclick="selectEquipment('${eq.no}')" ${eq.type==='manual'?'style="border-style:dashed;border-color:#d97706"':''}>
       <div class="eq-name">${eq.no}</div>
       <div class="eq-detail">${eq.id}</div>
       <span class="eq-badge ${eq.type}" ${eq.type==='manual'?'style="background:#fef3c7;color:#92400e"':''}>${typeLabels[eq.type]}</span>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function selectEquipment(eqNo) {
