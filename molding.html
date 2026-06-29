@@ -1428,6 +1428,22 @@ function renumberRows(faceKey) {
 // ═══════════════════════════════════════════════
 let downtimeCounter = 0;
 
+// 작업내역에 입력된 사번 목록 (비가동 사번 드롭다운용)
+function getEnteredSabuns() {
+  const set = new Set();
+  document.querySelectorAll('input.sabun').forEach(function(inp){
+    const v = (inp.value || '').trim();
+    if (v) set.add(v);
+  });
+  return Array.from(set);
+}
+function populateDtSabun(sel) {
+  const cur = sel.value;
+  const sabuns = getEnteredSabuns();
+  sel.innerHTML = '<option value="">공통(전체)</option>' +
+    sabuns.map(function(s){ return '<option value="' + s + '"' + (s===cur?' selected':'') + '>' + s + '</option>'; }).join('');
+}
+
 function addDowntimeRow() {
   downtimeCounter++;
   const rowId = `dt_${downtimeCounter}`;
@@ -1437,10 +1453,11 @@ function addDowntimeRow() {
   
   const div = document.createElement('div');
   div.id = rowId;
-  div.style.cssText = 'display:grid;grid-template-columns:' + (currentFaces===3?'80px ':'') + '1.2fr 1fr 1fr 1.5fr 40px;gap:8px;align-items:end;margin-bottom:8px;padding:10px;background:#fafbfd;border-radius:8px;border:1px solid #e0e4ed';
+  div.style.cssText = 'display:grid;grid-template-columns:' + (currentFaces===3?'80px ':'') + '90px 1.2fr 1fr 1fr 1.5fr 40px;gap:8px;align-items:end;margin-bottom:8px;padding:10px;background:#fafbfd;border-radius:8px;border:1px solid #e0e4ed';
   
   div.innerHTML = `
     ${currentFaces===3 ? `<div><label style="font-size:11px;color:#888">면</label><select class="dt-face" style="width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:6px;font-size:13px">${faceOptions}</select></div>` : ''}
+    <div><label style="font-size:11px;color:#888">사번</label><select class="dt-sabun" onfocus="populateDtSabun(this)" style="width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:6px;font-size:13px"><option value="">공통(전체)</option></select></div>
     <div><label style="font-size:11px;color:#888">비가동 코드</label><select class="dt-code" style="width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:6px;font-size:13px"><option value="">없음</option><option value="생지부족">생지부족</option><option value="금형교체">금형교체</option><option value="금형세척">금형세척</option><option value="설비이상">설비이상</option><option value="제품성형이상">제품성형이상</option><option value="금형수정">금형수정</option><option value="기타">기타</option></select></div>
     <div><label style="font-size:11px;color:#888">시작</label><input type="time" class="dt-start" style="width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:6px;font-size:13px" /></div>
     <div><label style="font-size:11px;color:#888">종료</label><input type="time" class="dt-end" style="width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:6px;font-size:13px" /></div>
@@ -1459,11 +1476,12 @@ function collectDowntimeData() {
   const result = [];
   for (const row of rows) {
     const face = row.querySelector('.dt-face')?.value || '전체';
+    const sabun = row.querySelector('.dt-sabun')?.value || '';
     const code = row.querySelector('.dt-code')?.value;
     const start = row.querySelector('.dt-start')?.value;
     const end = row.querySelector('.dt-end')?.value;
     const detail = row.querySelector('.dt-detail')?.value;
-    if (code) result.push({ face, code, start, end, detail });
+    if (code) result.push({ face, sabun, code, start, end, detail });
   }
   return result;
 }
@@ -1787,6 +1805,7 @@ function confirmLeave(e) {
 }
 
 // ── 오늘 내 제출 내역 ──────────────────────────────
+var _myHistoryData = [];
 async function loadMyHistory() {
   const workDate = document.getElementById('workDate').value;
   const myName = myInfo?.name;
@@ -1813,6 +1832,7 @@ async function loadMyHistory() {
     }
 
     var list = data || [];
+    _myHistoryData = list;
     countEl.textContent = list.length + '건';
 
     if (list.length === 0) {
@@ -1852,19 +1872,21 @@ async function loadMyHistory() {
         var prod = parseInt(r.production_qty) || 0;
         var defect = parseInt(r.defect_qty) || 0;
         var faceLabel = r.work_type || '-';
-        var dtCode = '', dtMin = '';
+        var dtCode = '', dtTime = '';
         try {
           var nObj = JSON.parse(r.note);
           if (nObj.downtime && nObj.downtime.length) {
-            dtCode = nObj.downtime.map(function(d){ return d.code; }).filter(Boolean).join(', ');
-            var tot = 0;
-            nObj.downtime.forEach(function(d){
+            // 사번 매칭: 해당 사번 전용이거나 공통(사번 미지정)인 비가동만
+            var matched = nObj.downtime.filter(function(d){ return !d.sabun || d.sabun === r.sabun; });
+            dtCode = matched.map(function(d){ return d.code; }).filter(Boolean).join(', ');
+            dtTime = matched.map(function(d){
               if (d.start && d.end) {
                 var s = d.start.split(':'), e = d.end.split(':');
-                var m = (+e[0]*60 + +e[1]) - (+s[0]*60 + +s[1]); if (m < 0) m += 1440; tot += m;
+                var m = (+e[0]*60 + +e[1]) - (+s[0]*60 + +s[1]); if (m < 0) m += 1440;
+                return d.start + '~' + d.end + '(' + m + '분)';
               }
-            });
-            if (tot > 0) dtMin = tot + '분';
+              return '';
+            }).filter(Boolean).join(', ');
           }
         } catch(e) {}
         return '<tr>' +
@@ -1878,9 +1900,9 @@ async function loadMyHistory() {
           '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;color:' + (defect > 0 ? '#dc2626' : '#aaa') + '">' + (defect > 0 ? defect.toLocaleString() : '-') + '</td>' +
           '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-family:monospace;font-size:11px">' + (r.batch_no||'-') + '</td>' +
           '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px;color:#e67e22">' + (dtCode||'-') + '</td>' +
-          '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px;color:#e67e22">' + (dtMin||'-') + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px;color:#e67e22;white-space:nowrap">' + (dtTime||'-') + '</td>' +
           '<td style="padding:8px 6px;border:1px solid #e0e4ed;color:#888;font-size:11px">' + time + '</td>' +
-          '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center"><button onclick="deleteMyRecord(\'' + r.id + '\')" style="background:#fef2f2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">삭제</button></td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center;white-space:nowrap"><button onclick="openEditMyRecord(\'' + r.id + '\')" style="background:#eef2ff;color:#243bb2;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;margin-right:4px">수정</button><button onclick="deleteMyRecord(\'' + r.id + '\')" style="background:#fef2f2;color:#dc2626;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">삭제</button></td>' +
           '</tr>';
       }).join('') +
       '</tbody></table></div>';
@@ -1963,6 +1985,50 @@ function showConditionViewer(vd, sabun, recs, error) {
   ov.addEventListener('click', function(e){ if (e.target === ov) ov.remove(); });
   document.body.appendChild(ov);
 }
+// ── 제출내역 수정 모달 ──
+function openEditMyRecord(id) {
+  const r = (_myHistoryData || []).find(function(x){ return String(x.id) === String(id); });
+  if (!r) { showToast('레코드를 찾을 수 없습니다.', 'error'); return; }
+  const esc = function(v){ return v == null ? '' : String(v).replace(/"/g, '&quot;'); };
+  const fld = function(label, fid, val, type){
+    return '<div style="margin-bottom:10px"><label style="display:block;font-size:12px;color:#666;margin-bottom:4px">' + label + '</label>' +
+      '<input id="' + fid + '" type="' + (type||'text') + '" value="' + esc(val) + '" style="width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:6px;font-size:14px;box-sizing:border-box"></div>';
+  };
+  const ov = document.createElement('div');
+  ov.id = 'editMyOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML = '<div style="background:#fff;border-radius:12px;max-width:420px;width:100%;max-height:85vh;overflow:auto;padding:20px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h2 style="margin:0;font-size:16px">✏️ 제출 내역 수정</h2>' +
+    '<button onclick="document.getElementById(\'editMyOverlay\').remove()" style="background:#f0f0f0;border:none;width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:16px">×</button></div>' +
+    '<div style="font-size:12px;color:#888;margin-bottom:12px">' + (r.equipment_no||'') + ' · ' + (r.work_type||'') + '</div>' +
+    fld('사번', 'em_sabun', r.sabun) +
+    fld('C/V', 'em_cavity', r.cavity, 'number') +
+    fld('Shot', 'em_shot', r.shot_count, 'number') +
+    fld('생산수량', 'em_prod', r.production_qty, 'number') +
+    fld('불량수량', 'em_defect', r.defect_qty, 'number') +
+    fld('LOT', 'em_lot', r.batch_no) +
+    '<button onclick="saveEditMyRecord(\'' + r.id + '\')" style="width:100%;padding:10px;background:#243bb2;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:6px">저장</button>' +
+    '<div style="font-size:11px;color:#aaa;margin-top:8px">※ 성형조건·비가동은 새로 작성·제출로 수정해 주세요.</div>' +
+    '</div>';
+  document.body.appendChild(ov);
+}
+async function saveEditMyRecord(id) {
+  const g = function(i){ var el = document.getElementById(i); return el ? el.value.trim() : ''; };
+  const upd = {
+    sabun: g('em_sabun') || null,
+    cavity: parseInt(g('em_cavity')) || null,
+    shot_count: parseInt(g('em_shot')) || null,
+    production_qty: parseInt(g('em_prod')) || null,
+    defect_qty: parseInt(g('em_defect')) || 0,
+    batch_no: g('em_lot') || null
+  };
+  const { error } = await db.from('molding_reports').update(upd).eq('id', id);
+  if (error) { showToast('수정 실패: ' + error.message, 'error'); return; }
+  const ov = document.getElementById('editMyOverlay'); if (ov) ov.remove();
+  showToast('✓ 수정되었습니다');
+  loadMyHistory();
+}
+
 async function checkViewDateParam() {
   const params = new URLSearchParams(location.search);
   const vd = params.get('viewDate');
