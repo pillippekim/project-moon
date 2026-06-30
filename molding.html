@@ -1805,6 +1805,19 @@ function confirmLeave(e) {
 }
 
 // ── 오늘 내 제출 내역 ──────────────────────────────
+// 제출내역 정렬: 가-나-다 면 순, 같은 면에서 비가동 있는 행은 아래로 (제출순 유지)
+function moldingFaceRank(wt){ var m={'가면':0,'나면':1,'다면':2}; return (wt in m) ? m[wt] : 3; }
+function moldingRecHasDt(r){
+  try { var n = JSON.parse(r.note); return (n.downtime||[]).some(function(d){ return (!d.sabun || d.sabun===r.sabun) && d.code; }) ? 1 : 0; } catch(e) { return 0; }
+}
+function sortMoldingHistory(list){
+  return list.slice().sort(function(a,b){
+    var fr = moldingFaceRank(a.work_type) - moldingFaceRank(b.work_type);
+    if (fr !== 0) return fr;
+    return moldingRecHasDt(a) - moldingRecHasDt(b);
+  });
+}
+
 var _myHistoryData = [];
 async function loadMyHistory() {
   const workDate = document.getElementById('workDate').value;
@@ -1833,6 +1846,7 @@ async function loadMyHistory() {
     }
 
     var list = data || [];
+    list = sortMoldingHistory(list);
     _myHistoryData = list;
     countEl.textContent = list.length + '건';
 
