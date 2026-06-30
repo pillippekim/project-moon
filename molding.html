@@ -1823,7 +1823,8 @@ async function loadMyHistory() {
       .eq('work_date', workDate)
       .eq('created_by_name', myName)
       .is('deleted_at', null)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: true });
 
     if (error) {
       body.innerHTML = '<div style="text-align:center;color:#dc2626;font-size:13px;padding:20px">조회 실패: ' + error.message + '</div>';
@@ -1994,10 +1995,13 @@ function openEditMyRecord(id) {
     return '<div style="margin-bottom:10px"><label style="display:block;font-size:12px;color:#666;margin-bottom:4px">' + label + '</label>' +
       '<input id="' + fid + '" type="' + (type||'text') + '" value="' + esc(val) + '" style="width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:6px;font-size:14px;box-sizing:border-box"></div>';
   };
+  // 이 사번의 기존 비가동
+  let myDt = [];
+  try { const n = JSON.parse(r.note); myDt = (n.downtime || []).filter(function(d){ return d.sabun === r.sabun; }); } catch(e) {}
   const ov = document.createElement('div');
   ov.id = 'editMyOverlay';
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  ov.innerHTML = '<div style="background:#fff;border-radius:12px;max-width:420px;width:100%;max-height:85vh;overflow:auto;padding:20px">' +
+  ov.innerHTML = '<div style="background:#fff;border-radius:12px;max-width:440px;width:100%;max-height:88vh;overflow:auto;padding:20px">' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h2 style="margin:0;font-size:16px">✏️ 제출 내역 수정</h2>' +
     '<button onclick="document.getElementById(\'editMyOverlay\').remove()" style="background:#f0f0f0;border:none;width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:16px">×</button></div>' +
     '<div style="font-size:12px;color:#888;margin-bottom:12px">' + (r.equipment_no||'') + ' · ' + (r.work_type||'') + '</div>' +
@@ -2007,12 +2011,37 @@ function openEditMyRecord(id) {
     fld('생산수량', 'em_prod', r.production_qty, 'number') +
     fld('불량수량', 'em_defect', r.defect_qty, 'number') +
     fld('LOT', 'em_lot', r.batch_no) +
-    '<button onclick="saveEditMyRecord(\'' + r.id + '\')" style="width:100%;padding:10px;background:#243bb2;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:6px">저장</button>' +
-    '<div style="font-size:11px;color:#aaa;margin-top:8px">※ 성형조건·비가동은 새로 작성·제출로 수정해 주세요.</div>' +
+    '<div style="margin-top:4px;border-top:1px solid #eee;padding-top:10px">' +
+      '<label style="display:block;font-size:12px;color:#666;margin-bottom:6px">⏸️ 비가동 (이 사번 · 코드/시작/종료/상세)</label>' +
+      '<div id="em_dtRows"></div>' +
+      '<button type="button" onclick="emAddDtRow()" style="width:100%;padding:7px;border:1px dashed #c7ceff;background:#fafbfd;border-radius:6px;color:#243bb2;font-size:12px;font-weight:600;cursor:pointer;margin-top:4px">+ 비가동 추가</button>' +
+    '</div>' +
+    '<button onclick="saveEditMyRecord(\'' + r.id + '\')" style="width:100%;padding:10px;background:#243bb2;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:12px">저장</button>' +
+    '<div style="font-size:11px;color:#aaa;margin-top:8px">※ 성형조건은 새로 작성·제출로 수정해 주세요. 공통 비가동은 여기서 편집되지 않습니다.</div>' +
     '</div>';
   document.body.appendChild(ov);
+  myDt.forEach(function(d){ emAddDtRow(d.code, d.start, d.end, d.detail); });
 }
+
+function emAddDtRow(code, start, end, detail) {
+  const wrap = document.getElementById('em_dtRows');
+  if (!wrap) return;
+  const codes = ['생지부족','금형교체','금형세척','설비이상','제품성형이상','금형수정','기타'];
+  const div = document.createElement('div');
+  div.className = 'em-dt-row';
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 0.9fr 0.9fr 1fr 22px;gap:4px;align-items:center;margin-bottom:5px';
+  div.innerHTML =
+    '<select class="em-dt-code" style="padding:6px;border:1px solid #e0e4ed;border-radius:5px;font-size:12px"><option value="">없음</option>' +
+    codes.map(function(c){ return '<option value="' + c + '"' + (c===code ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select>' +
+    '<input type="time" class="em-dt-start" value="' + (start||'') + '" style="padding:6px;border:1px solid #e0e4ed;border-radius:5px;font-size:12px">' +
+    '<input type="time" class="em-dt-end" value="' + (end||'') + '" style="padding:6px;border:1px solid #e0e4ed;border-radius:5px;font-size:12px">' +
+    '<input type="text" class="em-dt-detail" value="' + (detail ? String(detail).replace(/"/g,'&quot;') : '') + '" placeholder="상세" style="padding:6px;border:1px solid #e0e4ed;border-radius:5px;font-size:12px">' +
+    '<button type="button" onclick="this.parentNode.remove()" style="background:#fef2f2;color:#dc2626;border:none;border-radius:5px;cursor:pointer;font-size:13px;padding:4px 0">×</button>';
+  wrap.appendChild(div);
+}
+
 async function saveEditMyRecord(id) {
+  const r = (_myHistoryData || []).find(function(x){ return String(x.id) === String(id); });
   const g = function(i){ var el = document.getElementById(i); return el ? el.value.trim() : ''; };
   const upd = {
     sabun: g('em_sabun') || null,
@@ -2022,12 +2051,35 @@ async function saveEditMyRecord(id) {
     defect_qty: parseInt(g('em_defect')) || 0,
     batch_no: g('em_lot') || null
   };
+  // 비가동 재구성
+  if (r) {
+    const newSabun = upd.sabun || r.sabun;
+    const edited = [];
+    document.querySelectorAll('#em_dtRows .em-dt-row').forEach(function(row){
+      const code = row.querySelector('.em-dt-code').value;
+      if (!code) return;
+      edited.push({
+        face: r.work_type || '전체', sabun: newSabun, code: code,
+        start: row.querySelector('.em-dt-start').value,
+        end: row.querySelector('.em-dt-end').value,
+        detail: row.querySelector('.em-dt-detail').value
+      });
+    });
+    let note = {};
+    try { note = JSON.parse(r.note) || {}; } catch(e) { note = {}; }
+    const others = (note.downtime || []).filter(function(d){ return d.sabun !== r.sabun; });
+    note.downtime = others.concat(edited);
+    upd.note = JSON.stringify(note);
+    upd.downtime_code = edited.length ? edited[0].code : null;
+    upd.problem = edited.length ? (edited[0].detail || null) : null;
+  }
   const { error } = await db.from('molding_reports').update(upd).eq('id', id);
   if (error) { showToast('수정 실패: ' + error.message, 'error'); return; }
   const ov = document.getElementById('editMyOverlay'); if (ov) ov.remove();
   showToast('✓ 수정되었습니다');
   loadMyHistory();
 }
+
 
 async function checkViewDateParam() {
   const params = new URLSearchParams(location.search);
