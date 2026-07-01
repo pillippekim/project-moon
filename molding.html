@@ -1191,6 +1191,7 @@ function selectEquipment(eqNo) {
   initSafetyTable();
   checkTodaySafety();
   renderConditionInputs();
+  loadMyHistory();   // 선택한 호기의 제출내역만 표시
 }
 
 // ═══════════════════════════════════════════════
@@ -1812,9 +1813,9 @@ function moldingRecHasDt(r){
 }
 function sortMoldingHistory(list){
   return list.slice().sort(function(a,b){
-    var fr = moldingFaceRank(a.work_type) - moldingFaceRank(b.work_type);
-    if (fr !== 0) return fr;
-    return moldingRecHasDt(a) - moldingRecHasDt(b);
+    var ea=(a.equipment_no||''), eb=(b.equipment_no||''); if (ea!==eb) return ea<eb ? -1 : 1; // 설비(호기)
+    var fr = moldingFaceRank(a.work_type) - moldingFaceRank(b.work_type); if (fr!==0) return fr; // 유형(면)
+    return moldingRecHasDt(a) - moldingRecHasDt(b);                                        // 비가동
   });
 }
 
@@ -1831,11 +1832,13 @@ async function loadMyHistory() {
   }
 
   try {
-    const { data, error } = await db.from('molding_reports')
+    let query = db.from('molding_reports')
       .select('*')
       .eq('work_date', workDate)
       .eq('created_by_name', myName)
-      .is('deleted_at', null)
+      .is('deleted_at', null);
+    if (selectedEquipment) query = query.eq('equipment_no', selectedEquipment.no);
+    const { data, error } = await query
       .order('created_at', { ascending: false })
       .order('id', { ascending: true });
 
