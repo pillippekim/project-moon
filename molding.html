@@ -1001,7 +1001,7 @@ function renderWorkDetailArea() {
             <thead><tr>
               <th style="width:40px">NO</th>
               <th style="width:110px">사번</th>
-              <th style="width:130px">제품명</th>
+              <th style="width:130px">재질명</th>
               <th style="width:120px">Batch No.</th>
               <th style="width:60px">C/V</th>
               <th style="width:70px">Shot</th>
@@ -1513,7 +1513,7 @@ function onSabunChange(rowId) {
   const product = productsCache.find(p => String(p.sabun).trim() === sabun);
   
   if (product) {
-    const displayName = product.part_name || product.part_no || '';
+    const displayName = product.material_name || '';
     prodInput.value = displayName;
     prodInput.style.color = '#333';
     prodInput.style.background = '#d4edda';
