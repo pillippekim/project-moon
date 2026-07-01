@@ -1875,6 +1875,7 @@ async function loadMyHistory() {
       '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">설비</th>' +
       '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">면</th>' +
       '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">사번</th>' +
+      '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">재질명</th>' +
       '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">C/V</th>' +
       '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">Shot</th>' +
       '<th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">생산</th>' +
@@ -1890,6 +1891,9 @@ async function loadMyHistory() {
         var prod = parseInt(r.production_qty) || 0;
         var defect = parseInt(r.defect_qty) || 0;
         var faceLabel = r.work_type || '-';
+        var matName = '-';
+        var _pc = productsCache.find(function(p){ return String(p.sabun).trim() === String(r.sabun).trim(); });
+        if (_pc && _pc.material_name) matName = _pc.material_name;
         var dtCode = '', dtTime = '';
         try {
           var nObj = JSON.parse(r.note);
@@ -1912,6 +1916,7 @@ async function loadMyHistory() {
           '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">' + (r.equipment_no||'-') + '</td>' +
           '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">' + faceLabel + '</td>' +
           '<td style="padding:8px 6px;border:1px solid #e0e4ed">' + (r.sabun||'-') + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">' + matName + '</td>' +
           '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right">' + (r.cavity||'-') + '</td>' +
           '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right">' + (r.shot_count||'-') + '</td>' +
           '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;font-weight:600">' + prod.toLocaleString() + '</td>' +
