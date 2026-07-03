@@ -2033,6 +2033,8 @@ function openEditMyRecord(id) {
     fld('생산수량', 'em_prod', r.production_qty, 'number') +
     fld('불량수량', 'em_defect', r.defect_qty, 'number') +
     fld('LOT', 'em_lot', r.batch_no) +
+    fld('시작시간', 'em_start', r.start_time, 'time') +
+    fld('종료시간', 'em_end', r.end_time, 'time') +
     '<div style="margin-top:4px;border-top:1px solid #eee;padding-top:10px">' +
       '<label style="display:block;font-size:12px;color:#666;margin-bottom:6px">⏸️ 비가동 (이 사번 · 코드/시작/종료/상세)</label>' +
       '<div id="em_dtRows"></div>' +
@@ -2071,7 +2073,9 @@ async function saveEditMyRecord(id) {
     shot_count: parseInt(g('em_shot')) || null,
     production_qty: parseInt(g('em_prod')) || null,
     defect_qty: parseInt(g('em_defect')) || 0,
-    batch_no: g('em_lot') || null
+    batch_no: g('em_lot') || null,
+    start_time: g('em_start') || null,
+    end_time: g('em_end') || null
   };
   // 비가동 재구성
   if (r) {
