@@ -6,6 +6,7 @@
 <title>통합 작업일지 | 한국하이테크</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth_guard.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif; background: #f4f6fb; color: #1a1a2e; }
@@ -93,7 +94,12 @@
       <div class="fld"><label>작업자</label><input type="text" id="workerName" placeholder="작업자명"></div>
       <div class="fld"><label>사번 / 품번 <span class="req">*</span></label><input type="text" id="sabun" placeholder="예) 502209"></div>
       <div class="fld"><label>제품명</label><input type="text" id="productName" placeholder="(선택)"></div>
-      <div class="fld"><label>성형 LOT</label><input type="text" id="lotNo" placeholder="LOT 번호"></div>
+      <div class="fld"><label>성형 LOT</label>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="lotNo" placeholder="LOT 번호" style="flex:1">
+          <button type="button" onclick="openScanner()" title="바코드/QR 스캔" style="flex:0 0 auto;padding:0 12px;border:1px solid #243bb2;background:#eef0ff;color:#243bb2;border-radius:8px;font-size:18px;cursor:pointer">📷</button>
+        </div>
+      </div>
       <div class="fld"><label>설비</label><input type="text" id="equipment" placeholder="예) LM 사상기"></div>
       <div class="fld"><label>시작 시간</label><input type="time" id="startTime"></div>
       <div class="fld"><label>종료 시간</label><input type="time" id="endTime"></div>
@@ -434,6 +440,68 @@ function showToast(msg, type) {
   t.className = 'toast show' + (type === 'error' ? ' error' : '');
   setTimeout(function(){ t.className = 'toast' + (type === 'error' ? ' error' : ''); }, 2600);
 }
+
+// ── LOT 바코드/QR 스캔 ──
+let _html5Qr = null;
+async function openScanner() {
+  var ov = document.getElementById('scanOverlay');
+  var hint = document.getElementById('scanHint');
+  ov.style.display = 'flex';
+  hint.textContent = '카메라를 준비 중입니다...';
+  if (typeof Html5Qrcode === 'undefined') {
+    hint.textContent = '스캐너를 불러오지 못했어요. 인터넷 연결을 확인해주세요.';
+    return;
+  }
+  try {
+    _html5Qr = new Html5Qrcode('qrReader');
+    var config = {
+      fps: 10,
+      qrbox: { width: 250, height: 160 },
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.QR_CODE,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.CODE_93,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.ITF,
+        Html5QrcodeSupportedFormats.CODABAR
+      ]
+    };
+    await _html5Qr.start(
+      { facingMode: 'environment' },
+      config,
+      function(decodedText) {
+        document.getElementById('lotNo').value = decodedText;
+        if (typeof showToast === 'function') showToast('LOT 스캔 완료: ' + decodedText);
+        closeScanner();
+      },
+      function() {}  // 프레임별 인식 실패는 무시
+    );
+    hint.textContent = '바코드나 QR을 화면 안에 맞춰주세요';
+  } catch (e) {
+    hint.textContent = '카메라를 열 수 없어요. 카메라 권한을 허용했는지 확인해주세요.';
+    console.error('스캐너 오류:', e);
+  }
+}
+async function closeScanner() {
+  try {
+    if (_html5Qr) { await _html5Qr.stop(); _html5Qr.clear(); _html5Qr = null; }
+  } catch (e) {}
+  var ov = document.getElementById('scanOverlay');
+  if (ov) ov.style.display = 'none';
+}
 </script>
+<!-- LOT 바코드/QR 스캐너 -->
+<div id="scanOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:14px;max-width:420px;width:100%;padding:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:15px;font-weight:700;color:#243bb2">📷 LOT 바코드 스캔</div>
+      <button type="button" onclick="closeScanner()" style="background:#f0f0f0;border:none;width:32px;height:32px;border-radius:8px;font-size:16px;cursor:pointer">×</button>
+    </div>
+    <div id="qrReader" style="width:100%;border-radius:10px;overflow:hidden"></div>
+    <div id="scanHint" style="font-size:12px;color:#888;margin-top:12px;text-align:center">바코드나 QR을 화면 안에 맞춰주세요</div>
+  </div>
+</div>
 </body>
 </html>
