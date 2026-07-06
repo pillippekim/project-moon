@@ -2054,6 +2054,14 @@ function openEditMyRecord(id) {
     '</div>';
   document.body.appendChild(ov);
   myDt.forEach(function(d){ emAddDtRow(d.code, d.start, d.end, d.detail); });
+  // 생산수량 자동 계산 (C/V × Shot)
+  var _emCalc = function(){
+    var c = parseInt(document.getElementById('em_cavity').value) || 0;
+    var s = parseInt(document.getElementById('em_shot').value) || 0;
+    if (c > 0 && s > 0) document.getElementById('em_prod').value = c * s;
+  };
+  document.getElementById('em_cavity').addEventListener('input', _emCalc);
+  document.getElementById('em_shot').addEventListener('input', _emCalc);
 }
 
 function emAddDtRow(code, start, end, detail) {
