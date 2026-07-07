@@ -159,14 +159,13 @@ body { font-family:'Noto Sans KR',sans-serif; background:#f1f3f9; color:#1e293b;
             <!-- 제품정보 (면별 독립) -->
             <div class="row-label">제품정보</div>
             <div class="form-grid-4">
-                <div class="form-group"><label>사번</label><input type="text" id="faceSabun" placeholder="502264"></div>
+                <div class="form-group"><label>사번</label><input type="text" id="faceSabun" placeholder="502264" oninput="autoFillMaterial()"></div>
                 <div class="form-group"><label>Cavity 수량</label><input type="number" id="faceCavity" placeholder="4"></div>
-                <div class="form-group"><label>재질</label>
-                    <select id="faceMaterial"><option value="">-- 재질 선택 --</option>
-                        <option>NBR(A)</option><option>EPDM(E)</option><option>NR(N)</option><option>SBR(B)</option><option>CR(C)</option>
-                        <option>FMK불소고무(F)</option><option>VMQ실리콘고무(S)</option><option>U 우레탄(U)</option>
-                        <option>아크릴(T)</option>
-                    </select>
+                <div class="form-group"><label>재질 (사번 연동 자동)</label>
+                    <input type="text" id="faceMaterial" placeholder="사번 입력 시 자동">
+                    <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#243bb2;margin-top:5px;cursor:pointer">
+                        <input type="checkbox" id="faceMatConfirm" style="width:14px;height:14px;cursor:pointer"> 재질 확인 완료
+                    </label>
                 </div>
                 <div class="form-group"><label>사상 방법</label>
                     <select id="faceTrimMethod"><option value="">-- 선택 --</option><option>바렐</option><option>냉동</option><option>수사상</option></select>
@@ -273,9 +272,9 @@ var DEFECT_TYPES = ['미성형','이물','Burr','찍힘','찢어짐','기타'];
 
 // 면별 데이터 저장 (제품정보 + 설비정보 + 검사데이터 + 비가동)
 var faceData = {
-    A: { inactive:false, sabun:'', cavity:'', material:'', trimMethod:'', moldTemp:'', moldTempLower:'', cureTime:'', moldPressure:'', vacuum:'', actionDetail:'' },
-    B: { inactive:false, sabun:'', cavity:'', material:'', trimMethod:'', moldTemp:'', moldTempLower:'', cureTime:'', moldPressure:'', vacuum:'', actionDetail:'' },
-    C: { inactive:false, sabun:'', cavity:'', material:'', trimMethod:'', moldTemp:'', moldTempLower:'', cureTime:'', moldPressure:'', vacuum:'', actionDetail:'' }
+    A: { inactive:false, sabun:'', cavity:'', material:'', matConfirm:false, trimMethod:'', moldTemp:'', moldTempLower:'', cureTime:'', moldPressure:'', vacuum:'', actionDetail:'' },
+    B: { inactive:false, sabun:'', cavity:'', material:'', matConfirm:false, trimMethod:'', moldTemp:'', moldTempLower:'', cureTime:'', moldPressure:'', vacuum:'', actionDetail:'' },
+    C: { inactive:false, sabun:'', cavity:'', material:'', matConfirm:false, trimMethod:'', moldTemp:'', moldTempLower:'', cureTime:'', moldPressure:'', vacuum:'', actionDetail:'' }
 };
 
 function fmtLocal(d) { if(!d) return ''; var dt = new Date(d); return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'); }
@@ -289,6 +288,7 @@ function showToast(msg,type) { var el=document.getElementById('toast'); el.textC
     document.getElementById('inspDate').value = fmtLocal(new Date());
     loadEquipments();
     loadMoldingWorkers();
+    loadProductsMap();
     buildVisualInspection();
 
     // URL 파라미터로 수정 모드
@@ -296,6 +296,29 @@ function showToast(msg,type) { var el=document.getElementById('toast'); el.textC
     var editId = params.get('edit');
     if (editId) loadForEdit(editId);
 })();
+
+// 기준정보(사번→재질명) 로드 — 1,000건 제한 우회(페이지네이션)
+var PRODUCTS = {};
+async function loadProductsMap(){
+    var offset = 0, limit = 1000;
+    while (true) {
+        try {
+            var r = await fetch(SU+'/rest/v1/products?select=sabun,material_name&limit='+limit+'&offset='+offset, {headers:HR});
+            var data = await r.json();
+            if (!Array.isArray(data) || data.length === 0) break;
+            data.forEach(function(x){ if (x.material_name) PRODUCTS[String(x.sabun).trim()] = x.material_name; });
+            if (data.length < limit) break;
+            offset += limit;
+        } catch(e) { console.error('기준정보 로드 실패:', e); break; }
+    }
+}
+// 사번 입력 → 재질명 자동 채움 (+ 재확인 요구)
+function autoFillMaterial(){
+    var sab = document.getElementById('faceSabun').value.trim();
+    var mat = PRODUCTS[sab];
+    if (mat) document.getElementById('faceMaterial').value = mat;
+    document.getElementById('faceMatConfirm').checked = false;   // 사번이 바뀌면 재질 재확인 필요
+}
 
 // 성형작업자 목록 로딩 (workers 테이블, 공정=성형)
 async function loadMoldingWorkers() {
@@ -421,6 +444,7 @@ function saveFaceData(face) {
         sabun: document.getElementById('faceSabun').value,
         cavity: document.getElementById('faceCavity').value,
         material: document.getElementById('faceMaterial').value,
+        matConfirm: document.getElementById('faceMatConfirm').checked,
         trimMethod: document.getElementById('faceTrimMethod').value,
         moldTemp: document.getElementById('faceMoldTemp').value,
         moldTempLower: document.getElementById('faceMoldTempLower').value,
@@ -446,6 +470,7 @@ function restoreFaceData(face) {
     document.getElementById('faceSabun').value = d.sabun || '';
     document.getElementById('faceCavity').value = d.cavity || '';
     document.getElementById('faceMaterial').value = d.material || '';
+    document.getElementById('faceMatConfirm').checked = d.matConfirm || false;
     document.getElementById('faceTrimMethod').value = d.trimMethod || '';
 
     // 설비정보 복원
@@ -597,6 +622,12 @@ async function submitForm() {
             if (!hasSabun && !hasMaterial && !hasVisual && !hasAction && !hasMoldTemp && !hasCureTime) {
                 continue; // 이 면은 저장 안 함
             }
+            // 재질 확인 장치: 재질이 있는데 확인 체크가 없으면 제출 차단
+            if (hasMaterial && !fd.matConfirm) {
+                var _fm = {A:'가', B:'나', C:'다'};
+                alert('[' + _fm[faces[f]] + ' 면] 재질이 맞는지 확인 후 "재질 확인 완료"에 체크해주세요.');
+                return;
+            }
         }
 
         var rec = {
@@ -719,6 +750,7 @@ async function loadForEdit(id) {
             sabun: rec.sabun || '',
             cavity: rec.cavity_count || '',
             material: rec.material || '',
+            matConfirm: true,
             trimMethod: rec.trim_method || '',
             moldTemp: rec.mold_temp || '',
             moldTempLower: rec.mold_temp_lower || '',
