@@ -1472,6 +1472,46 @@ function removeDowntimeRow(rowId) {
   document.getElementById(rowId)?.remove();
 }
 
+// ── 금형교체 자동 시각 보정 (담당자 합의 규칙) ──
+// 금형교체 비가동(사번 지정)이 있으면:
+//  · 지정 사번(교체 후 작업) 행의 시작시각 = 교체 시작시각
+//  · 같은 면·같은 근무에서 교체 시작시각을 근무구간에 포함하는 다른 사번 행(교체 전 작업)의 종료시각 = 교체 시작시각
+//  · 앞/뒤 행이 유일하게 식별될 때만 적용 (오적용 방지) · 교체 여러 건이면 시각순 적용
+function _mldToMin(t){ var p=(''+t).split(':'); return (+p[0])*60 + (+p[1]); }
+function applyMoldChangeAdjust(rows, dts){
+  var changes = (dts||[]).filter(function(d){ return d.code === '금형교체' && d.sabun && d.start; })
+    .slice().sort(function(a,b){ return _mldToMin(a.start) - _mldToMin(b.start); });
+  changes.forEach(function(d){
+    var ds = _mldToMin(d.start);
+    var faceMatch = function(r){ return d.face === '전체' || !d.face || (r.work_type||'') === d.face; };
+    var inWindow = function(r){
+      var s = _mldToMin(r.start_time), e = _mldToMin(r.end_time); if (e < s) e += 1440;
+      var x = ds; if (x < s) x += 1440;
+      return x >= s && x <= e;
+    };
+    // 교체 후 작업 = 지정 사번 행
+    var later = null;
+    for (var i = 0; i < rows.length; i++){
+      var r = rows[i];
+      if (r.sabun === d.sabun && faceMatch(r) && r.start_time && r.end_time){ later = r; break; }
+    }
+    if (!later || !inWindow(later)) return;
+    // 이 교체보다 늦게 시작하는 다른 교체의 지정 사번(그들도 '교체 후 작업')은 앞 작업 후보에서 제외
+    var laterDesignated = {};
+    changes.forEach(function(o){ if (o !== d && _mldToMin(o.start) >= ds && o.sabun) laterDesignated[o.sabun] = 1; });
+    // 교체 전 작업 후보: 같은 면·같은 근무, 다른 사번, 근무구간이 교체 시작시각 포함
+    var cands = rows.filter(function(r){
+      if (r === later || r.sabun === d.sabun || laterDesignated[r.sabun]) return false;
+      if (!faceMatch(r) || r.shift_type !== later.shift_type) return false;
+      if (!r.start_time || !r.end_time) return false;
+      return inWindow(r);
+    });
+    if (cands.length !== 1) return;   // 짝을 유일하게 못 찾으면 건드리지 않음
+    cands[0].end_time = d.start;      // 앞 작업 종료 = 교체 시작
+    later.start_time = d.start;       // 뒷 작업 시작 = 교체 시작 (교체시간은 뒷 작업 비가동으로 차감)
+  });
+}
+
 function collectDowntimeData() {
   const rows = document.getElementById('downtimeRows').children;
   const result = [];
@@ -1595,6 +1635,9 @@ async function submitReport() {
     showToast('입력된 작업 내역이 없어요.', 'error');
     return;
   }
+  
+  // 금형교체 자동 시각 보정 (앞 작업 종료·뒷 작업 시작 = 교체 시작시각)
+  applyMoldChangeAdjust(reportRows, downtimeList);
   
   const submitBtn = document.getElementById('submitBtn');
   submitBtn.disabled = true;
