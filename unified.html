@@ -342,7 +342,7 @@ async function submitAll() {
   const note = document.getElementById('note').value.trim() || null;
   const empCode = myInfo ? myInfo.emp_code : null;
   const myName = myInfo ? myInfo.name : workerName;
-  const lotArr = lotNo ? [lotNo] : [];
+  const lotArr = lotNo ? lotNo.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [];
 
   const tasks = [];   // {table, record}
 
@@ -441,11 +441,86 @@ function showToast(msg, type) {
   setTimeout(function(){ t.className = 'toast' + (type === 'error' ? ' error' : ''); }, 2600);
 }
 
-// ── LOT 바코드/QR 스캔 ──
+// ── LOT 바코드/QR 스캔 (연속 스캔 — 포장작업일지와 동일 UX) ──
 let _html5Qr = null;
+let _contScans = [];        // 이번 세션에서 스캔된 LOT 목록
+let _lastCode = '';         // 같은 코드 연속 인식 방지
+let _lastCodeTime = 0;
+
+function _scanBeep() {
+  try { navigator.vibrate && navigator.vibrate(100); } catch(e) {}
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = 1200;
+    osc.connect(ctx.destination);
+    osc.start();
+    setTimeout(function(){ osc.stop(); ctx.close(); }, 100);
+  } catch(e) {}
+}
+
+function _renderScanList() {
+  const items = document.getElementById('contScanItems');
+  const count = document.getElementById('contScanCount');
+  if (!items || !count) return;
+  count.textContent = _contScans.length;
+  if (_contScans.length === 0) {
+    items.innerHTML = '<div style="color:#aaa;text-align:center;padding:8px">스캔 대기 중...</div>';
+    return;
+  }
+  items.innerHTML = _contScans.map(function(code, i){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:'+(i%2===0?'#f9fafb':'white')+';border-radius:4px;margin-bottom:2px">'
+      + '<span><strong style="color:#243bb2">'+(i+1)+'.</strong> '+code+'</span>'
+      + '<button type="button" onclick="removeScanItem('+i+')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;padding:2px 6px">×</button>'
+      + '</div>';
+  }).join('');
+}
+
+function removeScanItem(idx) {
+  _contScans.splice(idx, 1);
+  _renderScanList();
+}
+
+function _onScanDetected(decodedText) {
+  const code = String(decodedText || '').trim();
+  if (!code) return;
+  const now = Date.now();
+  if (code === _lastCode && (now - _lastCodeTime) < 1500) return;  // 같은 코드 1.5초 내 재인식 무시
+  _lastCode = code; _lastCodeTime = now;
+  const hint = document.getElementById('scanHint');
+  if (_contScans.indexOf(code) !== -1) {
+    if (hint) hint.textContent = '⚠️ 이미 스캔된 바코드: ' + code;
+    setTimeout(function(){ if (hint) hint.textContent = '계속 스캔하세요. 완료 후 [적용]을 누르세요.'; }, 1500);
+    return;
+  }
+  _contScans.push(code);
+  _scanBeep();
+  _renderScanList();
+  if (hint) hint.textContent = '✓ ' + code + ' 추가됨 — 계속 스캔하거나 [적용]을 누르세요.';
+}
+
+function applyScans() {
+  if (_contScans.length === 0) {
+    showToast('스캔된 바코드가 없어요.', 'error');
+    return;
+  }
+  // 기존 입력값 유지 + 스캔 결과 병합 (중복 제거)
+  const input = document.getElementById('lotNo');
+  const existing = input.value.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+  const merged = existing.slice();
+  _contScans.forEach(function(c){ if (merged.indexOf(c) === -1) merged.push(c); });
+  input.value = merged.join(', ');
+  const n = _contScans.length;
+  closeScanner();
+  showToast('✓ ' + n + '개 LOT 적용 완료!');
+}
+
 async function openScanner() {
   var ov = document.getElementById('scanOverlay');
   var hint = document.getElementById('scanHint');
+  _contScans = []; _lastCode = ''; _lastCodeTime = 0;
+  _renderScanList();
   ov.style.display = 'flex';
   hint.textContent = '카메라를 준비 중입니다...';
   if (typeof Html5Qrcode === 'undefined') {
@@ -472,13 +547,11 @@ async function openScanner() {
       { facingMode: 'environment' },
       config,
       function(decodedText) {
-        document.getElementById('lotNo').value = decodedText;
-        if (typeof showToast === 'function') showToast('LOT 스캔 완료: ' + decodedText);
-        closeScanner();
+        _onScanDetected(decodedText);  // 연속 스캔: 카메라 닫지 않고 목록에 누적
       },
       function() {}  // 프레임별 인식 실패는 무시
     );
-    hint.textContent = '바코드나 QR을 화면 안에 맞춰주세요';
+    hint.textContent = '계속 스캔하세요. 완료 후 [적용]을 누르세요.';
   } catch (e) {
     hint.textContent = '카메라를 열 수 없어요. 카메라 권한을 허용했는지 확인해주세요.';
     console.error('스캐너 오류:', e);
@@ -488,19 +561,30 @@ async function closeScanner() {
   try {
     if (_html5Qr) { await _html5Qr.stop(); _html5Qr.clear(); _html5Qr = null; }
   } catch (e) {}
+  _contScans = [];
   var ov = document.getElementById('scanOverlay');
   if (ov) ov.style.display = 'none';
 }
 </script>
-<!-- LOT 바코드/QR 스캐너 -->
+<!-- LOT 바코드/QR 스캐너 (연속 스캔) -->
 <div id="scanOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;align-items:center;justify-content:center;padding:16px">
-  <div style="background:#fff;border-radius:14px;max-width:420px;width:100%;padding:16px">
+  <div style="background:#fff;border-radius:14px;max-width:420px;width:100%;padding:16px;max-height:90vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div style="font-size:15px;font-weight:700;color:#243bb2">📷 LOT 바코드 스캔</div>
+      <div style="font-size:15px;font-weight:700;color:#243bb2">🔄 LOT 연속 스캔</div>
       <button type="button" onclick="closeScanner()" style="background:#f0f0f0;border:none;width:32px;height:32px;border-radius:8px;font-size:16px;cursor:pointer">×</button>
     </div>
     <div id="qrReader" style="width:100%;border-radius:10px;overflow:hidden"></div>
-    <div id="scanHint" style="font-size:12px;color:#888;margin-top:12px;text-align:center">바코드나 QR을 화면 안에 맞춰주세요</div>
+    <div style="margin-top:12px;border:1px solid #e0e4ed;border-radius:10px;padding:10px;background:#fafbfd">
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600;color:#555;margin-bottom:6px">
+        <span>📋 스캔된 LOT (<span id="contScanCount">0</span>개)</span>
+      </div>
+      <div id="contScanItems" style="font-size:12px;max-height:130px;overflow-y:auto"></div>
+    </div>
+    <div id="scanHint" style="font-size:12px;color:#888;margin-top:10px;text-align:center">계속 스캔하세요. 완료 후 [적용]을 누르세요.</div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button type="button" onclick="closeScanner()" style="font-size:13px;padding:10px 18px;border-radius:8px;background:#f0f3f9;color:#555;border:none;cursor:pointer;font-family:inherit">취소</button>
+      <button type="button" onclick="applyScans()" style="flex:1;font-size:13px;padding:10px;border-radius:8px;background:#243bb2;color:white;border:none;cursor:pointer;font-weight:600;font-family:inherit">적용</button>
+    </div>
   </div>
 </div>
 </body>
