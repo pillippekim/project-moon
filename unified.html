@@ -601,26 +601,33 @@ function switchScanMode(mode) {
     _renderScanList();
     input.style.display = 'block';
     input.value = '';
-    input.placeholder = '블루투스 리더기 스캔 또는 직접 입력 (자동 추가)';
-    // 리더기 자동 등록: Enter가 없어도 타이핑이 멈추면(250ms) 자동 추가·검사·비움
+    input.placeholder = '리더기로 스캔하세요 (LOT 완성 시 자동 추가)';
+    // ── 리더기 자동 등록 v2: 패턴 완성 즉시 등록 ──
+    // 글자가 들어올 때마다 LOT 형식(영문1+숫자9, 예 C260902075)이 완성되는 순간 바로 등록·제거.
+    // 이전 타이머(250ms) 방식이 느린 블루투스 수신에서 코드를 조각내던 문제를 원천 해결.
+    var LOT_RE = /[A-Za-z][0-9]{9}/;
+    function commitCompleted(){
+      var guard = 0, m;
+      while ((m = input.value.match(LOT_RE)) && guard++ < 50){
+        _addContScan(m[0]);
+        input.value = input.value.replace(m[0], '');
+      }
+      if (/^[\s,;]+$/.test(input.value)) input.value = '';
+    }
     function readerFlush(){
-      clearTimeout(window._uniReaderTimer);
-      var raw = input.value;
+      commitCompleted();
+      var raw = input.value.trim();
       input.value = '';
-      if (!raw || !raw.trim()) return;
-      raw.split(/[\s,;]+/).filter(Boolean).forEach(function(part){
-        var tokens = part.match(/[A-Za-z]{1,3}[0-9]{4,}/g);
-        if (tokens && tokens.join('') === part && tokens.length > 1) tokens.forEach(_addContScan);
-        else _addContScan(part);
-      });
+      if (raw) raw.split(/[\s,;]+/).filter(Boolean).forEach(_addContScan);
       input.focus();
     }
+    input.oninput = commitCompleted;
     input.onkeydown = function(e){
-      if (e.key === 'Enter'){ e.preventDefault(); readerFlush(); }
-    };
-    input.oninput = function(){
-      clearTimeout(window._uniReaderTimer);
-      window._uniReaderTimer = setTimeout(readerFlush, 250);
+      // Enter·Tab 등 리더기 접미사 키는 모두 등록 트리거로 처리 (Tab 포커스 이탈도 방지)
+      if (e.key === 'Enter' || e.key === 'Tab' || e.keyCode === 13 || e.keyCode === 9){
+        e.preventDefault();
+        readerFlush();
+      }
     };
     okBtn.style.display = 'block';
     okBtn.textContent = '✓ 스캔 완료 (적용)';
@@ -694,7 +701,7 @@ async function closeScanner() {
 <div id="scanOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;align-items:center;justify-content:center;padding:16px">
   <div style="background:#fff;border-radius:14px;max-width:420px;width:100%;padding:16px;max-height:90vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div style="font-size:15px;font-weight:700;color:#243bb2">📷 LOT 바코드 스캔</div>
+      <div style="font-size:15px;font-weight:700;color:#243bb2">📷 LOT 바코드 스캔 <span style="font-size:10px;font-weight:500;color:#059669;background:#ecfdf5;padding:2px 6px;border-radius:6px;vertical-align:middle">v2</span></div>
       <button type="button" onclick="closeScanner()" style="background:#f0f0f0;border:none;width:32px;height:32px;border-radius:8px;font-size:16px;cursor:pointer">×</button>
     </div>
     <style>
