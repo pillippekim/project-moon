@@ -508,11 +508,27 @@ function _addContScan(raw) {
 }
 
 // 카메라 인식 콜백 (모드별 분기)
+// 오인식 차단 2중 장치: ①LOT 형식(영문1+숫자9)만 통과 ②같은 값 연속 2회 인식 시에만 확정
+var LOT_CAM_RE = /^[A-Za-z][0-9]{9}$/;
+let _pendCode = '', _pendCount = 0, _pendTime = 0;
 function _onCameraDetect(text) {
   if (!_scannerOpen) return;
   const code = String(text || '').trim();
   if (!code) return;
   const now = Date.now();
+
+  // ① LOT 형식이 아닌 해독 결과는 폐기 (체크섬 없는 1D 오독 차단)
+  if (!LOT_CAM_RE.test(code)) return;
+
+  // ② 같은 값이 1.2초 내 연속 2회 읽혀야 확정 (프레임 단위 산발 오독 차단)
+  if (code !== _pendCode || (now - _pendTime) > 1200) {
+    _pendCode = code; _pendCount = 1; _pendTime = now;
+    return;
+  }
+  _pendCount++; _pendTime = now;
+  if (_pendCount < 2) return;
+  _pendCode = ''; _pendCount = 0;
+
   if (_scanMode === 'continuous') {
     // 같은 코드 2초 내 재인식 무시 (포장과 동일)
     if (code === _lastCode && (now - _lastCodeTime) < 2000) return;
@@ -544,15 +560,11 @@ async function _startCam() {
     var config = {
       fps: 10,
       qrbox: { width: 250, height: 160 },
+      // 오인식 방지: 체크섬 없는 형식(ITF/CODABAR/CODE93/EAN) 제거 — LOT은 영문+숫자라 해당 없음
       formatsToSupport: [
         Html5QrcodeSupportedFormats.QR_CODE,
         Html5QrcodeSupportedFormats.CODE_128,
-        Html5QrcodeSupportedFormats.CODE_39,
-        Html5QrcodeSupportedFormats.CODE_93,
-        Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.EAN_8,
-        Html5QrcodeSupportedFormats.ITF,
-        Html5QrcodeSupportedFormats.CODABAR
+        Html5QrcodeSupportedFormats.CODE_39
       ]
     };
     await _html5Qr.start(
@@ -701,7 +713,7 @@ async function closeScanner() {
 <div id="scanOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;align-items:center;justify-content:center;padding:16px">
   <div style="background:#fff;border-radius:14px;max-width:420px;width:100%;padding:16px;max-height:90vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div style="font-size:15px;font-weight:700;color:#243bb2">📷 LOT 바코드 스캔 <span style="font-size:10px;font-weight:500;color:#059669;background:#ecfdf5;padding:2px 6px;border-radius:6px;vertical-align:middle">v2</span></div>
+      <div style="font-size:15px;font-weight:700;color:#243bb2">📷 LOT 바코드 스캔 <span style="font-size:10px;font-weight:500;color:#059669;background:#ecfdf5;padding:2px 6px;border-radius:6px;vertical-align:middle">v3</span></div>
       <button type="button" onclick="closeScanner()" style="background:#f0f0f0;border:none;width:32px;height:32px;border-radius:8px;font-size:16px;cursor:pointer">×</button>
     </div>
     <style>
