@@ -585,6 +585,8 @@ function switchScanMode(mode) {
     _stopCam();
     input.style.display = 'block';
     input.value = '';
+    input.oninput = null;
+    clearTimeout(window._uniReaderTimer);
     input.placeholder = '예: C260424020';
     input.onkeydown = function(e){ if (e.key === 'Enter'){ e.preventDefault(); confirmManual(); } };
     okBtn.style.display = 'block';
@@ -599,14 +601,26 @@ function switchScanMode(mode) {
     _renderScanList();
     input.style.display = 'block';
     input.value = '';
-    input.placeholder = '블루투스 리더기 스캔 또는 직접 입력 (Enter로 추가)';
+    input.placeholder = '블루투스 리더기 스캔 또는 직접 입력 (자동 추가)';
+    // 리더기 자동 등록: Enter가 없어도 타이핑이 멈추면(250ms) 자동 추가·검사·비움
+    function readerFlush(){
+      clearTimeout(window._uniReaderTimer);
+      var raw = input.value;
+      input.value = '';
+      if (!raw || !raw.trim()) return;
+      raw.split(/[\s,;]+/).filter(Boolean).forEach(function(part){
+        var tokens = part.match(/[A-Za-z]{1,3}[0-9]{4,}/g);
+        if (tokens && tokens.join('') === part && tokens.length > 1) tokens.forEach(_addContScan);
+        else _addContScan(part);
+      });
+      input.focus();
+    }
     input.onkeydown = function(e){
-      if (e.key === 'Enter'){
-        e.preventDefault();
-        _addContScan(input.value);
-        input.value = '';
-        input.focus();
-      }
+      if (e.key === 'Enter'){ e.preventDefault(); readerFlush(); }
+    };
+    input.oninput = function(){
+      clearTimeout(window._uniReaderTimer);
+      window._uniReaderTimer = setTimeout(readerFlush, 250);
     };
     okBtn.style.display = 'block';
     okBtn.textContent = '✓ 스캔 완료 (적용)';
@@ -617,6 +631,8 @@ function switchScanMode(mode) {
     camWrap.style.display = 'block';
     list.style.display = 'none';
     input.style.display = 'none';
+    input.oninput = null;
+    clearTimeout(window._uniReaderTimer);
     okBtn.style.display = 'none';
     _startCam();
   }
@@ -632,9 +648,16 @@ function confirmManual() {
 }
 
 function applyScans() {
-  // 입력창에 Enter 안 누른 잔여값도 흡수
+  // 입력창에 남은 잔여값도 흡수 (자동 등록과 동일한 분해 규칙)
   const input = document.getElementById('scanInput');
-  if (input && input.value.trim()) { _addContScan(input.value); input.value = ''; }
+  if (input && input.value.trim()) {
+    input.value.split(/[\s,;]+/).filter(Boolean).forEach(function(part){
+      var tokens = part.match(/[A-Za-z]{1,3}[0-9]{4,}/g);
+      if (tokens && tokens.join('') === part && tokens.length > 1) tokens.forEach(_addContScan);
+      else _addContScan(part);
+    });
+    input.value = '';
+  }
   if (_contScans.length === 0) {
     showToast('스캔된 바코드가 없어요.', 'error');
     return;
@@ -658,6 +681,9 @@ async function openScanner() {
 }
 async function closeScanner() {
   _scannerOpen = false;
+  clearTimeout(window._uniReaderTimer);
+  var _inp = document.getElementById('scanInput');
+  if (_inp) { _inp.oninput = null; _inp.value = ''; }
   await _stopCam();
   _contScans = [];
   var ov = document.getElementById('scanOverlay');
