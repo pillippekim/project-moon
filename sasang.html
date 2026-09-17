@@ -365,7 +365,9 @@ async function init() {
 }
 
 async function loadWorkers() {
-  const { data } = await db.from('workers').select('name, name_local').eq('is_active', true).order('name');
+  // 사상은 전담 없이 조립·성형·검사·포장 작업자가 겸직 → 해당 공정(+사상 등록자) 전체 로딩
+  // (기존 is_active는 존재하지 않는 컬럼이라 조회가 실패하던 버그 → active로 수정)
+  const { data } = await db.from('workers').select('name, name_local').in('process', ['사상','조립','성형','검사','포장']).eq('active', true).order('name');
   workersCache = (data || []).map(w => ({ name: w.name, nameLocal: w.name_local }));
   if (myInfo && myInfo.name && !workersCache.find(w => w.name === myInfo.name)) workersCache.unshift({ name: myInfo.name, nameLocal: null });
   const sel = document.getElementById('workerSelect');
