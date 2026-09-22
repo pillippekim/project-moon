@@ -734,6 +734,7 @@ let selectedTeam = 'A반';
 let selectedEquipment = null;
 let safetyCheckCompleted = false;
 let existingSafetyId = null;
+let safetySaving = false;  // 점검 저장 연타 방지
 
 // ═══════════════════════════════════════════════
 // 설비 마스터 데이터 (DB에서 로드)
@@ -1279,6 +1280,8 @@ async function completeSafetyCheck() {
   });
   if (hasUnusable && !confirm('사용불가(×) 항목이 있습니다! 관리자에게 보고하셨나요?')) return;
   
+  if (safetySaving) return;   // 저장 진행 중 재클릭 무시 (중복 insert 방지)
+  safetySaving = true;
   try {
     const payload = {
       check_date: workDate,
@@ -1295,11 +1298,13 @@ async function completeSafetyCheck() {
     if (existingSafetyId) {
       await db.from('molding_safety_check').update(payload).eq('id', existingSafetyId);
     } else {
-      await db.from('molding_safety_check').insert(payload);
+      const { data: insData } = await db.from('molding_safety_check').insert(payload).select('id');
+      if (insData && insData[0] && insData[0].id) existingSafetyId = insData[0].id;   // 재제출 시 update 되도록
     }
   } catch(e) {
     console.log('molding_safety_check 저장 실패 - 로컬만 저장:', e);
   }
+  safetySaving = false;
   
   safetyCheckCompleted = true;
   document.getElementById('workArea').classList.remove('work-area-locked'); document.getElementById('lockMessage').style.display='none';
