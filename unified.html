@@ -444,6 +444,9 @@ function showToast(msg, type) {
 // ── LOT 바코드/QR 스캔 (포장작업일지와 동일 3모드: 카메라/직접입력/연속) ──
 let _html5Qr = null;
 let _scanMode = 'camera';
+let _camList = [];        // 기기 카메라 목록 (전환 버튼용)
+let _camIdx = -1;         // 현재 선택 카메라 (-1 = 자동: 저장된 카메라 또는 후면)
+let _camWatchdog = null;  // 카메라 응답 감시 타이머
 let _scannerOpen = false;
 let _contScans = [];        // 연속 스캔 목록
 let _lastCode = '';         // 같은 코드 연속 인식 방지
@@ -543,18 +546,41 @@ function _onCameraDetect(text) {
 }
 
 async function _stopCam() {
+  clearTimeout(_camWatchdog);
   try {
     if (_html5Qr) { await _html5Qr.stop(); _html5Qr.clear(); }
   } catch(e) {}
   _html5Qr = null;
 }
 
-async function _startCam() {
+// 카메라 오류를 종류별 한글 안내로 변환 (현장 자가진단용)
+function _camErrMsg(e) {
+  var n = ((e && e.name) || '') + ' ' + ((e && (e.message || e)) || '');
+  if (n.indexOf('NotAllowed') !== -1 || n.indexOf('Permission') !== -1)
+    return '카메라 권한이 차단되어 있어요. 주소창 자물쇠(🔒) → 권한 → 카메라 [허용] 후 새로고침해주세요.';
+  if (n.indexOf('NotFound') !== -1)
+    return '사용 가능한 카메라를 찾지 못했어요. 태블릿 카메라 상태를 확인해주세요.';
+  if (n.indexOf('NotReadable') !== -1 || n.indexOf('in use') !== -1)
+    return '다른 앱이 카메라를 사용 중이에요. 열려 있는 앱을 모두 종료한 뒤 다시 시도해주세요.';
+  if (n.indexOf('Overconstrained') !== -1)
+    return '이 카메라가 요청을 지원하지 않아요. 아래 [카메라 전환]을 눌러보세요.';
+  return '카메라를 열 수 없어요 (' + n.trim().slice(0, 80) + '). 아래 [카메라 전환] 또는 직접 입력 모드를 이용해주세요.';
+}
+
+async function _startCam(_retried) {
   if (typeof Html5Qrcode === 'undefined') {
     _scanMsg('스캐너를 불러오지 못했어요. 인터넷 연결을 확인해주세요.', true);
     return;
   }
   await _stopCam();
+  _scanMsg('카메라 여는 중...', false);
+  // 일부 태블릿은 카메라 시작이 응답 없이 멈춤 → 8초 감시
+  clearTimeout(_camWatchdog);
+  _camWatchdog = setTimeout(function(){
+    _scanMsg('카메라 응답이 없습니다. 아래 [카메라 전환]을 눌러보세요. (안 되면 직접 입력 모드 이용)', true);
+  }, 8000);
+  var savedId = null;
+  try { savedId = localStorage.getItem('uni_cam_id'); } catch(e) {}
   try {
     _html5Qr = new Html5Qrcode('qrReader');
     var config = {
@@ -567,17 +593,44 @@ async function _startCam() {
         Html5QrcodeSupportedFormats.CODE_39
       ]
     };
+    // 카메라 선택 우선순위: [전환 버튼으로 고른 카메라] > [이 태블릿에 저장된 카메라] > [후면 자동]
+    var target = (_camIdx >= 0 && _camList[_camIdx]) ? { deviceId: { exact: _camList[_camIdx].id } }
+               : (savedId && !_retried) ? { deviceId: { exact: savedId } }
+               : { facingMode: 'environment' };
     await _html5Qr.start(
-      { facingMode: 'environment' },
+      target,
       config,
       function(decodedText) { _onCameraDetect(decodedText); },
       function() {}  // 프레임별 인식 실패는 무시
     );
+    clearTimeout(_camWatchdog);
+    // 전환 버튼으로 성공한 카메라는 이 태블릿에 기억 (다음부터 바로 그 카메라로)
+    try { if (_camIdx >= 0 && _camList[_camIdx]) localStorage.setItem('uni_cam_id', _camList[_camIdx].id); } catch(e) {}
     if (_scanMode === 'continuous') _scanMsg('바코드를 계속 스캔하세요. 리더기는 아래 입력창에 자동 입력됩니다.', false);
     else _scanMsg('바코드나 QR을 화면 안에 맞춰주세요', false);
   } catch (e) {
-    _scanMsg('카메라를 열 수 없어요. 카메라 권한을 확인해주세요. (직접 입력 모드 이용 가능)', true);
+    clearTimeout(_camWatchdog);
+    // 저장된 카메라가 사라진 경우(기기 변경 등) → 기억 지우고 후면 자동으로 1회 재시도
+    if (savedId && !_retried && _camIdx < 0) {
+      try { localStorage.removeItem('uni_cam_id'); } catch(_) {}
+      return _startCam(true);
+    }
+    _scanMsg(_camErrMsg(e), true);
     console.error('스캐너 오류:', e);
+  }
+}
+
+// [카메라 전환]: 기기의 카메라 목록을 순환 (다중 렌즈 태블릿에서 까만 화면 대응)
+async function switchCamera() {
+  try {
+    if (!_camList.length) _camList = await Html5Qrcode.getCameras() || [];
+    if (!_camList.length) { _scanMsg('카메라 목록을 가져올 수 없어요. 카메라 권한을 확인해주세요.', true); return; }
+    _camIdx = (_camIdx + 1) % _camList.length;
+    var label = _camList[_camIdx].label || ('카메라 ' + (_camIdx + 1));
+    _scanMsg('카메라 전환: ' + (_camIdx + 1) + '/' + _camList.length + ' · ' + label, false);
+    await _startCam();
+  } catch (e) {
+    _scanMsg('카메라 전환 실패: ' + ((e && (e.message || e)) || ''), true);
   }
 }
 
@@ -726,7 +779,9 @@ async function closeScanner() {
       <button type="button" class="uni-scan-mode-btn" id="modeManual" onclick="switchScanMode('manual')">⌨️ 직접 입력</button>
       <button type="button" class="uni-scan-mode-btn" id="modeContinuous" onclick="switchScanMode('continuous')">🔄 연속 스캔</button>
     </div>
-    <div id="qrWrap"><div id="qrReader" style="width:100%;border-radius:10px;overflow:hidden"></div></div>
+    <div id="qrWrap"><div id="qrReader" style="width:100%;border-radius:10px;overflow:hidden"></div>
+      <button type="button" onclick="switchCamera()" style="width:100%;margin-top:8px;font-size:12px;padding:8px;border-radius:8px;border:1.5px solid #e0e4ed;background:#fafbfd;color:#555;cursor:pointer;font-family:inherit">🔁 카메라 전환 <span style="color:#94a3b8">— 화면이 까맣게 보일 때 눌러주세요</span></button>
+    </div>
     <div id="continuousList" style="display:none;margin-top:12px;border:1px solid #e0e4ed;border-radius:10px;padding:10px;background:#fafbfd">
       <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600;color:#555;margin-bottom:6px">
         <span>📋 스캔된 LOT (<span id="contScanCount">0</span>개)</span>
