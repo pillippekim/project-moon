@@ -440,6 +440,7 @@ let materialsCache = [];
 let rowCounter = 0;
 let safetyCheckCompleted = false;
 let existingSafetyCheckId = null;
+let safetySaving = false;  // 점검 저장 연타/재제출 중복 방지 (2026-10-07)
 
 let rows = [];
 let uid = 0;
@@ -598,12 +599,17 @@ async function completeCheck() {
     checked_at: new Date().toISOString()
   };
 
+  if (safetySaving) return;   // 저장 진행 중 재클릭 무시
+  safetySaving = true;
   let error;
   if (existingSafetyCheckId) {
     ({ error } = await db.from('postcure_safety_check').update(payload).eq('id', existingSafetyCheckId));
   } else {
-    ({ error } = await db.from('postcure_safety_check').insert(payload));
+    const { data: insData, error: insErr } = await db.from('postcure_safety_check').insert(payload).select('id');
+    error = insErr;
+    if (insData && insData[0] && insData[0].id) existingSafetyCheckId = insData[0].id;   // 재제출 시 update 전환
   }
+  safetySaving = false;
 
   if (error) { showToast('점검 저장 실패: ' + error.message, 'error'); return; }
 

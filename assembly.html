@@ -297,6 +297,7 @@ let selectedEquipment = null;
 let editingRecordId = null;
 let safetyCheckCompleted = false;
 let existingSafetyId = null;
+let safetySaving = false;  // 점검 저장 연타/재제출 중복 방지 (2026-10-07)
 
 // ═══════════════════════════════════════════════
 // 설비 마스터 (8대)
@@ -533,11 +534,17 @@ async function completeSafetyCheck() {
   const workDate = document.getElementById('workDate').value;
   if (!workDate) { showToast('작업 일자를 선택하세요.', 'error'); return; }
 
+  if (safetySaving) return;   // 저장 진행 중 재클릭 무시
+  safetySaving = true;
   try {
     const payload = { check_date: workDate, equipment_no: selectedEquipment.no, equipment_id: selectedEquipment.id, check_data: checkData, overall_remarks: document.getElementById('safetyOverallRemarks').value || null, checked_by_emp_code: myInfo?.emp_code, checked_by_name: myInfo?.name, checked_at: new Date().toISOString() };
     if (existingSafetyId) await db.from('assembly_safety_check').update(payload).eq('id', existingSafetyId);
-    else await db.from('assembly_safety_check').insert(payload);
+    else {
+      const { data: insData } = await db.from('assembly_safety_check').insert(payload).select('id');
+      if (insData && insData[0] && insData[0].id) existingSafetyId = insData[0].id;   // 재제출 시 update 전환
+    }
   } catch(e) { console.log('assembly_safety_check 저장 스킵:', e); }
+  safetySaving = false;
 
   safetyCheckCompleted = true;
   document.getElementById('workArea').classList.remove('work-area-locked');

@@ -316,7 +316,7 @@ let MY_NAME = '', MY_EMP_CODE = '';
 let rows = [], uid = 0;
 let editingRecordId = null;
 let currentTab = 'freeze';
-let safetyDone = false, existSafetyId = null;
+let safetyDone = false, existSafetyId = null, safetySaving = false;  // safetySaving: 연타/재제출 중복 방지 (2026-10-07)
 
 function todayStr() { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function onDateChange() {
@@ -367,8 +367,10 @@ async function completeSafety(){
   if(!wd){showToast('작성일을 입력해주세요.','error');return;}
   let bad=false;EQUIPMENTS.forEach(eq=>{CHECK_MAP[eq.key].forEach(it=>{if(cd[eq.key][it.num]==='×')bad=true;});});
   if(bad&&!confirm('사용불가(×) 항목이 있습니다! 관리자에게 보고하셨나요?'))return;
+  if(safetySaving)return;safetySaving=true;   // 저장 진행 중 재클릭 무시
   try{const p={check_date:wd,check_data:cd,overall_remarks:ov||null,checked_by_emp_code:MY_EMP_CODE,checked_by_name:MY_NAME,checked_at:new Date().toISOString()};
-  if(existSafetyId){await db.from('shot_safety_check').update(p).eq('id',existSafetyId);}else{await db.from('shot_safety_check').insert(p);}}catch(e){}
+  if(existSafetyId){await db.from('shot_safety_check').update(p).eq('id',existSafetyId);}else{const{data:ins}=await db.from('shot_safety_check').insert(p).select('id');if(ins&&ins[0]&&ins[0].id)existSafetyId=ins[0].id;}}catch(e){}
+  safetySaving=false;
   safetyDone=true;document.getElementById('workArea').classList.remove('work-area-locked');
   document.getElementById('safetyStatus').textContent='✓ 점검 완료';document.getElementById('safetyStatus').style.background='rgba(255,255,255,0.3)';
   showToast('✓ 설비 점검 완료!');if(!rows.length){addRow();addRow();addRow();}
