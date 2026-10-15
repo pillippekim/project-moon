@@ -1640,6 +1640,40 @@ async function submitReport() {
     showToast('입력된 작업 내역이 없어요.', 'error');
     return;
   }
+
+  // ═══ 중복 제출 방지 (2026-10-15) ═══
+  // 같은 날·근무·설비의 기존 제출과 비교해
+  //  · 완전 동일(사번·면·Shot·생산·불량까지 일치) → 차단
+  //  · 사번·면만 겹침(수량 다름) → 확인 후 진행 (금형교체 후 재제출 등 정상 추가 제출 보호)
+  // 조회 실패 시에는 차단하지 않음 — 현장 제출이 우선.
+  try {
+    const { data: dupExist } = await db.from('molding_reports')
+      .select('sabun, work_type, shot_count, production_qty, defect_qty')
+      .eq('work_date', workDate).eq('shift_type', shiftType)
+      .eq('equipment_no', selectedEquipment.no).is('deleted_at', null);
+    if (dupExist && dupExist.length > 0) {
+      const dnorm = v => (v === null || v === undefined) ? '' : String(v);
+      const dupExact = [], dupSimilar = [];
+      reportRows.forEach(nr => {
+        const sameKey = dupExist.filter(er => dnorm(er.sabun) === dnorm(nr.sabun) && dnorm(er.work_type) === dnorm(nr.work_type));
+        if (sameKey.length === 0) return;
+        const label = (nr.work_type ? nr.work_type + ' ' : '') + nr.sabun;
+        const exact = sameKey.some(er => dnorm(er.shot_count) === dnorm(nr.shot_count)
+          && dnorm(er.production_qty) === dnorm(nr.production_qty)
+          && dnorm(er.defect_qty) === dnorm(nr.defect_qty));
+        if (exact) dupExact.push(label); else dupSimilar.push(label);
+      });
+      if (dupExact.length > 0) {
+        alert('⚠ 이미 똑같은 내용이 제출되어 있어요.\n\n· ' + dupExact.join('\n· ')
+          + '\n\n(같은 날·근무·설비에 사번/면/Shot/생산/불량까지 동일)\n중복 제출은 저장되지 않아요. 내용이 바뀌었다면 수량을 확인해 주세요.');
+        return;
+      }
+      if (dupSimilar.length > 0) {
+        if (!confirm('오늘 이 설비·근무에 같은 사번 제출이 이미 있어요.\n\n· ' + dupSimilar.join('\n· ')
+          + '\n\n(수량이 달라 추가 제출로 보입니다)\n그래도 제출할까요?')) return;
+      }
+    }
+  } catch(e) { console.log('중복 확인 건너뜀:', e); }
   
   // 금형교체 자동 시각 보정 (앞 작업 종료·뒷 작업 시작 = 교체 시작시각)
   applyMoldChangeAdjust(reportRows, downtimeList);
