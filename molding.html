@@ -1446,7 +1446,8 @@ function getEnteredSabuns() {
 function populateDtSabun(sel) {
   const cur = sel.value;
   const sabuns = getEnteredSabuns();
-  sel.innerHTML = '<option value="">공통(전체)</option>' +
+  // 2026-10-22: 공통(전체) 선택지 제거 — 비가동은 항상 사번 지정 (담당자 의견)
+  sel.innerHTML = '<option value="">사번 선택</option>' +
     sabuns.map(function(s){ return '<option value="' + s + '"' + (s===cur?' selected':'') + '>' + s + '</option>'; }).join('');
 }
 
@@ -1463,7 +1464,7 @@ function addDowntimeRow() {
   
   div.innerHTML = `
     ${currentFaces===3 ? `<div><label style="font-size:11px;color:#888">면</label><select class="dt-face" style="width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:6px;font-size:13px">${faceOptions}</select></div>` : ''}
-    <div><label style="font-size:11px;color:#888">사번</label><select class="dt-sabun" onfocus="populateDtSabun(this)" style="width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:6px;font-size:13px"><option value="">공통(전체)</option></select></div>
+    <div><label style="font-size:11px;color:#888">사번</label><select class="dt-sabun" onfocus="populateDtSabun(this)" style="width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:6px;font-size:13px"><option value="">사번 선택</option></select></div>
     <div><label style="font-size:11px;color:#888">비가동 코드</label><select class="dt-code" style="width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:6px;font-size:13px"><option value="">없음</option><option value="생지부족">생지부족</option><option value="금형교체">금형교체</option><option value="금형세척">금형세척</option><option value="설비이상">설비이상</option><option value="제품성형이상">제품성형이상</option><option value="금형수정">금형수정</option><option value="기타">기타</option></select></div>
     <div><label style="font-size:11px;color:#888">시작</label><input type="time" class="dt-start" style="width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:6px;font-size:13px" /></div>
     <div><label style="font-size:11px;color:#888">종료</label><input type="time" class="dt-end" style="width:100%;padding:8px;border:1px solid #e0e4ed;border-radius:6px;font-size:13px" /></div>
@@ -1471,6 +1472,7 @@ function addDowntimeRow() {
     <div><button onclick="removeDowntimeRow('${rowId}')" style="background:#fef2f2;color:#dc2626;border:none;width:36px;height:36px;border-radius:6px;font-size:16px;cursor:pointer;font-weight:700">×</button></div>
   `;
   document.getElementById('downtimeRows').appendChild(div);
+  var _ds = div.querySelector('.dt-sabun'); if (_ds) populateDtSabun(_ds);
 }
 
 function removeDowntimeRow(rowId) {
@@ -1589,6 +1591,12 @@ async function submitReport() {
   
   const allConditions = collectAllConditions();
   const downtimeList = collectDowntimeData();
+  // 2026-10-22: 사번 미지정 비가동 차단 (공통 선택지 폐지)
+  const _noSabun = downtimeList.filter(function(d){ return d.code && !d.sabun; });
+  if (_noSabun.length) {
+    alert('비가동 ' + _noSabun.length + '건에 사번이 없습니다.\n비가동은 반드시 해당 사번을 선택해야 합니다. (코드: ' + _noSabun.map(function(d){ return d.code; }).join(', ') + ')');
+    return;
+  }
   const remarks = document.getElementById('remarks').value.trim() || null;
   
   // 면별 행 수집
@@ -2116,7 +2124,8 @@ function openEditMyRecord(id) {
   };
   // 이 사번의 기존 비가동
   let myDt = [];
-  try { const n = JSON.parse(r.note); myDt = (n.downtime || []).filter(function(d){ return d.sabun === r.sabun; }); } catch(e) {}
+  // 2026-10-22: 과거 공통(사번 없음) 항목도 함께 표시 — 목록 표시 규칙과 동일, 저장 시 이 사번으로 귀속
+  try { const n = JSON.parse(r.note); myDt = (n.downtime || []).filter(function(d){ return d && (!d.sabun || d.sabun === r.sabun); }); } catch(e) {}
   const ov = document.createElement('div');
   ov.id = 'editMyOverlay';
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
@@ -2198,7 +2207,8 @@ async function saveEditMyRecord(id) {
     });
     let note = {};
     try { note = JSON.parse(r.note) || {}; } catch(e) { note = {}; }
-    const others = (note.downtime || []).filter(function(d){ return d.sabun !== r.sabun; });
+    // 2026-10-22: 이 사번 항목 + 과거 공통(사번 없음) 항목을 모달 내용으로 교체
+    const others = (note.downtime || []).filter(function(d){ return d && d.sabun && d.sabun !== r.sabun; });
     note.downtime = others.concat(edited);
     upd.note = JSON.stringify(note);
     upd.downtime_code = edited.length ? edited[0].code : null;
