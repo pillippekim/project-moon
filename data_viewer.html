@@ -2331,6 +2331,18 @@ async function deleteShot(id) {
 }
 
 // ── 성형 ──────────────────────────────
+// 비가동 사유 문자열: note.downtime(사번 매칭) 우선, 배열이 없을 때만 downtime_code 폴백 (2026-10-20 작성, 10/27 재적용)
+//   downtime_code 컬럼은 제출 시 첫 사유를 전 행에 복사한 요약값이라, 비가동을 지운 뒤에도 남아 있을 수 있음.
+function moldingDtCodes(r){
+  try {
+    var n = JSON.parse(r.note);
+    if (n && Array.isArray(n.downtime)) {
+      return n.downtime.filter(function(d){ return d && (!d.sabun || d.sabun === r.sabun); })
+                       .map(function(d){ return d.code; }).filter(Boolean).join(', ');
+    }
+  } catch(e) {}
+  return r.downtime_code || '';
+}
 function renderMoldingTable(data) {
   if (!data.length) { document.getElementById('resultArea').innerHTML = '<div class="card"><div style="padding:2rem;text-align:center;color:#aaa;font-size:13px">데이터가 없어요.</div></div>'; return; }
   data = applySortIfNeeded(data);
@@ -2353,16 +2365,8 @@ function renderMoldingTable(data) {
       } catch(e) {
         noteText = r.note || '';
       }
-      // 비가동코드: note JSON에서 추출 또는 downtime_code 사용
-      let dtCode = r.downtime_code || '';
-      if (!dtCode) {
-        try {
-          const noteObj = JSON.parse(r.note);
-          if (noteObj.downtime && noteObj.downtime.length > 0) {
-            dtCode = noteObj.downtime.map(d => d.code).filter(Boolean).join(', ');
-          }
-        } catch(e) {}
-      }
+      // 비가동코드: note.downtime(사번 매칭) 우선, 없을 때만 downtime_code (2026-10-27)
+      let dtCode = moldingDtCodes(r);
       return `<tr style="${st}">
         <td>${i+1}</td><td>${r.work_date||''}</td><td>${r.shift_type||''}</td>
         <td>${r.team||''}</td><td style="font-size:11px">${r.equipment_no||''}</td>
@@ -2830,7 +2834,7 @@ function downloadExcel() {
       '성형압력': r.molding_pressure || '',
       '상판온도': r.upper_temp || '',
       '하판온도': r.lower_temp || '',
-      '비가동코드': r.downtime_code || '',
+      '비가동코드': moldingDtCodes(r),
       '비가동시간(분)': r.downtime_minutes || '',
       '문제점': r.problem || '',
       '작업자': r.worker_name || '',
