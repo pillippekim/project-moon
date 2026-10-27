@@ -260,8 +260,8 @@ body { font-family:'Noto Sans KR',sans-serif; background:#f1f3f9; color:#1e293b;
 <script>
 var SU = 'https://vpaixxlhzkwtgcllimvn.supabase.co';
 var SK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwYWl4eGxoemt3dGdjbGxpbXZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNzk4NjMsImV4cCI6MjA5MTk1NTg2M30.V8Bj0cMbM0E2TFhklYYa7TM-vO6Fi70ctACA7uUf4Ig';
-var H = {'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'return=representation'};
-var HR = {'apikey':SK,'Authorization':'Bearer '+SK};
+function H(){ return window.agHeaders ? window.agHeaders({'Content-Type':'application/json','Prefer':'return=representation'}) : {'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'return=representation'}; } // 2026-10-27 세션 토큰
+function HR(){ return window.agHeaders ? window.agHeaders() : {'apikey':SK,'Authorization':'Bearer '+SK}; } // 2026-10-27 세션 토큰
 
 var myInfo = null;
 var currentEquipType = 'press';
@@ -284,6 +284,7 @@ function showToast(msg,type) { var el=document.getElementById('toast'); el.textC
 (async function(){
     myInfo = await checkPageAccess('inspection_round.html');
     if (!myInfo) return;
+    if (window.agReady) await window.agReady; // 2026-10-27 세션 토큰 확보 후 조회
     document.getElementById('inspector').value = myInfo.name || '';
     document.getElementById('inspDate').value = fmtLocal(new Date());
     loadEquipments();
@@ -343,7 +344,7 @@ async function loadMoldingWorkers() {
     var sel = document.getElementById('moldingWorker');
     if (!sel) return;
     try {
-        var r = await fetch(SU+'/rest/v1/workers?process=eq.성형&order=name', {headers:HR});
+        var r = await fetch(SU+'/rest/v1/workers?process=eq.성형&order=name', {headers:HR()});
         var data = await r.json();
         if (data && data.length > 0) {
             for (var i = 0; i < data.length; i++) {
@@ -361,7 +362,7 @@ async function loadMoldingWorkers() {
 async function loadEquipments() {
     var sel = document.getElementById('equipment');
     try {
-        var r = await fetch(SU+'/rest/v1/equipments?process=eq.성형&is_active=eq.true&order=sort_order', {headers:HR});
+        var r = await fetch(SU+'/rest/v1/equipments?process=eq.성형&is_active=eq.true&order=sort_order', {headers:HR()});
         var data = await r.json();
         if (data && data.length > 0) {
             // 그룹별 분류
@@ -711,7 +712,7 @@ async function submitForm() {
             var target = records.find(function(x){ return x.face === targetFace; }) || records[0];
             if (!target) { showToast('수정할 면 데이터가 비어 있습니다.','error'); return; }
             delete target.created_by; // 원래 작성자 유지
-            var r = await fetch(SU+'/rest/v1/inspection_rounds?id=eq.'+editId, {method:'PATCH',headers:H,body:JSON.stringify(target)});
+            var r = await fetch(SU+'/rest/v1/inspection_rounds?id=eq.'+editId, {method:'PATCH',headers:H(),body:JSON.stringify(target)});
             if (r.ok) {
                 showToast('수정 완료!','success');
                 setTimeout(function(){ location.href='https://pillippekim.github.io/work-manager/inspection_round_viewer.html'; }, 1500);
@@ -719,7 +720,7 @@ async function submitForm() {
             return;
         }
         // 신규: 면별 개별 레코드로 저장
-        var r = await fetch(SU+'/rest/v1/inspection_rounds', {method:'POST',headers:H,body:JSON.stringify(records)});
+        var r = await fetch(SU+'/rest/v1/inspection_rounds', {method:'POST',headers:H(),body:JSON.stringify(records)});
         if (r.ok) {
             showToast('검사 제출 완료!','success');
             setTimeout(function(){ location.href='https://pillippekim.github.io/work-manager/inspection_round_viewer.html'; }, 1500);
@@ -730,7 +731,7 @@ async function submitForm() {
 // 수정 모드 데이터 로드
 async function loadForEdit(id) {
     try {
-        var r = await fetch(SU+'/rest/v1/inspection_rounds?id=eq.'+id, {headers:HR});
+        var r = await fetch(SU+'/rest/v1/inspection_rounds?id=eq.'+id, {headers:HR()});
         var arr = await r.json();
         if (!arr || !arr[0]) return;
         var rec = arr[0];
