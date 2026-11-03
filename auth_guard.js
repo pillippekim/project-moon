@@ -83,6 +83,14 @@ async function checkPageAccess(pageFile) {
     return null;
   }
 
+  // 2026-11-03 비활성(퇴사) 계정 차단 — 포털 auth_guard 와 동일 규칙 (보안 2단계 ⑥)
+  if (user.active === false) {
+    alert('비활성화된 계정이에요.');
+    await dbAuth.auth.signOut();
+    location.href = 'login.html';
+    return null;
+  }
+
   // 사용자 언어 설정 저장 (localStorage에 값이 없을 때만 DB에서 초기화)
   if (user.language && !localStorage.getItem('hkht_lang')) {
     localStorage.setItem('hkht_lang', user.language);
