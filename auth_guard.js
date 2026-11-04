@@ -169,3 +169,12 @@ function showAccessDenied(user) {
     </div>
   `;
 }
+
+// =============================================
+// 2026-11-04 개선 요청(의견 접수) 위젯 로드 — 이 파일을 쓰는 모든 페이지 우하단에 💬 버튼 (login·change_password 는 위젯이 스스로 제외)
+// =============================================
+(function () {
+    if (document.getElementById('fbw-loader')) return;
+    var s = document.createElement('script'); s.id = 'fbw-loader'; s.src = 'feedback_widget.js?v=20261104'; s.defer = true;
+    (document.head || document.documentElement).appendChild(s);
+})();
