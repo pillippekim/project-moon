@@ -834,12 +834,14 @@ async function completeSafetyCheck() {
 
   try {
     const payload = { check_date: workDate, check_data: checkData, overall_remarks: overallRemarks || null, checked_by_emp_code: MY_EMP_CODE, checked_by_name: MY_NAME, checked_at: new Date().toISOString() };
-    if (existingSafetyId) {
-      await db.from('coating_safety_check').update(payload).eq('id', existingSafetyId);
-    } else {
-      await db.from('coating_safety_check').insert(payload);
-    }
-  } catch(e) { console.log('coating_safety_check 저장 실패:', e); }
+    // 2026-11-05 저장 결과 검사 (#48 원인: 실패를 삼키고 '점검 완료'로 표시되던 문제)
+    var SAFE_RES = existingSafetyId
+      ? await db.from('coating_safety_check').update(payload).eq('id', existingSafetyId).select('id')
+      : await db.from('coating_safety_check').insert(payload).select('id');
+    var SAFE_ERR = SAFE_RES.error || (!SAFE_RES.data || !SAFE_RES.data.length ? { message: '반영 0건(권한 확인)' } : null);
+    if (SAFE_ERR) { alert('설비 점검 저장 실패 — 관리자에게 알려주세요.\n' + (SAFE_ERR.message || SAFE_ERR)); return; }
+    if (!existingSafetyId && SAFE_RES.data[0] && SAFE_RES.data[0].id) existingSafetyId = SAFE_RES.data[0].id;
+  } catch(e) { alert('설비 점검 저장 실패 — 관리자에게 알려주세요.\n' + (e.message || e)); return; }
 
   safetyCheckCompleted = true;
   document.getElementById('workArea').classList.remove('work-area-locked');

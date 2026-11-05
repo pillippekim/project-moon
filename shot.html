@@ -370,7 +370,12 @@ async function completeSafety(){
   if(bad&&!confirm('사용불가(×) 항목이 있습니다! 관리자에게 보고하셨나요?'))return;
   if(safetySaving)return;safetySaving=true;   // 저장 진행 중 재클릭 무시
   try{const p={check_date:wd,check_data:cd,overall_remarks:ov||null,checked_by_emp_code:MY_EMP_CODE,checked_by_name:MY_NAME,checked_at:new Date().toISOString()};
-  if(existSafetyId){await db.from('shot_safety_check').update(p).eq('id',existSafetyId);}else{const{data:ins}=await db.from('shot_safety_check').insert(p).select('id');if(ins&&ins[0]&&ins[0].id)existSafetyId=ins[0].id;}}catch(e){}
+  // 2026-11-05 저장 결과 검사 (#48 원인: 실패를 삼키고 '점검 완료'로 표시되던 문제)
+  var SAFE_RES=existSafetyId?await db.from('shot_safety_check').update(p).eq('id',existSafetyId).select('id'):await db.from('shot_safety_check').insert(p).select('id');
+  var SAFE_ERR=SAFE_RES.error||(!SAFE_RES.data||!SAFE_RES.data.length?{message:'반영 0건(권한 확인)'}:null);
+  if(SAFE_ERR){safetySaving=false;alert('설비 점검 저장 실패 — 관리자에게 알려주세요.\n' + (SAFE_ERR.message || SAFE_ERR)); return;}
+  if(!existSafetyId&&SAFE_RES.data[0]&&SAFE_RES.data[0].id)existSafetyId=SAFE_RES.data[0].id;
+  }catch(e){safetySaving=false;alert('설비 점검 저장 실패 — 관리자에게 알려주세요.\n'+(e.message||e));return;}
   safetySaving=false;
   safetyDone=true;document.getElementById('workArea').classList.remove('work-area-locked');
   document.getElementById('safetyStatus').textContent='✓ 점검 완료';document.getElementById('safetyStatus').style.background='rgba(255,255,255,0.3)';
