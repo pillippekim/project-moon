@@ -658,7 +658,7 @@ async function submitReport() {
     const { error } = await db.from('sasang_reports').update(updateData).eq('id', editingRecordId).eq('created_by_name', myInfo?.name || '');
     btn.disabled = false; btn.textContent = '수정 저장';
     if (error) { showToast('수정 실패: ' + error.message, 'error'); return; }
-    try { await db.from('audit_logs').insert({ table_name:'sasang_reports', record_id:editingRecordId, action:'UPDATE', performed_by:myInfo?.name||'-', performed_at:new Date().toISOString() }); } catch(e) {}
+    try { await db.from('audit_logs').insert({ table_name:'sasang_reports', record_id:editingRecordId, action:'update', performed_by:myInfo?.name||'-', performed_at:new Date().toISOString() }); } catch(e) {}
     showToast('✓ 수정 완료!');
     editingRecordId = null; btn.textContent = '제출하기'; btn.style.background = '';
     const eb = document.getElementById('editModeBadge'); if (eb) eb.style.display = 'none';
@@ -808,7 +808,7 @@ async function deleteMyRecord(id) {
   if (!confirm('이 제출 내역을 삭제할까요?')) return;
   var { error } = await db.from('sasang_reports').update({ deleted_at: new Date().toISOString() }).eq('id', id).eq('created_by_name', myInfo?.name || '');
   if (error) { showToast('삭제 실패: ' + error.message, 'error'); return; }
-  try { await db.from('audit_logs').insert({ table_name:'sasang_reports', record_id:id, action:'DELETE', performed_by:myInfo?.name||'-', performed_at:new Date().toISOString() }); } catch(e) {}
+  try { await db.from('audit_logs').insert({ table_name:'sasang_reports', record_id:id, action:'delete', performed_by:myInfo?.name||'-', performed_at:new Date().toISOString() }); } catch(e) {}
   loadMyHistory(); showToast('✓ 삭제 완료');
 }
 

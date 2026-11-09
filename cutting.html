@@ -1435,7 +1435,7 @@ async function submitReport() {
       await db.from('audit_logs').insert({
         table_name: 'cutting_reports',
         record_id: editingRecordId,
-        action: 'UPDATE',
+        action: 'update',
         performed_by: myInfo?.name || '-',
         performed_at: new Date().toISOString()
       });
@@ -1900,7 +1900,7 @@ async function deleteMyRecord(id) {
     await db.from('audit_logs').insert({ 
       table_name:'cutting_reports', 
       record_id:id, 
-      action:'DELETE', 
+      action:'delete', 
       performed_by:myInfo?.name||'-', 
       performed_at:new Date().toISOString() 
     }); 

@@ -2051,7 +2051,7 @@ async function deleteMyRecord(id) {
     await db.from('audit_logs').insert({
       table_name: 'molding_reports',
       record_id: id,
-      action: 'DELETE',
+      action: 'delete',
       performed_by: myName,
       performed_at: new Date().toISOString()
     });
