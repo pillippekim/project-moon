@@ -236,7 +236,12 @@ body { font-family:'Noto Sans KR',sans-serif; background:#f1f3f9; color:#1e293b;
             <div class="change-box-title">🔧 금형</div>
             <label class="change-item"><input type="checkbox" value="금형 교체"> 금형 교체</label>
             <label class="change-item"><input type="checkbox" value="금형 수정/파손"> 금형 수정/파손</label>
-            <label class="change-item"><input type="checkbox" value="금형 세척"> 금형 세척</label>
+            <label class="change-item"><input type="checkbox" value="금형 세척" id="chkMoldClean" onchange="renderCleanFaces()"> 금형 세척</label>
+            <!-- 2026-11-09 세척 자동 접수: 체크하면 작업 중인 면/사번이 나타나고, 세척한 금형만 고른다 (기본 미선택) -->
+            <div id="cleanFaceBox" style="display:none;margin:8px 0 2px 24px;padding:8px 10px;background:#eef2ff;border:1px dashed #a5b4fc;border-radius:8px;font-size:12.5px">
+                <div style="font-weight:700;color:#243bb2;margin-bottom:4px">🧽 세척한 금형(면) 선택 — 세척 이력에 자동 접수됩니다</div>
+                <div id="cleanFaceList" style="display:flex;gap:14px;flex-wrap:wrap"></div>
+            </div>
         </div>
         <div class="change-box">
             <div class="change-box-title">🏭 설비/제품</div>
@@ -450,6 +455,7 @@ function updateTabStyle(face, inactive) {
 
 // 면 전환 (데이터 저장/복원)
 function switchFace(face, tab) {
+    if (document.getElementById('chkMoldClean') && document.getElementById('chkMoldClean').checked) setTimeout(renderCleanFaces, 0);   // 2026-11-09
     saveFaceData(currentFace);
     currentFace = face;
     var tabs = document.querySelectorAll('.face-tab');
@@ -594,6 +600,58 @@ function restoreGridData(gridId, data) {
     }
 }
 
+// ── 2026-11-09 세척 자동 접수 ─────────────────────────────────────
+var FACE_KO = {A:'가', B:'나', C:'다'};
+// '금형 세척' 체크 시: 비가동이 아니고 사번이 있는 면만 후보로 표시 (기본 미선택 — 세척한 금형을 직접 고르게)
+function renderCleanFaces() {
+    var on = document.getElementById('chkMoldClean').checked;
+    var box = document.getElementById('cleanFaceBox'), list = document.getElementById('cleanFaceList');
+    if (!on) { box.style.display = 'none'; return; }
+    saveFaceData(currentFace);
+    var prev = {}; list.querySelectorAll('input:checked').forEach(function(cb){ prev[cb.value] = 1; });
+    var faces = currentEquipType === 'press' ? ['A','B','C'] : ['A'];
+    if (editFace) faces = [editFace];
+    var h = '';
+    faces.forEach(function(f){
+        var fd = faceData[f] || {}; var sb = (fd.sabun || '').trim();
+        if (fd.inactive || !sb) return;
+        h += '<label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="' + f + '"' + (prev[f] ? ' checked' : '') + '> <b>' + FACE_KO[f] + '면</b> · ' + sb + '</label>';
+    });
+    list.innerHTML = h || '<span style="color:#b45309">사번이 입력된 면이 없습니다. 각 면의 사번을 먼저 입력하세요.</span>';
+    box.style.display = 'block';
+}
+function selectedCleanFaces() {
+    var out = {}; document.querySelectorAll('#cleanFaceList input:checked').forEach(function(cb){ out[cb.value] = 1; }); return out;
+}
+// 저장된 검사 행(id 포함) 중 선택된 면 → mold_cleaning_logs 접수 (round_id 로 연결, 중복은 서버에서 무시)
+async function registerCleaningRequests(savedRows, faceSel, equipment) {
+    var targets = (savedRows || []).filter(function(r){ return r && r.id && faceSel[r.face] && (r.sabun || '').trim(); });
+    if (!targets.length) return { ok: 0, fail: 0 };
+    var ok = 0, fail = 0, msgs = [];
+    for (var i = 0; i < targets.length; i++) {
+        var r = targets[i], sb = r.sabun.trim();
+        var moldId = null;
+        try {
+            var mr = await fetch(SU + '/rest/v1/molds?product_code=eq.' + encodeURIComponent(sb) + '&select=id,status', { headers: HR() });
+            var molds = mr.ok ? await mr.json() : [];
+            if (Array.isArray(molds) && molds.length) { var m = molds.find(function(x){ return x.status === 'in_use'; }) || molds[0]; moldId = m.id; }
+        } catch (e) {}
+        var body = {
+            round_id: r.id, request_date: r.inspect_date, product_code: sb, mold_id: moldId,
+            requester: r.inspector || null, cleaning_reason: '공정순회검사', cleaning_method: null,
+            complete_date: null, completed_by: null,
+            note: '공정검사 자동접수 · ' + (equipment || '') + ' ' + (FACE_KO[r.face] || r.face) + '면'
+        };
+        var hd = H(); hd['Prefer'] = 'resolution=ignore-duplicates,return=representation';
+        try {
+            var res = await fetch(SU + '/rest/v1/mold_cleaning_logs?on_conflict=round_id', { method: 'POST', headers: hd, body: JSON.stringify(body) });
+            if (res.ok) ok++; else { fail++; msgs.push(sb + ': ' + (await res.text()).slice(0, 80)); }
+        } catch (e) { fail++; msgs.push(sb + ': ' + e.message); }
+    }
+    if (fail) alert('검사는 저장됐지만 세척 접수 ' + fail + '건이 실패했어요. 금형 대시보드에서 직접 등록해주세요.\n' + msgs.join('\n'));
+    return { ok: ok, fail: fail };
+}
+
 // 변동점 수집
 function collectChangeMold() {
     var items = [];
@@ -615,6 +673,15 @@ async function submitForm() {
 
     // 현재 면 데이터 저장
     saveFaceData(currentFace);
+
+    // 2026-11-09 금형 세척 체크 시 세척 대상 면 필수
+    var cleanOn = document.getElementById('chkMoldClean').checked;
+    var cleanSel = cleanOn ? selectedCleanFaces() : {};
+    if (cleanOn && !Object.keys(cleanSel).length) {
+        renderCleanFaces();
+        alert('[변동점 관리] 금형 세척을 체크했어요.\n세척한 금형(면)을 선택해주세요. 선택한 면의 사번이 세척 이력에 자동 접수됩니다.');
+        return;
+    }
 
     // 면 목록
     var faces = currentEquipType === 'press' ? ['A','B','C'] : ['A'];
@@ -715,6 +782,7 @@ async function submitForm() {
             delete target.created_by; // 원래 작성자 유지
             var r = await fetch(SU+'/rest/v1/inspection_rounds?id=eq.'+editId, {method:'PATCH',headers:H(),body:JSON.stringify(target)});
             if (r.ok) {
+                if (cleanOn) { try { var savedU = await r.json(); await registerCleaningRequests(savedU, cleanSel, equipment); } catch (e2) {} }   // 2026-11-09
                 showToast('수정 완료!','success');
                 setTimeout(function(){ location.href='https://pillippekim.github.io/work-manager/inspection_round_viewer.html'; }, 1500);
             } else { showToast('수정 실패','error'); }
@@ -723,7 +791,9 @@ async function submitForm() {
         // 신규: 면별 개별 레코드로 저장
         var r = await fetch(SU+'/rest/v1/inspection_rounds', {method:'POST',headers:H(),body:JSON.stringify(records)});
         if (r.ok) {
-            showToast('검사 제출 완료!','success');
+            var cleanMsg = '';
+            if (cleanOn) { try { var saved = await r.json(); var cr = await registerCleaningRequests(saved, cleanSel, equipment); if (cr.ok) cleanMsg = ' · 세척 ' + cr.ok + '건 접수'; } catch (e2) {} }   // 2026-11-09
+            showToast('검사 제출 완료!' + cleanMsg,'success');
             setTimeout(function(){ location.href='https://pillippekim.github.io/work-manager/inspection_round_viewer.html'; }, 1500);
         } else { showToast('저장 실패','error'); }
     } catch(e) { showToast('오류: '+e.message,'error'); }
@@ -756,6 +826,7 @@ async function loadForEdit(id) {
                 if (rec.change_mold.indexOf(cb.value) !== -1) cb.checked = true;
             });
         }
+        setTimeout(function(){ if (document.getElementById('chkMoldClean').checked) renderCleanFaces(); }, 600);   // 2026-11-09 (면 데이터 복원 뒤)
         if (rec.change_equip) {
             document.querySelectorAll('.change-box:last-child .change-item input').forEach(function(cb){
                 if (rec.change_equip.indexOf(cb.value) !== -1) cb.checked = true;
