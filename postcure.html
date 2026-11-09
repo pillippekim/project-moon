@@ -769,10 +769,10 @@ async function submitForm() {
     try {
       await db.from('audit_logs').insert({
         table_name: 'postcure_reports',
-        record_id: editingRecordId,
+        record_id: String(editingRecordId),
         action: 'update',
-        performed_by: myInfo?.name || '-',
-        performed_at: new Date().toISOString()
+        changed_by_name: myInfo?.name || '-',
+        changed_at: new Date().toISOString()
       });
     } catch(e) {}
 
@@ -1199,10 +1199,10 @@ async function deleteMyRecord(id) {
   try {
     await db.from('audit_logs').insert({
       table_name: 'postcure_reports',
-      record_id: id,
+      record_id: String(id),
       action: 'delete',
-      performed_by: myInfo?.name || '-',
-      performed_at: new Date().toISOString()
+      changed_by_name: myInfo?.name || '-',
+      changed_at: new Date().toISOString()
     });
   } catch(e) {}
   
