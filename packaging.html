@@ -988,7 +988,8 @@ async function submitForm() {
       });
     } catch(e) {}
 
-    showToast('✓ 수정 완료!');
+    const syncMsg = await syncWaitingLot(editingRecordId, r, document.getElementById('workDate').value);   // 2026-11-10 ① 입고대기 동기화
+    showToast('✓ 수정 완료!' + syncMsg);
     editingRecordId = null;
     btn.textContent = '제출하기';
     btn.style.background = '#243bb2';
@@ -1013,14 +1014,69 @@ async function submitForm() {
     created_by_name: MY_NAME
   }));
 
-  const { error } = await db.from('packaging_reports').insert(records);
+  const { data: savedRows, error } = await db.from('packaging_reports').insert(records).select('id');   // 2026-11-10 id 회수(입고대기 자동 등록용)
   if (error) {
     showToast('저장 실패: ' + error.message, 'error');
     btn.disabled = false; btn.textContent = '제출하기';
   } else {
-    showToast('✓ 저장 완료! DB에 정상 저장됐어요');
-    setTimeout(() => { resetForm(); loadMyHistory(); }, 1800);
+    const invMsg = await registerWaitingLots(savedRows || [], valid, workDate);   // 2026-11-10 ① 물류 입고대기 자동 등록
+    showToast('✓ 저장 완료! DB에 정상 저장됐어요' + invMsg);
+    setTimeout(() => { resetForm(); loadMyHistory(); }, 2200);
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 2026-11-10 ① 포장 일지 → 물류팀 재고관리 '입고대기' 자동 등록
+//  - 제출 1행 = inventory_lots 1건(status waiting). LOT 여러 개는 콤마로 합쳐 1건
+//  - 연결키 source_ref = 'packaging:<packaging_reports.id>' (유니크) → 수정/삭제 시 추적
+//  - 수정/삭제는 아직 '입고대기' 상태인 건만 따라감. 물류팀이 이미 입고처리(stocked)한 건은 그대로 둠
+// ══════════════════════════════════════════════════════════════
+function lotRowFrom(r, workDate) {
+  const lots = r.lots.map(l => String(l || '').trim()).filter(l => l !== '');
+  return {
+    product_code: r.sabun,
+    product_name: r.partName || (PRODUCTS[r.sabun] ? PRODUCTS[r.sabun].partName : ''),
+    lot_no: lots.join(', '),
+    quantity: parseInt(r.qty) || 0,
+    initial_quantity: parseInt(r.qty) || 0,
+    produced_at: workDate || null,
+    note: '포장 일지 자동 등록 · ' + (r.worker || MY_NAME)
+  };
+}
+async function registerWaitingLots(savedRows, valid, workDate) {
+  try {
+    const rows = [];
+    for (let i = 0; i < valid.length; i++) {
+      const r = valid[i], saved = savedRows[i];
+      if (!saved || !saved.id || !r.sabun || (parseInt(r.qty) || 0) <= 0) continue;
+      rows.push(Object.assign(lotRowFrom(r, workDate), {
+        status: 'waiting', source_type: 'packaging', source_ref: 'packaging:' + saved.id,
+        created_by: MY_NAME || 'packaging'
+      }));
+    }
+    if (rows.length === 0) return '';
+    const { data, error } = await db.from('inventory_lots').insert(rows).select('id');
+    if (error) { console.error('inventory_lots 자동 등록 실패:', error); return ' · (물류 입고대기 등록 실패: ' + error.message + ')'; }
+    return ' · 물류 입고대기 ' + ((data && data.length) || 0) + '건 자동 등록';
+  } catch (e) { console.error(e); return ' · (물류 입고대기 등록 실패)'; }
+}
+// 수정: 아직 입고대기인 연결 LOT만 내용 갱신 (0건이면 이미 입고됐거나 자동 등록 이전 건 → 그대로)
+async function syncWaitingLot(recordId, r, workDate) {
+  try {
+    const { data, error } = await db.from('inventory_lots').update(lotRowFrom(r, workDate))
+      .eq('source_ref', 'packaging:' + recordId).eq('status', 'waiting').select('id');
+    if (error) { console.error('inventory_lots 동기화 실패:', error); return ' · (물류 입고대기 갱신 실패: ' + error.message + ')'; }
+    return (data && data.length) ? ' · 물류 입고대기 내용도 함께 갱신' : '';
+  } catch (e) { console.error(e); return ''; }
+}
+// 삭제: 아직 입고대기인 연결 LOT 삭제 (입고 완료된 건은 재고에 남김)
+async function removeWaitingLot(recordId) {
+  try {
+    const { data, error } = await db.from('inventory_lots').delete()
+      .eq('source_ref', 'packaging:' + recordId).eq('status', 'waiting').select('id');
+    if (error) { console.error('inventory_lots 삭제 실패:', error); return ' · (물류 입고대기 삭제 실패: ' + error.message + ')'; }
+    return (data && data.length) ? ' · 물류 입고대기 건도 함께 삭제' : '';
+  } catch (e) { console.error(e); return ''; }
 }
 
 function resetForm() {
@@ -1253,7 +1309,8 @@ async function deleteMyRecord(id) {
     });
   } catch(e) {}
   
-  showToast('✓ 삭제 완료');
+  const rmMsg = await removeWaitingLot(id);   // 2026-11-10 ① 입고대기 동기화
+  showToast('✓ 삭제 완료' + rmMsg);
   loadMyHistory();
 }
 </script>
