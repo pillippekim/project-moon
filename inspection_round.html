@@ -602,6 +602,7 @@ function restoreGridData(gridId, data) {
 
 // ── 2026-11-09 세척 자동 접수 ─────────────────────────────────────
 var FACE_KO = {A:'가', B:'나', C:'다'};
+var editCleanDone = false;   // 2026-11-11 수정 모드: 이 검사(round_id)로 이미 세척 접수된 경우 true → 면 체크 유지
 // '금형 세척' 체크 시: 비가동이 아니고 사번이 있는 면만 후보로 표시 (기본 미선택 — 세척한 금형을 직접 고르게)
 function renderCleanFaces() {
     var on = document.getElementById('chkMoldClean').checked;
@@ -615,7 +616,8 @@ function renderCleanFaces() {
     faces.forEach(function(f){
         var fd = faceData[f] || {}; var sb = (fd.sabun || '').trim();
         if (fd.inactive || !sb) return;
-        h += '<label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="' + f + '"' + (prev[f] ? ' checked' : '') + '> <b>' + FACE_KO[f] + '면</b> · ' + sb + '</label>';
+        var done = editCleanDone && editFace === f;   // 2026-11-11 이미 접수된 면은 기본 체크 + 표시
+        h += '<label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" value="' + f + '"' + (prev[f] || done ? ' checked' : '') + '> <b>' + FACE_KO[f] + '면</b> · ' + sb + (done ? ' <span style="font-size:11px;color:#166534;background:#dcfce7;border-radius:4px;padding:1px 6px">세척 접수됨</span>' : '') + '</label>';
     });
     list.innerHTML = h || '<span style="color:#b45309">사번이 입력된 면이 없습니다. 각 면의 사번을 먼저 입력하세요.</span>';
     box.style.display = 'block';
@@ -827,6 +829,17 @@ async function loadForEdit(id) {
             });
         }
         setTimeout(function(){ if (document.getElementById('chkMoldClean').checked) renderCleanFaces(); }, 600);   // 2026-11-09 (면 데이터 복원 뒤)
+        // 2026-11-11 이 검사로 이미 접수된 세척 이력이 있으면 면 체크 유지 (중품/종품 추가 시 매번 다시 체크하던 문제)
+        try {
+            var cr = await fetch(SU + '/rest/v1/mold_cleaning_logs?round_id=eq.' + encodeURIComponent(id) + '&select=id', { headers: HR() });
+            var cl = cr.ok ? await cr.json() : [];
+            if (Array.isArray(cl) && cl.length) {
+                editCleanDone = true;
+                var chk = document.getElementById('chkMoldClean');
+                if (chk && !chk.checked) chk.checked = true;   // 이력이 있는데 체크가 풀려 있으면 복원
+                setTimeout(renderCleanFaces, 700);
+            }
+        } catch (eCl) {}
         if (rec.change_equip) {
             document.querySelectorAll('.change-box:last-child .change-item input').forEach(function(cb){
                 if (rec.change_equip.indexOf(cb.value) !== -1) cb.checked = true;
