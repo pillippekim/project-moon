@@ -50,6 +50,21 @@
   .btn-submit:disabled { opacity: 0.5; cursor: default; }
   .btn-reset { background: #f0f3f9; color: #243bb2; border: none; padding: 14px 28px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
   .savenote { font-size: 12px; color: #888; text-align: center; margin-top: 14px; }
+  /* 2026-11-18 내 통합 일지 목록 */
+  .hist-item { border: 1px solid #eef0f5; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+  .hist-item.editing { border-color: #243bb2; background: #f5f7ff; }
+  .hist-main { flex: 1 1 260px; min-width: 0; }
+  .hist-main b { font-size: 15px; color: #1f2937; }
+  .hist-sub { font-size: 12px; color: #6b7280; margin-top: 2px; word-break: break-all; }
+  .hist-procs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .hist-proc { font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 999px; background: #eef0ff; color: #243bb2; }
+  .hist-proc.del { background: #f3f4f6; color: #9ca3af; text-decoration: line-through; }
+  .hist-btns { display: flex; gap: 6px; }
+  .hist-btns button { padding: 8px 12px; border-radius: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; border: 1px solid #c7d2fe; background: #fff; color: #243bb2; min-height: 36px; }
+  .hist-btns button.danger { border-color: #fecaca; color: #b91c1c; }
+  .edit-bar { display: none; background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 13px; font-weight: 600; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .edit-bar.on { display: flex; }
+  .edit-bar button { margin-left: auto; padding: 7px 12px; border-radius: 8px; border: 1px solid #fdba74; background: #fff; color: #9a3412; font-weight: 700; cursor: pointer; }
   /* 불량유형 팝업 */
   .defect-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
   .defect-modal.open { display: flex; }
@@ -87,10 +102,12 @@
 
 <div class="container">
 
+  <div class="edit-bar" id="editBar">✏️ <span id="editBarText">제출 내역을 수정하고 있어요</span><button type="button" onclick="cancelEdit()">수정 취소</button></div>
+
   <div class="card">
     <h2>📋 공통 정보</h2>
     <div class="grid">
-      <div class="fld"><label>작업일 <span class="req">*</span></label><input type="date" id="workDate"></div>
+      <div class="fld"><label>작업일 <span class="req">*</span></label><input type="date" id="workDate" onchange="loadHistory()"></div>
       <div class="fld"><label>근무</label><select id="shiftType"><option value="주간">주간</option><option value="야간">야간</option></select></div>
       <div class="fld"><label>작업자</label><input type="text" id="workerName" placeholder="작업자명"></div>
       <div class="fld"><label>사번 / 품번 <span class="req">*</span></label><input type="text" id="sabun" placeholder="예) 502209"></div>
@@ -187,6 +204,13 @@
   </div>
   <div class="savenote">💾 저장 시 → 선택한 공정의 작업일지(사상·조립·검사·포장)에 각각 한 건씩 기록되고 같은 LOT로 연결됩니다.</div>
 
+  <!-- 2026-11-18 내 통합 일지 (이 화면에서 제출한 묶음만 · 수정/삭제는 4개 공정 일지에 함께 반영) -->
+  <div class="card" id="histCard" style="margin-top:18px">
+    <h2>📋 <span id="histTitle">오늘 내 통합 일지</span> <span id="histCount" style="font-size:13px;color:#888;font-weight:500"></span></h2>
+    <div id="histBody" style="color:#aaa;font-size:13px;text-align:center;padding:14px">불러오는 중...</div>
+    <div style="font-size:11.5px;color:#888;margin-top:6px">이 화면에서 제출한 건만 보여요. 각 공정 화면에서 직접 쓴 일지는 그 화면에서 관리해 주세요. 삭제하면 사상·조립·검사·포장 일지에서 함께 삭제돼요.</div>
+  </div>
+
 </div>
 
 <!-- 불량유형 팝업 -->
@@ -215,6 +239,9 @@ const DEFECT_TYPES = ['기포','미성형','형상불량','이물질','찢어짐
 const procState = { sasang:false, assembly:false, inspect:true, pack:true };
 let defectData = [];           // [{type, qty}]
 let failManual = false;        // 사용자가 불량 수량을 직접 입력했는지
+let editingGroup = null;       // 2026-11-18 수정 중인 묶음 { gid, ids:{sasang,assembly,inspect,pack}, rows:{...} }
+const PROC_TABLE = { sasang: 'sasang_reports', assembly: 'assembly_reports', inspect: 'inspection_reports', pack: 'packaging_reports' };
+const PROC_KO = { sasang: '사상', assembly: '조립', inspect: '검사', pack: '포장' };
 
 // ── 초기화 ──
 window.onload = async () => {
@@ -228,6 +255,7 @@ window.onload = async () => {
   document.getElementById('userInfo').textContent = myInfo ? `${myInfo.name} (${myInfo.emp_code})` : '';
   document.getElementById('workerName').value = myInfo.name || '';
   document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
+  loadHistory();   // 2026-11-18
 };
 
 // ── 공정 토글 ──
@@ -344,6 +372,8 @@ async function submitAll() {
   const empCode = myInfo ? myInfo.emp_code : null;
   const myName = myInfo ? myInfo.name : workerName;
   const lotArr = lotNo ? lotNo.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [];
+  // 2026-11-18 제출 묶음 ID — 4개 공정 일지에 같은 값이 들어가 '내 통합 일지'에서 한 건으로 보이고, 수정/삭제가 함께 처리됨
+  const gid = editingGroup ? editingGroup.gid : ('U' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)).toUpperCase();
 
   const tasks = [];   // {table, record}
 
@@ -355,8 +385,8 @@ async function submitAll() {
       sabun: sabun, product_name: productName,
       work_method: getMethod('sasangMethod'),
       production_qty: num('sasangProd'), defect_qty: num('sasangDefect'), lot_no: lotNo || null,
-      note: note, created_by_emp_code: empCode, created_by_name: myName
-    }});
+      note: note, created_by_emp_code: empCode, created_by_name: myName, unified_group: gid
+    }, proc: 'sasang' });
   }
   if (procState.assembly) {
     tasks.push({ table: 'assembly_reports', record: {
@@ -367,8 +397,8 @@ async function submitAll() {
       assembly_type: null, work_method: getMethod('assemblyMethod'),
       production_qty: num('assemblyProd'), defect_qty: num('assemblyDefect'), lot_no: lotNo || null,
       material_usage: null,
-      note: note, created_by_emp_code: empCode, created_by_name: myName
-    }});
+      note: note, created_by_emp_code: empCode, created_by_name: myName, unified_group: gid
+    }, proc: 'assembly' });
   }
   if (procState.inspect) {
     const defectStr = defectData.length ? defectData.map(function(d){ return d.type + '(' + d.qty + ')'; }).join(', ') : '';
@@ -377,35 +407,207 @@ async function submitAll() {
       lot_nos: lotArr, inspect_qty: num('inspectQty'), pass_qty: num('passQty'), fail_qty: num('failQty'),
       defect_type: defectStr, defect_memo: document.getElementById('defectMemo').value.trim(),
       recheck: document.getElementById('recheck').checked, remarks: note || '',
-      created_by_emp_code: empCode, created_by_name: myName
-    }});
+      created_by_emp_code: empCode, created_by_name: myName, unified_group: gid
+    }, proc: 'inspect' });
   }
   if (procState.pack) {
     tasks.push({ table: 'packaging_reports', record: {
       work_date: workDate, worker_id: sabun, worker_name: workerName,
       lot_nos: lotArr, badge_nos: [], quantity: num('packQty'),
       note: note, remarks: '',
-      created_by_emp_code: empCode, created_by_name: myName
-    }});
+      created_by_emp_code: empCode, created_by_name: myName, unified_group: gid
+    }, proc: 'pack' });
   }
 
   const btn = document.getElementById('submitBtn');
   btn.disabled = true; btn.textContent = '저장 중...';
+  const wasEditing = editingGroup;
 
   const done = [];
+  let extra = '';
   for (const t of tasks) {
-    const { error } = await db.from(t.table).insert([t.record]);
-    if (error) {
-      btn.disabled = false; btn.textContent = '제출하기';
-      showToast('저장 실패 (' + t.table + '): ' + error.message, 'error');
-      return;
+    const existingId = editingGroup ? editingGroup.ids[t.proc] : null;
+    if (existingId) {
+      // 수정: 같은 묶음의 기존 행 갱신 (작성자 정보는 그대로)
+      const upd = Object.assign({}, t.record); delete upd.created_by_emp_code; delete upd.created_by_name;
+      const { data, error } = await db.from(t.table).update(upd).eq('id', existingId).select('id');
+      if (error || !data || !data.length) {
+        btn.disabled = false; btn.textContent = editingGroup ? '수정 저장' : '제출하기';
+        showToast('수정 실패 (' + PROC_KO[t.proc] + '): ' + (error ? error.message : '반영 0건(권한 확인)'), 'error');
+        return;
+      }
+      if (t.proc === 'pack') extra += await syncWaitingLot(existingId, t.record, productName);
+    } else {
+      const { data, error } = await db.from(t.table).insert([t.record]).select('id');
+      if (error) {
+        btn.disabled = false; btn.textContent = editingGroup ? '수정 저장' : '제출하기';
+        showToast('저장 실패 (' + PROC_KO[t.proc] + '): ' + error.message, 'error');
+        return;
+      }
+      if (t.proc === 'pack' && data && data[0]) extra += await registerWaitingLot(data[0].id, t.record, productName);   // 2026-11-18 포장 → 물류 입고대기 (포장 일지와 동일)
     }
-    done.push(t.table);
+    done.push(t.proc);
+  }
+  // 수정 모드에서 체크 해제한 공정 → 해당 일지 삭제
+  if (editingGroup) {
+    for (const p of ['sasang', 'assembly', 'inspect', 'pack']) {
+      if (!procState[p] && editingGroup.ids[p]) {
+        const { error } = await db.from(PROC_TABLE[p]).update({ deleted_at: new Date().toISOString() }).eq('id', editingGroup.ids[p]);
+        if (error) { showToast(PROC_KO[p] + ' 일지 삭제 실패: ' + error.message, 'error'); }
+        else if (p === 'pack') extra += await removeWaitingLot(editingGroup.ids[p]);
+      }
+    }
   }
 
   btn.disabled = false; btn.textContent = '제출하기';
-  showToast('✓ ' + done.length + '개 공정 일지에 저장 완료!');
-  setTimeout(function(){ resetForm(true); }, 1400);
+  showToast('✓ ' + (wasEditing ? '수정 완료 (' + done.map(function(p){ return PROC_KO[p]; }).join('·') + ')' : done.length + '개 공정 일지에 저장 완료!') + extra);
+  editingGroup = null; document.getElementById('editBar').classList.remove('on');
+  setTimeout(function(){ resetForm(true); loadHistory(); }, 1400);
+}
+
+// ── 2026-11-18 포장 → 물류 입고대기 (packaging.html 과 같은 규칙: source_ref = 'packaging:<id>', 대기 중인 건만 따라감) ──
+function waitingRow(rec, productName) {
+  return { product_code: rec.worker_id, product_name: productName || '', lot_no: (rec.lot_nos || []).join(', '),
+    quantity: rec.quantity || 0, initial_quantity: rec.quantity || 0, produced_at: rec.work_date || null,
+    note: '포장 일지 자동 등록(통합) · ' + (rec.worker_name || rec.created_by_name || '') };
+}
+async function registerWaitingLot(packId, rec, productName) {
+  try {
+    if (!rec.worker_id || !(rec.quantity > 0)) return '';
+    const row = Object.assign(waitingRow(rec, productName), { status: 'waiting', source_type: 'packaging', source_ref: 'packaging:' + packId, created_by: rec.created_by_name || 'unified' });
+    const { data, error } = await db.from('inventory_lots').insert([row]).select('id');
+    if (error) { console.error(error); return ' · (물류 입고대기 등록 실패: ' + error.message + ')'; }
+    return (data && data.length) ? ' · 물류 입고대기 1건 자동 등록' : '';
+  } catch (e) { console.error(e); return ''; }
+}
+async function syncWaitingLot(packId, rec, productName) {
+  try {
+    const { data, error } = await db.from('inventory_lots').update(waitingRow(rec, productName)).eq('source_ref', 'packaging:' + packId).eq('status', 'waiting').select('id');
+    if (error) { console.error(error); return ''; }
+    return (data && data.length) ? ' · 물류 입고대기 갱신' : '';
+  } catch (e) { return ''; }
+}
+async function removeWaitingLot(packId) {
+  try {
+    const { data, error } = await db.from('inventory_lots').delete().eq('source_ref', 'packaging:' + packId).eq('status', 'waiting').select('id');
+    if (error) { console.error(error); return ''; }
+    return (data && data.length) ? ' · 물류 입고대기 삭제' : '';
+  } catch (e) { return ''; }
+}
+
+// ── 2026-11-18 내 통합 일지: 조회 · 수정 · 삭제 ──
+let histGroups = {};
+async function loadHistory() {
+  const body = document.getElementById('histBody'); if (!body || !myInfo) return;
+  const wd = document.getElementById('workDate').value; if (!wd) return;
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('histTitle').textContent = (wd === today ? '오늘' : wd) + ' 내 통합 일지';
+  const emp = myInfo.emp_code;
+  const q = function(p, cols) {
+    return db.from(PROC_TABLE[p]).select(cols).eq('work_date', wd).eq('created_by_emp_code', emp).not('unified_group', 'is', null).is('deleted_at', null).order('id');
+  };
+  const res = await Promise.all([
+    q('sasang', 'id, unified_group, created_at, shift_type, equipment_no, start_time, end_time, worker_name, sabun, product_name, work_method, production_qty, defect_qty, lot_no, note'),
+    q('assembly', 'id, unified_group, created_at, shift_type, equipment_no, start_time, end_time, worker_name, sabun, product_name, work_method, production_qty, defect_qty, lot_no, note'),
+    q('inspect', 'id, unified_group, created_at, worker_id, worker_name, lot_nos, inspect_qty, pass_qty, fail_qty, defect_type, defect_memo, recheck, remarks'),
+    q('pack', 'id, unified_group, created_at, worker_id, worker_name, lot_nos, quantity, note')
+  ]);
+  const err = res.find(function(r){ return r.error; });
+  if (err) { body.innerHTML = '<div style="color:#b91c1c">조회 실패: ' + esc(err.error.message) + '</div>'; return; }
+  histGroups = {};
+  ['sasang', 'assembly', 'inspect', 'pack'].forEach(function(p, i) {
+    (res[i].data || []).forEach(function(r) {
+      const g = histGroups[r.unified_group] || (histGroups[r.unified_group] = { gid: r.unified_group, rows: {}, created_at: r.created_at });
+      g.rows[p] = r;
+      if (r.created_at && (!g.created_at || r.created_at < g.created_at)) g.created_at = r.created_at;
+    });
+  });
+  const list = Object.values(histGroups).sort(function(a, b) { return (b.created_at || '').localeCompare(a.created_at || ''); });
+  document.getElementById('histCount').textContent = list.length ? list.length + '건' : '';
+  if (!list.length) { body.innerHTML = '<div style="color:#aaa;font-size:13px;text-align:center;padding:14px">이 날짜에 통합일지로 제출한 내역이 없어요</div>'; return; }
+  body.innerHTML = list.map(function(g) {
+    const any = g.rows.sasang || g.rows.assembly || g.rows.inspect || g.rows.pack;
+    const sabun = any.sabun || any.worker_id || '-';
+    const pname = (g.rows.sasang && g.rows.sasang.product_name) || (g.rows.assembly && g.rows.assembly.product_name) || '';
+    const lot = (g.rows.sasang && g.rows.sasang.lot_no) || (g.rows.assembly && g.rows.assembly.lot_no) || ((g.rows.inspect && g.rows.inspect.lot_nos) || (g.rows.pack && g.rows.pack.lot_nos) || []).join(', ') || '';
+    const t = g.created_at ? new Date(g.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
+    const procs = [];
+    if (g.rows.sasang) procs.push('사상 ' + (g.rows.sasang.production_qty || 0).toLocaleString() + (g.rows.sasang.defect_qty ? ' / 불량 ' + g.rows.sasang.defect_qty : ''));
+    if (g.rows.assembly) procs.push('조립 ' + (g.rows.assembly.production_qty || 0).toLocaleString() + (g.rows.assembly.defect_qty ? ' / 불량 ' + g.rows.assembly.defect_qty : ''));
+    if (g.rows.inspect) procs.push('검사 ' + (g.rows.inspect.inspect_qty || 0).toLocaleString() + ' → 합격 ' + (g.rows.inspect.pass_qty || 0).toLocaleString() + (g.rows.inspect.fail_qty ? ' / 불량 ' + g.rows.inspect.fail_qty : ''));
+    if (g.rows.pack) procs.push('포장 ' + (g.rows.pack.quantity || 0).toLocaleString());
+    return '<div class="hist-item' + (editingGroup && editingGroup.gid === g.gid ? ' editing' : '') + '" id="hist_' + esc(g.gid) + '">'
+      + '<div class="hist-main"><b>' + esc(sabun) + '</b>' + (pname ? ' <span style="color:#6b7280;font-size:13px">' + esc(pname) + '</span>' : '')
+      + '<div class="hist-sub">' + (t ? t + ' 제출' : '') + (lot ? ' · LOT ' + esc(lot) : ' · LOT 없음') + (any.worker_name ? ' · ' + esc(any.worker_name) : '') + '</div>'
+      + '<div class="hist-procs" style="margin-top:6px">' + procs.map(function(x){ return '<span class="hist-proc">' + esc(x) + '</span>'; }).join('') + '</div></div>'
+      + '<div class="hist-btns"><button type="button" onclick="startEdit(\'' + esc(g.gid) + '\')">수정</button><button type="button" class="danger" onclick="deleteGroup(\'' + esc(g.gid) + '\')">삭제</button></div>'
+      + '</div>';
+  }).join('');
+}
+function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+async function deleteGroup(gid) {
+  const g = histGroups[gid]; if (!g) return;
+  const names = ['sasang', 'assembly', 'inspect', 'pack'].filter(function(p){ return g.rows[p]; }).map(function(p){ return PROC_KO[p]; });
+  if (!confirm('이 제출 내역을 삭제할까요?\n' + names.join(' · ') + ' 일지에서 함께 삭제돼요.' + (g.rows.pack ? '\n(물류 입고대기에 올라간 건은 아직 입고 전이면 같이 삭제돼요)' : ''))) return;
+  const now = new Date().toISOString(); let extra = '', fail = [];
+  for (const p of ['sasang', 'assembly', 'inspect', 'pack']) {
+    if (!g.rows[p]) continue;
+    const { data, error } = await db.from(PROC_TABLE[p]).update({ deleted_at: now }).eq('id', g.rows[p].id).select('id');
+    if (error || !data || !data.length) fail.push(PROC_KO[p]);
+    else if (p === 'pack') extra += await removeWaitingLot(g.rows[p].id);
+  }
+  if (fail.length) showToast('일부 삭제 실패: ' + fail.join('·') + ' — 다시 시도해 주세요', 'error');
+  else showToast('✓ 삭제 완료 (' + names.join('·') + ')' + extra);
+  if (editingGroup && editingGroup.gid === gid) cancelEdit(true);
+  loadHistory();
+}
+
+function startEdit(gid) {
+  const g = histGroups[gid]; if (!g) return;
+  const r = g.rows.sasang || g.rows.assembly, ins = g.rows.inspect, pk = g.rows.pack, any = r || ins || pk;
+  resetForm(false); failManual = false;
+  // 공통
+  if (r) {
+    document.getElementById('shiftType').value = r.shift_type || '주간';
+    document.getElementById('equipment').value = r.equipment_no || '';
+    document.getElementById('startTime').value = r.start_time ? String(r.start_time).slice(0, 5) : '';
+    document.getElementById('endTime').value = r.end_time ? String(r.end_time).slice(0, 5) : '';
+    document.getElementById('productName').value = r.product_name || '';
+  }
+  document.getElementById('workerName').value = any.worker_name || (myInfo && myInfo.name) || '';
+  document.getElementById('sabun').value = (r && r.sabun) || any.worker_id || '';
+  document.getElementById('lotNo').value = (r && r.lot_no) || ((ins && ins.lot_nos) || (pk && pk.lot_nos) || []).join(', ');
+  document.getElementById('note').value = (r && r.note) || (pk && pk.note) || (ins && ins.remarks) || '';
+  // 공정 선택 상태 맞추기
+  ['sasang', 'assembly', 'inspect', 'pack'].forEach(function(p) { if (procState[p] !== !!g.rows[p]) toggleProc(p); });
+  if (g.rows.sasang) { setVal('sasangProd', g.rows.sasang.production_qty || 0); setVal('sasangDefect', g.rows.sasang.defect_qty || 0); setSeg('sasangMethod', g.rows.sasang.work_method); }
+  if (g.rows.assembly) { setVal('assemblyProd', g.rows.assembly.production_qty || 0); setVal('assemblyDefect', g.rows.assembly.defect_qty || 0); setSeg('assemblyMethod', g.rows.assembly.work_method); }
+  if (ins) {
+    setVal('inspectQty', ins.inspect_qty || 0); setVal('passQty', ins.pass_qty || 0); setVal('failQty', ins.fail_qty || 0); failManual = true;
+    document.getElementById('defectMemo').value = ins.defect_memo || '';
+    document.getElementById('recheck').checked = !!ins.recheck;
+    defectData = []; String(ins.defect_type || '').split(',').forEach(function(s) { const m = s.trim().match(/^(.+?)\((\d+)\)$/); if (m) defectData.push({ type: m[1], qty: parseInt(m[2], 10) }); });
+    document.getElementById('defectBtn').innerHTML = defectData.length ? defectData.map(function(d){ return '<span class="dt-tag">' + esc(d.type) + '(' + d.qty + ')</span>'; }).join('') : '<span class="dt-ph">불량 발생 시 선택</span>';
+  }
+  if (pk) setVal('packQty', pk.quantity || 0);
+  editingGroup = { gid: gid, ids: { sasang: g.rows.sasang && g.rows.sasang.id, assembly: g.rows.assembly && g.rows.assembly.id, inspect: ins && ins.id, pack: pk && pk.id } };
+  document.getElementById('editBarText').textContent = '제출 내역 수정 중 — ' + esc((r && r.sabun) || any.worker_id || '') + (any.worker_name ? ' · ' + any.worker_name : '') + ' (저장하면 사상·조립·검사·포장 일지에 함께 반영, 체크 해제한 공정은 삭제)';
+  document.getElementById('editBar').classList.add('on');
+  document.getElementById('submitBtn').textContent = '수정 저장';
+  loadHistory();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function setSeg(segId, v) {
+  const btn = Array.prototype.find.call(document.querySelectorAll('#' + segId + ' button'), function(b){ return b.dataset.v === v; });
+  if (btn) pickMethod(segId, btn);
+}
+function cancelEdit(silent) {
+  editingGroup = null;
+  document.getElementById('editBar').classList.remove('on');
+  document.getElementById('submitBtn').textContent = '제출하기';
+  resetForm(true);
+  if (!silent) { showToast('수정을 취소했어요'); loadHistory(); }
 }
 
 // ── 초기화 ──
