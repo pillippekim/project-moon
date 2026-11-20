@@ -713,8 +713,20 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
+// 2026-11-20 제품 마스터 전체 읽기 (1,000행 제한 대응: 끝까지 나눠 읽음)
+async function fetchAllProducts(cols) {
+  var all = [], from = 0, chunk = 1000;
+  while (true) {
+    var res = await db.from('products').select(cols).order('sabun').range(from, from + chunk - 1);
+    if (res.error) { console.error('products 조회 실패:', res.error); return { data: all, error: res.error }; }
+    all = all.concat(res.data || []);
+    if (!res.data || res.data.length < chunk) break;
+    from += chunk;
+  }
+  return { data: all, error: null };
+}
 async function loadProducts() {
-  const { data } = await db.from('products').select('sabun, part_no, part_name');
+  const { data } = await fetchAllProducts('sabun, part_no, part_name');   // 2026-11-20 1,000건 제한 해제
   if (data) {
     data.forEach(r => { PRODUCTS[r.sabun] = { partNo: r.part_no || '', partName: r.part_name || '' }; });
   }
