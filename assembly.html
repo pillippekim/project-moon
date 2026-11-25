@@ -213,6 +213,7 @@
               <th style="width:130px">성형 LOT</th>
               <th style="width:80px">조립수량</th>
               <th style="width:70px">불량수량</th>
+              <th style="width:54px" title="체크하면 제출 시 포장 일지와 물류 입고대기가 함께 생성돼요">포장<br><span style="font-size:10px;font-weight:400;color:#888">완료</span></th><!-- 2026-11-25 -->
               <th style="width:200px">부자재 소모 (BOM 자동)</th>
               <th style="width:120px">비고</th>
               <th style="width:40px"></th>
@@ -604,6 +605,7 @@ function addRow() {
     </td>
     <td><input type="number" class="prod-qty" placeholder="수량" min="0" oninput="calcBom('${rowId}')" /></td>
     <td><input type="number" class="defect-qty" placeholder="0" min="0" value="0" /></td>
+    <td style="text-align:center"><input type="checkbox" class="pack-chk" checked style="width:20px;height:20px" title="제출 시 포장 일지 + 입고대기 자동 생성" /></td><!-- 2026-11-25 -->
     <td><div class="bom-display" id="bom_${rowId}">사번 입력 시 자동 표시</div></td>
     <td><input type="text" class="note" placeholder="" /></td>
     <td><button class="btn-del-row" onclick="deleteRow('${rowId}')">×</button></td>
@@ -730,7 +732,8 @@ async function submitReport() {
       });
     }
 
-    reportRows.push({
+    const packChk = tr.querySelector('.pack-chk'); const wantPack = !!(packChk && packChk.checked);   // 2026-11-25
+    reportRows.push({ _pack: wantPack,
       work_date: workDate, shift_type: shiftType,
       equipment_no: selectedEquipment.no, equipment_id: selectedEquipment.id,
       start_time: startTime, end_time: endTime, worker_name: workerName,
@@ -761,19 +764,27 @@ async function submitReport() {
     const { error } = await db.from('assembly_reports').update(updateData).eq('id', editingRecordId).eq('created_by_name', myInfo?.name || '');
     btn.disabled = false; btn.textContent = '수정 저장';
     if (error) { showToast('수정 실패: ' + error.message, 'error'); return; }
+    var packSync = await syncPackForAssembly(editingRecordId, r, reportRows[0]._pack);   // 2026-11-25 연결된 포장 일지 갱신/생성/삭제
     try { await db.from('audit_logs').insert({ table_name:'assembly_reports', record_id:String(editingRecordId), action:'update', changed_by_name:myInfo?.name||'-', changed_at:new Date().toISOString() }); } catch(e) {}
-    showToast('✓ 수정 완료!');
+    showToast('✓ 수정 완료!' + (packSync || ''));
     editingRecordId = null; btn.textContent = '제출하기'; btn.style.background = '';
     const eb = document.getElementById('editModeBadge'); if (eb) eb.style.display = 'none';
     loadMyHistory(); setTimeout(() => resetForm(false), 1200);
     return;
   }
 
-  const { error } = await db.from('assembly_reports').insert(reportRows);
+  const packFlags = reportRows.map(r => r._pack); reportRows.forEach(r => { delete r._pack; });
+  const { data: inserted, error } = await db.from('assembly_reports').insert(reportRows).select('id');
   btn.disabled = false; btn.textContent = '제출하기';
 
   if (error) { showToast('제출 실패: ' + error.message, 'error'); return; }
-  showToast(`✓ ${reportRows.length}건 제출 완료!`);
+  // 2026-11-25 포장 완료 체크 행 → 포장 일지 + 입고대기 자동 생성
+  var packMsg = '';
+  for (let i = 0; i < reportRows.length; i++) {
+    if (!packFlags[i] || !inserted || !inserted[i]) continue;
+    packMsg += await createPackForAssembly(inserted[i].id, reportRows[i]);
+  }
+  showToast(`✓ ${reportRows.length}건 제출 완료!` + packMsg);
   loadMyHistory();
   setTimeout(() => resetForm(false), 1500);
 }
@@ -844,7 +855,7 @@ async function loadMyHistory() {
           '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px;font-family:monospace;color:#ca8a04">' + (r.lot_no||'-') + '</td>' +
           '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;font-weight:600">' + prod.toLocaleString() + '</td>' +
           '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;color:' + (defect>0?'#dc2626':'#aaa') + '">' + (defect>0?defect.toLocaleString():'-') + '</td>' +
-          '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">' + (r.note||'') + '</td>' +
+          '<td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">' + (r.note||'') + (r.unified_group && String(r.unified_group).charAt(0) === 'A' ? ' <span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;background:#dcfce7;color:#166534">포장✓</span>' : '') + '</td>' +
           '<td style="padding:8px 6px;border:1px solid #e0e4ed;color:#888;font-size:11px">' + time + '</td>' +
           '<td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center;white-space:nowrap">' + actionBtns + '</td>' +
           '</tr>';
@@ -859,6 +870,8 @@ async function editMyRecord(id) {
   if (error || !data) { showToast('데이터를 불러올 수 없습니다.', 'error'); return; }
 
   editingRecordId = id;
+  // 2026-11-25 연결된 포장 일지가 있으면 '포장 완료' 체크 유지, 없으면 해제 (수정 저장 시 체크 상태대로 생성/삭제)
+  setTimeout(function() { var chk = document.querySelector('#mainRows tr .pack-chk'); if (chk) chk.checked = !!(data.unified_group && String(data.unified_group).charAt(0) === 'A'); }, 50);
 
   // 작업자/설비 복원
   var ws = document.getElementById('workerSelect'); if (ws && data.worker_name) ws.value = data.worker_name;
@@ -914,8 +927,74 @@ async function deleteMyRecord(id) {
   if (!confirm('이 제출 내역을 삭제할까요?')) return;
   var { error } = await db.from('assembly_reports').update({ deleted_at: new Date().toISOString() }).eq('id', id).eq('created_by_name', myInfo?.name || '');
   if (error) { showToast('삭제 실패: ' + error.message, 'error'); return; }
+  var packDel = await deletePackForAssembly(id);   // 2026-11-25 연결된 포장 일지·입고대기도 삭제
   try { await db.from('audit_logs').insert({ table_name:'assembly_reports', record_id:String(id), action:'delete', changed_by_name:myInfo?.name||'-', changed_at:new Date().toISOString() }); } catch(e) {}
-  loadMyHistory(); showToast('✓ 삭제 완료');
+  loadMyHistory(); showToast('✓ 삭제 완료' + (packDel || ''));
+}
+
+// ══════════════════════════════════════════════════════════════
+// 2026-11-25 조립 → 포장 자동 처리 (조립=포장인 품목용)
+//  - 묶음 번호 unified_group = 'A' + 조립 id 로 조립 일지 ↔ 포장 일지 연결 (통합일지 화면 '내 통합 일지'에도 묶음으로 보임)
+//  - 포장 일지 → 물류 입고대기(inventory_lots) 등록은 포장 일지와 같은 규칙 (source_ref = 'packaging:<id>')
+// ══════════════════════════════════════════════════════════════
+function lotListOf(lotNo) { return String(lotNo || '').split(',').map(function(x) { return x.trim(); }).filter(Boolean); }
+function packRowFrom(aid, r) {
+  return { work_date: r.work_date, worker_id: r.sabun, worker_name: r.worker_name, lot_nos: lotListOf(r.lot_no), badge_nos: [],
+    quantity: r.production_qty || 0, note: '조립 일지 자동 생성', remarks: '',
+    created_by_emp_code: myInfo?.emp_code, created_by_name: myInfo?.name, unified_group: 'A' + aid };
+}
+function waitingRowFrom(r) {
+  return { product_code: r.sabun, product_name: r.product_name || '', lot_no: lotListOf(r.lot_no).join(', '),
+    quantity: r.production_qty || 0, initial_quantity: r.production_qty || 0, produced_at: r.work_date || null,
+    note: '포장 일지 자동 등록(조립) · ' + (r.worker_name || myInfo?.name || '') };
+}
+async function createPackForAssembly(aid, r) {
+  try {
+    if (!r.sabun || !(r.production_qty > 0)) return '';
+    var lots = lotListOf(r.lot_no);
+    // 같은 날·사번·LOT 포장 일지가 이미 있으면 중복 생성 안 함
+    if (lots.length) {
+      var dup = await db.from('packaging_reports').select('id').eq('work_date', r.work_date).eq('worker_id', r.sabun).is('deleted_at', null).contains('lot_nos', [lots[0]]).limit(1);
+      if (!dup.error && dup.data && dup.data.length) return ' · ' + r.sabun + ' 포장 일지 이미 있음(#' + dup.data[0].id + ') → 생성 안 함';
+    }
+    var ins = await db.from('packaging_reports').insert([packRowFrom(aid, r)]).select('id');
+    if (ins.error || !ins.data || !ins.data.length) { console.error(ins.error); return ' · (포장 일지 생성 실패: ' + (ins.error ? ins.error.message : '0건') + ')'; }
+    var pid = ins.data[0].id;
+    await db.from('assembly_reports').update({ unified_group: 'A' + aid }).eq('id', aid);   // 조립 쪽에도 묶음 번호
+    var lot = await db.from('inventory_lots').insert([Object.assign(waitingRowFrom(r), { status: 'waiting', source_type: 'packaging', source_ref: 'packaging:' + pid, created_by: myInfo?.name || 'assembly' })]).select('id');
+    if (lot.error) { console.error(lot.error); return ' · 포장 일지 #' + pid + ' 생성 (입고대기 등록 실패: ' + lot.error.message + ')'; }
+    return ' · 포장 일지 + 입고대기 등록';
+  } catch (e) { console.error(e); return ' · (포장 자동 처리 오류)'; }
+}
+async function syncPackForAssembly(aid, r, wantPack) {
+  try {
+    var g = 'A' + aid;
+    var ex = await db.from('packaging_reports').select('id').eq('unified_group', g).is('deleted_at', null).limit(1);
+    if (ex.error) return '';
+    var pid = ex.data && ex.data[0] ? ex.data[0].id : null;
+    if (pid && wantPack) {
+      var up = await db.from('packaging_reports').update({ worker_id: r.sabun, worker_name: r.worker_name, lot_nos: lotListOf(r.lot_no), quantity: r.production_qty || 0 }).eq('id', pid).select('id');
+      if (up.error) return ' · (포장 일지 갱신 실패)';
+      var w = await db.from('inventory_lots').update(waitingRowFrom(r)).eq('source_ref', 'packaging:' + pid).eq('status', 'waiting').select('id');
+      return ' · 포장 일지 갱신' + (w.data && w.data.length ? ' · 입고대기 갱신' : '');
+    }
+    if (pid && !wantPack) return await deletePackForAssembly(aid);
+    if (!pid && wantPack) return await createPackForAssembly(aid, Object.assign({}, r, { work_date: r.work_date || document.getElementById('workDate').value }));
+    return '';
+  } catch (e) { console.error(e); return ''; }
+}
+async function deletePackForAssembly(aid) {
+  try {
+    var g = 'A' + aid;
+    var del = await db.from('packaging_reports').update({ deleted_at: new Date().toISOString() }).eq('unified_group', g).is('deleted_at', null).select('id');
+    if (del.error || !del.data || !del.data.length) return '';
+    var msg = ' · 연결된 포장 일지 삭제';
+    for (var i = 0; i < del.data.length; i++) {
+      var w = await db.from('inventory_lots').delete().eq('source_ref', 'packaging:' + del.data[i].id).eq('status', 'waiting').select('id');
+      if (w.data && w.data.length) msg += ' · 입고대기 삭제';
+    }
+    return msg;
+  } catch (e) { console.error(e); return ''; }
 }
 
 function resetForm(askConfirm = true) {
