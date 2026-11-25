@@ -227,6 +227,9 @@
   .lot-list { display: flex; flex-direction: column; gap: 4px; }
   .lot-item { display: flex; align-items: center; gap: 4px; }
   .lot-item input { flex: 1; text-align: left !important; }
+  .lot-item input.lot-bad { border-color: #dc2626 !important; background: #fef2f2; }   /* 2026-11-25 날짜·사번처럼 보이는 값 */
+  .lot-item input.lot-ok { border-color: #16a34a !important; }
+  .lot-warn { font-size: 10.5px; color: #dc2626; margin: 2px 0 0 22px; }
   .lot-num { font-size: 10px; color: #999; min-width: 16px; font-weight: 600; }
   .lot-add {
     font-size: 11px; color: #243bb2; background: none; border: none;
@@ -428,7 +431,7 @@
               <th class="col-partno">고객 품번</th>
               <th class="col-partname">품명</th>
               <th class="col-worker">작업자</th>
-              <th class="col-lot">성형 LOT No.</th>
+              <th class="col-lot">성형 LOT No.<br><span style="font-size:10px;font-weight:400;color:#fca5a5">박스 라벨 C… 번호 (날짜 아님)</span></th><!-- 2026-11-25 -->
               <th class="col-qty">검사수량</th>
               <th class="col-qty">합격수량</th>
               <th class="col-qty">불합격</th>
@@ -777,10 +780,20 @@ function setField(id, field, val) {
   renderRows();
 }
 
-function setLot(id, idx, val) {
+function setLot(id, idx, val, el) {
   const r = rows.find(r => r.id === id);
+  val = String(val || '').toUpperCase().replace(/\s+/g, '');   // 2026-11-25 소문자·공백 정리
   if (r) r.lots[idx] = val;
+  if (el) { if (el.value !== val) el.value = val; el.className = lotClass(val); }
 }
+// 2026-11-25 LOT 값 판정: 성형 LOT = 영문1 + 숫자9 (예 C261102010). 날짜(250814 · 20260622 · 2026,11,17)·사번(502102)은 LOT 이 아님
+function lotLooksWrong(v) {
+  v = String(v || '').trim(); if (!v) return '';
+  if (/^[A-Za-z]\d{9}$/.test(v)) return '';
+  if (/^\d{6}$/.test(v) || /^\d{8}$/.test(v) || /^\d{4}[,.\s\-\/]+\d{1,2}[,.\s\-\/]+\d{1,2}$/.test(v) || /^\d{6}[,.\s\-\/]+\d{1,2}$/.test(v)) return '날짜/사번';
+  return '형식';
+}
+function lotClass(v) { v = String(v || '').trim(); if (!v) return ''; return lotLooksWrong(v) ? 'lot-bad' : 'lot-ok'; }
 
 function addLot(id) {
   const r = rows.find(r => r.id === id);
@@ -820,8 +833,8 @@ function renderRows() {
           ${r.lots.map((l, li) => `
             <div class="lot-item">
               <span class="lot-num">${li+1}</span>
-              <input type="text" value="${l}" placeholder="스캔 또는 입력"
-                oninput="setLot(${r.id},${li},this.value)" />
+              <input type="text" value="${l}" placeholder="라벨 C… 스캔" class="${lotClass(l)}"
+                oninput="setLot(${r.id},${li},this.value,this)" />
               <button class="scan-btn" onclick="openModal(${r.id},${li})">스캔</button>
               ${li>0 ? `<button class="lot-del" onclick="removeLot(${r.id},${li})">×</button>` : ''}
             </div>
@@ -1109,6 +1122,22 @@ async function submitForm() {
       showToast(`${rowNum}행: 합격(${passQty}) + 불합격(${failQty}) ≠ 검사수량(${ins})`, 'error');
       return;
     }
+  }
+
+  // 2026-11-25 LOT 확인: 비었거나 날짜·사번·형식 다른 값이면 확인창 (저장은 허용)
+  var lotEmpty = [], lotDate = [], lotBad = [];
+  valid.forEach(function(r) {
+    var ls = (r.lots || []).map(function(l) { return String(l || '').trim(); }).filter(Boolean);
+    if (!ls.length) { lotEmpty.push(r.sabun || '(사번 없음)'); return; }
+    ls.forEach(function(l) { var w = lotLooksWrong(l); if (w === '날짜/사번') lotDate.push((r.sabun || '') + ' ' + l); else if (w) lotBad.push((r.sabun || '') + ' ' + l); });
+  });
+  if (lotEmpty.length || lotDate.length || lotBad.length) {
+    var m = '';
+    if (lotDate.length) m += '⚠ LOT 칸에 날짜나 사번으로 보이는 값이 있어요: ' + lotDate.join(', ') + '\n   → 성형 LOT 은 박스 라벨의 C… 번호예요. 스캔 버튼으로 찍어주세요.\n';
+    if (lotBad.length) m += '⚠ 성형 LOT 형식(예 C261102010)이 아닌 값: ' + lotBad.join(', ') + '\n';
+    if (lotEmpty.length) m += '⚠ LOT 이 비어 있는 행: ' + lotEmpty.join(', ') + '\n';
+    m += '\n이대로 저장하면 LOT 추적에서 이 검사 건이 연결되지 않아요.\n\n그래도 저장할까요?';
+    if (!confirm(m)) return;
   }
 
   const btn = document.getElementById('submitBtn');
