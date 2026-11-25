@@ -213,7 +213,7 @@
               <th style="width:130px">성형 LOT</th>
               <th style="width:80px">조립수량</th>
               <th style="width:70px">불량수량</th>
-              <th style="width:54px" title="체크하면 제출 시 포장 일지와 물류 입고대기가 함께 생성돼요">포장<br><span style="font-size:10px;font-weight:400;color:#888">완료</span></th><!-- 2026-11-25 -->
+              <th style="width:54px;color:#aaa" title="준비 중 — 유관부서 협의 후 활성화">포장<br><span style="font-size:10px;font-weight:400;color:#aaa">준비중</span></th><!-- 2026-11-25 -->
               <th style="width:200px">부자재 소모 (BOM 자동)</th>
               <th style="width:120px">비고</th>
               <th style="width:40px"></th>
@@ -605,7 +605,7 @@ function addRow() {
     </td>
     <td><input type="number" class="prod-qty" placeholder="수량" min="0" oninput="calcBom('${rowId}')" /></td>
     <td><input type="number" class="defect-qty" placeholder="0" min="0" value="0" /></td>
-    <td style="text-align:center"><input type="checkbox" class="pack-chk" checked style="width:20px;height:20px" title="제출 시 포장 일지 + 입고대기 자동 생성" /></td><!-- 2026-11-25 -->
+    <td style="text-align:center"><input type="checkbox" class="pack-chk" disabled style="width:20px;height:20px;opacity:.4" title="준비 중 — 유관부서 협의 후 활성화 (2026-11-25 보류)" /></td><!-- 2026-11-25 기본 OFF·비활성 -->
     <td><div class="bom-display" id="bom_${rowId}">사번 입력 시 자동 표시</div></td>
     <td><input type="text" class="note" placeholder="" /></td>
     <td><button class="btn-del-row" onclick="deleteRow('${rowId}')">×</button></td>
