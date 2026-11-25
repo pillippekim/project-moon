@@ -957,12 +957,28 @@ function confirmScan() {
   renderRows();
 }
 
+// 2026-11-25 LOT 입력 안내: 성형 LOT 은 영문1+숫자9 (예 C261102010). 비었거나 다르면 확인만 받고 저장 (추적이 끊기는 걸 예방)
+function lotGuardMessage(lotLists) {   // lotLists: [{sabun, lots:[]}]
+  var empty = [], bad = [];
+  lotLists.forEach(function(x) {
+    var ls = (x.lots || []).map(function(l) { return String(l || '').trim(); }).filter(Boolean);
+    if (!ls.length) { empty.push(x.sabun || '(사번 없음)'); return; }
+    ls.forEach(function(l) { if (!/^[A-Za-z]\d{9}$/.test(l)) bad.push((x.sabun ? x.sabun + ' ' : '') + l); });
+  });
+  if (!empty.length && !bad.length) return '';
+  var m = '';
+  if (empty.length) m += 'LOT 이 비어 있는 행: ' + empty.join(', ') + '\n';
+  if (bad.length) m += '성형 LOT 형식(예 C261102010)이 아닌 값: ' + bad.join(', ') + '\n';
+  return m + '\n이대로 저장하면 LOT 추적에서 이 건이 연결되지 않아요.\n박스 라벨의 LOT 을 찍거나 입력하는 게 좋아요.\n\n그래도 저장할까요?';
+}
 async function submitForm() {
   const workDate = document.getElementById('workDate').value;
   const remarks = document.getElementById('remarks').value;
   const valid = rows.filter(r => r.sabun || r.lots.some(l=>l) || r.qty);
   if (!workDate) { showToast('작성일을 입력해주세요.', 'error'); return; }
   if (valid.length === 0) { showToast('작업 내역을 1건 이상 입력해주세요.', 'error'); return; }
+  const lotMsg = lotGuardMessage(valid.map(r => ({ sabun: r.sabun, lots: r.lots })));   // 2026-11-25
+  if (lotMsg && !confirm(lotMsg)) return;
 
   const btn = document.getElementById('submitBtn');
   btn.disabled = true; btn.textContent = editingRecordId ? '수정 중...' : '제출 중...';
