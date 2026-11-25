@@ -157,6 +157,8 @@
   .col-total { width: 85px; }
   .col-defect { width: 75px; }
   .col-note { min-width: 120px; }
+  .col-lot { min-width: 130px; }   /* 2026-11-25 인서트 LOT */
+  .lot-input { font-family: monospace; letter-spacing: .03em; text-transform: uppercase; }
   .col-del { width: 40px; }
   
   /* 행 추가/삭제 */
@@ -336,6 +338,7 @@
               <th class="col-partno">고객 품번</th>
               <th class="col-partname">품명</th>
               <th class="col-worktype">작업종류</th>
+              <th class="col-lot">인서트 LOT<br><span style="font-size:10px;font-weight:400;color:#888">입고 I-코드</span></th><!-- 2026-11-25 -->
               <th class="col-perline">줄당EA</th>
               <th class="col-lines">줄수</th>
               <th class="col-total">총수량</th>
@@ -345,7 +348,7 @@
             </tr>
           </thead>
           <tbody id="rowBody">
-            <tr><td colspan="11" style="text-align:center;color:#888;padding:1rem">기준정보 불러오는 중...</td></tr>
+            <tr><td colspan="12" style="text-align:center;color:#888;padding:1rem">기준정보 불러오는 중...</td></tr>
           </tbody>
         </table>
       </div>
@@ -547,7 +550,7 @@ function addRow() {
   uid++;
   rows.push({
     id: uid, sabun: '', partNo: '', partName: '',
-    workType: '', perLine: '', lines: '', total: 0, defect: '', note: ''
+    workType: '', lot: '', perLine: '', lines: '', total: 0, defect: '', note: ''
   });
   renderRows();
 }
@@ -572,6 +575,19 @@ function applySabun(id, val) {
   renderRows();
 }
 
+// 2026-11-25 인서트 입고 LOT 추천: 업로드된 입고 내역(material_receipts)에서 이 사번이 쓰이는 최근 LOT
+const INSERT_LOTS = {};
+async function loadInsertLots(rowId) {
+  const r = rows.find(x => x.id === rowId); if (!r || !r.sabun || INSERT_LOTS[r.sabun]) return;
+  try {
+    const { data, error } = await db.from('material_receipts').select('lot_id, received_date, supplier, item_name')
+      .contains('item_codes', [r.sabun]).order('received_date', { ascending: false }).limit(30);
+    if (error) { console.warn('입고 LOT 추천 조회 실패', error); return; }
+    INSERT_LOTS[r.sabun] = data || [];
+    const dl = document.getElementById('lotlist_' + rowId);
+    if (dl) dl.innerHTML = INSERT_LOTS[r.sabun].map(l => `<option value="${l.lot_id}">${l.received_date} ${l.supplier||''}</option>`).join('');
+  } catch (e) { console.warn(e); }
+}
 function setField(id, field, val) {
   const r = rows.find(r => r.id === id);
   if (!r) return;
@@ -604,7 +620,7 @@ function setField(id, field, val) {
 function renderRows() {
   const tbody = document.getElementById('rowBody');
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#888;padding:1rem">+ 행 추가 버튼을 눌러주세요</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#888;padding:1rem">+ 행 추가 버튼을 눌러주세요</td></tr>';
     updateSummary();
     return;
   }
@@ -624,6 +640,9 @@ function renderRows() {
           ${WORK_TYPES.map(t => `<option value="${t}" ${r.workType===t?'selected':''}>${t}</option>`).join('')}
         </select>
       </td>
+      <td><input type="text" class="lot-input" list="lotlist_${r.id}" data-field="lot" value="${r.lot||''}" placeholder="I261105004"
+        oninput="setField(${r.id},'lot',this.value.trim().toUpperCase())" onfocus="loadInsertLots(${r.id})" />
+        <datalist id="lotlist_${r.id}">${(INSERT_LOTS[r.sabun]||[]).map(l => `<option value="${l.lot_id}">${l.received_date} ${l.supplier||''}</option>`).join('')}</datalist></td><!-- 2026-11-25 -->
       <td><input type="number" data-field="perLine" value="${r.perLine}" placeholder="0" min="0"
         oninput="setField(${r.id},'perLine',this.value)" /></td>
       <td><input type="number" data-field="lines" value="${r.lines}" placeholder="0" min="0"
@@ -672,6 +691,7 @@ async function submitForm() {
       worker_id: r.sabun,
       worker_name: workerName,
       work_type: r.workType,
+      lot_no: (r.lot || '').trim().toUpperCase() || null,   // 2026-11-25
       qty_per_line: parseInt(r.perLine) || 0,
       line_count: parseInt(r.lines) || 0,
       total_qty: r.total || 0,
@@ -715,11 +735,17 @@ async function submitForm() {
   // ─────────────────────────────────────────────
   // 신규 모드: insert (기존 로직)
   // ─────────────────────────────────────────────
+  // 2026-11-25 인서트 LOT 형식 안내 (I + 숫자 9자리). 비었거나 다르면 확인만 받고 저장
+  const lotWarn = valid.filter(r => !(r.lot || '').trim() || !/^I\d{9}$/.test((r.lot || '').trim().toUpperCase()));
+  if (lotWarn.length && !confirm('인서트 LOT 이 비어 있거나 입고 LOT(I-코드) 형식이 아닌 행이 ' + lotWarn.length + '건 있어요.\n(LOT 추적에 연결되려면 입고 라벨의 I… 번호가 필요해요)\n\n그대로 저장할까요?')) {
+    btn.disabled = false; btn.textContent = '제출하기'; return;
+  }
   const records = valid.map(r => ({
     work_date: workDate,
     worker_id: r.sabun,
     worker_name: workerName,
     work_type: r.workType,
+    lot_no: (r.lot || '').trim().toUpperCase() || null,   // 2026-11-25 인서트 입고 LOT
     qty_per_line: parseInt(r.perLine) || 0,
     line_count: parseInt(r.lines) || 0,
     total_qty: r.total || 0,
@@ -943,6 +969,7 @@ async function loadMyHistory() {
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">NO</th>
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">사번</th>
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">작업종류</th>
+            <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700">인서트 LOT</th><!-- 2026-11-25 -->
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">줄당</th>
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">줄수</th>
             <th style="padding:8px 6px;border:1px solid #e0e4ed;color:#243bb2;font-weight:700;text-align:right">총수량</th>
@@ -964,6 +991,7 @@ async function loadMyHistory() {
               <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:center">${i+1}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed">${r.worker_id||'-'}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px">${r.work_type||'-'}</td>
+              <td style="padding:8px 6px;border:1px solid #e0e4ed;font-size:11px;font-family:monospace;color:${r.lot_no?'#1a1a2e':'#bbb'}">${r.lot_no||'-'}</td><!-- 2026-11-25 -->
               <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right">${perLine.toLocaleString()}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right">${lines.toLocaleString()}</td>
               <td style="padding:8px 6px;border:1px solid #e0e4ed;text-align:right;font-weight:600">${totalQ.toLocaleString()}</td>
@@ -1020,6 +1048,7 @@ async function editMyRecord(id) {
     partNo: PRODUCTS[data.worker_id] ? PRODUCTS[data.worker_id].partNo : '',
     partName: PRODUCTS[data.worker_id] ? PRODUCTS[data.worker_id].partName : '',
     workType: data.work_type || '',
+    lot: data.lot_no || '',   // 2026-11-25
     perLine: data.qty_per_line || '',
     lines: data.line_count || '',
     total: data.total_qty || 0,
