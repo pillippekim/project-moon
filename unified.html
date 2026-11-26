@@ -114,10 +114,12 @@
       <div class="fld"><label>제품명</label><input type="text" id="productName" placeholder="(선택)"></div>
       <div class="fld"><label>성형 LOT</label>
         <div style="display:flex;gap:6px">
-          <input type="text" id="lotNo" placeholder="LOT 번호" style="flex:1">
+          <input type="text" id="lotNo" placeholder="LOT 번호" style="flex:1" list="lotNoHint">
           <button type="button" onclick="openScanner()" title="바코드/QR 스캔" style="flex:0 0 auto;padding:0 12px;border:1px solid #243bb2;background:#eef0ff;color:#243bb2;border-radius:8px;font-size:18px;cursor:pointer">📷</button>
         </div>
       </div>
+      <div class="fld" style="grid-column:1 / -1;margin-top:-8px"><div id="lotExtraBox"></div>
+        <button type="button" onclick="addUnifiedLotLine('')" style="background:none;border:none;color:#243bb2;font-size:12px;font-weight:700;cursor:pointer;padding:4px 0">+ LOT 추가</button><!-- 2026-11-26 LOT 여러 개 --></div>
       <div class="fld"><label>설비</label><input type="text" id="equipment" placeholder="예) LM 사상기"></div>
       <div class="fld"><label>시작 시간</label><input type="time" id="startTime"></div>
       <div class="fld"><label>종료 시간</label><input type="time" id="endTime"></div>
@@ -378,7 +380,7 @@ async function submitAll() {
   const shiftType = document.getElementById('shiftType').value;
   const workerName = document.getElementById('workerName').value.trim() || (myInfo && myInfo.name) || '';
   const productName = document.getElementById('productName').value.trim() || null;
-  const lotNo = document.getElementById('lotNo').value.trim();
+  const lotNo = getUnifiedLots().join(', ');   // 2026-11-26 LOT 여러 개 → 콤마로 합침
   const equipment = document.getElementById('equipment').value.trim() || null;
   const startTime = document.getElementById('startTime').value || null;
   const endTime = document.getElementById('endTime').value || null;
@@ -593,7 +595,7 @@ function startEdit(gid) {
   }
   document.getElementById('workerName').value = any.worker_name || (myInfo && myInfo.name) || '';
   document.getElementById('sabun').value = (r && r.sabun) || any.worker_id || '';
-  document.getElementById('lotNo').value = (r && r.lot_no) || ((ins && ins.lot_nos) || (pk && pk.lot_nos) || []).join(', ');
+  setUnifiedLots(((r && r.lot_no) || ((ins && ins.lot_nos) || (pk && pk.lot_nos) || []).join(', ')).split(',').map(function(x){ return x.trim(); }).filter(Boolean));   // 2026-11-26
   document.getElementById('note').value = (r && r.note) || (pk && pk.note) || (ins && ins.remarks) || '';
   // 공정 선택 상태 맞추기
   ['sasang', 'assembly', 'inspect', 'pack'].forEach(function(p) { if (procState[p] !== !!g.rows[p]) toggleProc(p); });
@@ -638,10 +640,10 @@ function resetForm(keepCommon) {
   if (!keepCommon) {
     document.getElementById('sabun').value = '';
     document.getElementById('productName').value = '';
-    document.getElementById('lotNo').value = '';
+    document.getElementById('lotNo').value = ''; var _lx = document.getElementById('lotExtraBox'); if (_lx) _lx.innerHTML = '';
     document.getElementById('note').value = '';
   } else {
-    document.getElementById('lotNo').value = '';
+    document.getElementById('lotNo').value = ''; var _lx = document.getElementById('lotExtraBox'); if (_lx) _lx.innerHTML = '';
     document.getElementById('note').value = '';
   }
 }
@@ -758,8 +760,8 @@ function _onCameraDetect(text) {
     _addContScan(code);
     return;  // 카메라 유지
   }
-  // 단일 카메라 모드: 채우고 닫기
-  document.getElementById('lotNo').value = code;
+  // 단일 카메라 모드: 채우고 닫기 (2026-11-26 첫 칸이 차 있으면 새 줄에)
+  putUnifiedLot(code);
   showToast('바코드 인식 ✓ ' + code);
   closeScanner();
 }
@@ -933,7 +935,7 @@ function confirmManual() {
   const input = document.getElementById('scanInput');
   const v = input.value.trim();
   if (!v) { _scanMsg('LOT 번호를 입력해주세요.', true); return; }
-  document.getElementById('lotNo').value = v;
+  putUnifiedLot(v);   // 2026-11-26
   showToast('LOT 입력 완료: ' + v);
   closeScanner();
 }
@@ -954,16 +956,38 @@ function applyScans() {
     return;
   }
   // 기존 입력값 유지 + 스캔 결과 병합 (중복 제거)
-  const lotInput = document.getElementById('lotNo');
-  const existing = lotInput.value.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
-  const merged = existing.slice();
+  const merged = getUnifiedLots();   // 2026-11-26 줄 단위로 병합
   _contScans.forEach(function(c){ if (merged.indexOf(c) === -1) merged.push(c); });
-  lotInput.value = merged.join(', ');
+  setUnifiedLots(merged);
   const n = _contScans.length;
   closeScanner();
   showToast('✓ ' + n + '개 LOT 적용 완료!');
 }
 
+
+// ══ 2026-11-26 LOT 여러 개 입력 ══
+function getUnifiedLots() {
+  var out = [];
+  document.querySelectorAll('#lotNo, #lotExtraBox input').forEach(function(i) { String(i.value || '').toUpperCase().split(',').forEach(function(x) { x = x.trim(); if (x && out.indexOf(x) < 0) out.push(x); }); });
+  return out;
+}
+function addUnifiedLotLine(val) {
+  var box = document.getElementById('lotExtraBox'); var line = document.createElement('div');
+  line.style.cssText = 'display:flex;gap:6px;margin-top:6px';
+  line.innerHTML = '<input type="text" placeholder="LOT 번호" style="flex:1"><button type="button" onclick="this.parentNode.remove()" style="flex:0 0 auto;padding:0 12px;border:1px solid #fecaca;background:#fff5f5;color:#b91c1c;border-radius:8px;font-weight:700;cursor:pointer">×</button>';
+  box.appendChild(line); var inp = line.querySelector('input'); if (val) inp.value = val; return inp;
+}
+function setUnifiedLots(arr) {
+  document.getElementById('lotExtraBox').innerHTML = '';
+  document.getElementById('lotNo').value = arr[0] || '';
+  for (var i = 1; i < arr.length; i++) addUnifiedLotLine(arr[i]);
+}
+function putUnifiedLot(code) {
+  var first = document.getElementById('lotNo');
+  if (!first.value.trim()) { first.value = code; return; }
+  var empties = Array.prototype.filter.call(document.querySelectorAll('#lotExtraBox input'), function(i) { return !i.value.trim(); });
+  if (empties.length) empties[0].value = code; else addUnifiedLotLine(code);
+}
 async function openScanner() {
   _scannerOpen = true;
   _contScans = []; _lastCode = ''; _lastCodeTime = 0;
