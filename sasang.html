@@ -8,6 +8,8 @@
 <script src="vendor/supabase-2.119.0.js"></script>
 <script src="vendor/zxing-0.21.0.min.js"></script>
 <script src="auth_guard.js"></script>
+<script src="safety_items.js"></script><!-- 2026-11-26 점검 항목 공용 -->
+<script src="safety_collapse.js"></script><!-- 2026-11-26 점검 완료 시 접기 -->
 <script src="i18n.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -302,40 +304,12 @@ let existingSafetyId = null;
 //  ※ '수작업(수사상)'은 설비 점검 없이 바로 작성됩니다.
 //  ※ 자동사상기 실제 설비명/관리번호는 확인 후 아래에 추가/수정하세요.
 // ═══════════════════════════════════════════════
+// 2026-11-26 점검 항목(SAFETY_ALL_ITEMS)·설비별 매핑(EQUIPMENT_SAFETY_MAP)·판정(SAFETY_OPTIONS)은 safety_items.js 로 이동 (조립·사상·통합 공용)
 const EQUIPMENTS = [
   { no: '수작업(수사상)', id: '-', type: 'manual' },
   { no: 'LM 사상기', id: '생-B-36', type: 'sander' }
 ];
 
-// 포괄적 점검항목 (전체 통합 — 설비별로 해당 항목만 표시)
-const SAFETY_ALL_ITEMS = {
-  1: '스위치 작동 원활',
-  2: '실린더/압입실린더 작동',
-  3: '에어공급/에어압력 정상',
-  4: '조명상태 정상',
-  5: '청결상태 (3정5S)',
-  6: '비상정지 버튼 작동',
-  7: 'Air Drain기 작동',
-  8: '부트안착핀 높이확인',
-  9: '컨트롤 박스 이상유무',
-  10: '압력게이지 정상 (0.4~0.8MPa)',
-  11: '양수버튼 작동',
-  12: '칼날/샤링칼날 상태',
-  13: '호스 거치 상태',
-  14: '클램프 작동'
-};
-
-// 설비별 점검항목 매핑 (사상기)
-const EQUIPMENT_SAFETY_MAP = {
-  'LM 사상기': [1,11,10,12,14]
-};
-
-const SAFETY_OPTIONS = [
-  { value: '○', class: 'normal' },
-  { value: '△', class: 'repair' },
-  { value: '×', class: 'unusable' },
-  { value: '│', class: 'notuse' }
-];
 
 // ═══════════════════════════════════════════════
 // 초기화

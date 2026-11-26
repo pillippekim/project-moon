@@ -7,6 +7,8 @@
 <title>통합 작업일지 | 한국하이테크</title>
 <script src="vendor/supabase-2.119.0.js"></script>
 <script src="auth_guard.js"></script>
+<script src="safety_items.js"></script><!-- 2026-11-26 점검 항목 공용 -->
+<script src="safety_collapse.js"></script><!-- 2026-11-26 점검 완료 시 접기 -->
 <script src="vendor/html5-qrcode-2.3.8.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -86,6 +88,39 @@
   .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
   .toast.error { background: #dc2626; }
   #authCheckOverlay { position: fixed; inset: 0; background: #f4f6fb; display: flex; align-items: center; justify-content: center; z-index: 9999; color: #888; font-size: 14px; }
+  /* 2026-11-26 설비 점검 내장 */
+  #safetySection { padding: 0; overflow: hidden; border: 2px solid #fecaca; }
+  #safetySection.sf-none { border-color: #e2e8f0; }
+  #safetySection.sc-done { border-color: #a7f3d0; }
+  .sf-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; background: #dc2626; color: #fff; padding: 12px 24px; }
+  #safetySection.sf-none .sf-head { background: #94a3b8; }
+  .sf-head h2 { color: #fff; margin: 0; }
+  .sf-badge { font-size: 12px; background: rgba(255,255,255,0.22); padding: 4px 12px; border-radius: 6px; font-weight: 700; margin-left: auto; }
+  #safetyBody { padding: 16px 24px; }
+  .sf-note { background: #f8fafc; border: 1px dashed #cbd5e1; color: #64748b; border-radius: 10px; padding: 12px 14px; font-size: 13px; line-height: 1.5; }
+  .sf-note.warn { border-color: #fca5a5; background: #fff5f5; color: #b91c1c; border-style: solid; }
+  .safety-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+  .safety-table th, .safety-table td { border: 1px solid #e0e4ed; padding: 8px; text-align: center; vertical-align: middle; }
+  .safety-table thead th { background: #dc2626; color: white; font-weight: 700; }
+  .safety-table .item-cell { background: #fef2f2; color: #991b1b; font-weight: 700; text-align: left; padding-left: 12px; white-space: nowrap; }
+  .safety-table .item-cell .item-num { display: inline-block; background: #dc2626; color: white; border-radius: 50%; width: 20px; height: 20px; line-height: 20px; text-align: center; margin-right: 6px; font-size: 10px; }
+  .check-select-safety { display: flex; gap: 4px; justify-content: center; }
+  .check-select-safety button { width: 44px; height: 44px; border: 2px solid #d1d5db; background: white; border-radius: 8px; cursor: pointer; font-size: 20px; font-weight: 700; padding: 0; line-height: 1; font-family: inherit; }
+  .check-select-safety button.normal { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+  .check-select-safety button.repair { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+  .check-select-safety button.unusable { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+  .check-select-safety button.notuse { background: #f3f4f6; color: #374151; border-color: #d1d5db; }
+  .check-select-safety button.active.normal { background: #10b981; color: white; border-color: #10b981; }
+  .check-select-safety button.active.repair { background: #f59e0b; color: white; border-color: #f59e0b; }
+  .check-select-safety button.active.unusable { background: #ef4444; color: white; border-color: #ef4444; }
+  .check-select-safety button.active.notuse { background: #6b7280; color: white; border-color: #6b7280; }
+  .sf-legend { margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 12px; color: #888; font-weight: 600; }
+  .sf-legend button { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border: 2px solid; border-radius: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .sf-legend button i { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: #fff; border-radius: 6px; font-style: normal; font-size: 14px; }
+  #workArea { position: relative; }
+  #workArea.work-area-locked > :not(#lockMessage) { opacity: 0.45; pointer-events: none; filter: grayscale(0.4); }
+  #lockMessage { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 17px; font-weight: 700; color: #dc2626; z-index: 10; background: rgba(255,255,255,0.95); padding: 14px 28px; border-radius: 12px; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 16px rgba(220,38,38,0.18); }
+  #workArea.work-area-locked > #lockMessage { display: block; }
   @media (max-width: 700px) { .grid { grid-template-columns: 1fr 1fr; } }
 </style>
 </head>
@@ -107,7 +142,7 @@
   <div class="card">
     <h2>📋 공통 정보</h2>
     <div class="grid">
-      <div class="fld"><label>작업일 <span class="req">*</span></label><input type="date" id="workDate" onchange="loadHistory()"></div>
+      <div class="fld"><label>작업일 <span class="req">*</span></label><input type="date" id="workDate" onchange="loadHistory(); refreshSafety()"></div>
       <div class="fld"><label>근무</label><select id="shiftType"><option value="주간">주간</option><option value="야간">야간</option></select></div>
       <div class="fld"><label>작업자</label><input type="text" id="workerName" placeholder="작업자명"></div>
       <div class="fld"><label>사번 / 품번 <span class="req">*</span></label><input type="text" id="sabun" placeholder="예) 502209"></div>
@@ -120,7 +155,9 @@
       </div>
       <div class="fld" style="grid-column:1 / -1;margin-top:-8px"><div id="lotExtraBox"></div>
         <button type="button" onclick="addUnifiedLotLine('')" style="background:none;border:none;color:#243bb2;font-size:12px;font-weight:700;cursor:pointer;padding:4px 0">+ LOT 추가</button><!-- 2026-11-26 LOT 여러 개 --></div>
-      <div class="fld"><label>설비</label><input type="text" id="equipment" placeholder="예) LM 사상기"></div>
+      <div class="fld"><label>설비 <span class="req" id="equipmentReq" style="display:none">*</span> <span style="font-weight:500;color:#aaa">(조립·사상 시 선택)</span></label>
+        <select id="equipment" onchange="refreshSafety()"><!-- 2026-11-26 목록 선택 (조립 일지와 같은 설비 목록) --></select>
+      </div>
       <div class="fld"><label>시작 시간</label><input type="time" id="startTime"></div>
       <div class="fld"><label>종료 시간</label><input type="time" id="endTime"></div>
     </div>
@@ -152,6 +189,18 @@
       </div>
     </div>
   </div>
+
+  <!-- 2026-11-26 설비 점검 내장: 조립·사상 체크 + 설비 선택 시 그 설비의 오늘 점검(조립/사상 일지와 같은 표) 확인 → 없으면 여기서 점검, 완료 전 아래 입력·제출 잠금 -->
+  <div class="card sf-none" id="safetySection">
+    <div class="sf-head">
+      <h2>🔒 일일 설비 점검 <span style="font-size:12px;font-weight:500;opacity:0.85">— 조립·사상 일지와 같은 점검표</span></h2>
+      <span class="sf-badge" id="safetyStatus">해당 없음</span>
+    </div>
+    <div id="safetyBody"><div class="sf-note">조립 또는 사상을 체크하고 설비를 고르면 그 설비의 오늘 점검 여부를 확인해요. 검사·포장만 하는 경우에는 점검이 필요 없어요.</div></div>
+  </div>
+
+  <div id="workArea">
+    <div id="lockMessage">🔒 설비 점검 완료 후 입력·제출 가능</div>
 
   <div class="card">
     <h2>🔢 수량 입력 <span style="font-size:12px;font-weight:500;color:#888">— 앞 공정 입력 시 뒤 공정 자동 제안 (수정 가능)</span></h2>
@@ -205,6 +254,7 @@
     <button class="btn-reset" onclick="resetForm()">초기화</button>
   </div>
   <div class="savenote">💾 저장 시 → 선택한 공정의 작업일지(사상·조립·검사·포장)에 각각 한 건씩 기록되고 같은 LOT로 연결됩니다.</div>
+  </div><!-- /workArea -->
 
   <!-- 2026-11-18 내 통합 일지 (이 화면에서 제출한 묶음만 · 수정/삭제는 4개 공정 일지에 함께 반영) -->
   <div class="card" id="histCard" style="margin-top:18px">
@@ -257,8 +307,194 @@ window.onload = async () => {
   document.getElementById('userInfo').textContent = myInfo ? `${myInfo.name} (${myInfo.emp_code})` : '';
   document.getElementById('workerName').value = myInfo.name || '';
   document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
+  fillEquipmentSelect();   // 2026-11-26
   loadHistory();   // 2026-11-18
+  refreshSafety();   // 2026-11-26
 };
+
+
+// ══════════════════════════════════════════════════════════════
+// 2026-11-26 설비 점검 내장
+//  · 설비 목록은 조립 일지(assembly.html)의 EQUIPMENTS 와 같게 유지 (점검 항목은 safety_items.js 공용)
+//  · 점검 기록 표: 사상기 계열(type sander) → sasang_safety_check, 그 외 → assembly_safety_check
+//    조회는 두 표를 모두 보고 (check_date, equipment_no) 가 어느 쪽에든 있으면 통과 → 조립/사상/통합 어느 화면에서 점검했든 하루 1번
+//  · 잠금 대상(조립·사상 일지와 동일): 조립 또는 사상 체크 + 설비 선택 + 오늘 점검 없음. 검사·포장만 / 수작업 → 점검 없음
+//  · 수정 모드(editingGroup)에서는 상태만 표시하고 잠그지 않음 (과거 날짜 기록 수정이 막히지 않도록)
+// ══════════════════════════════════════════════════════════════
+const UNI_EQUIPMENTS = [
+  { no: '수작업', id: '-', type: 'manual' },
+  { no: 'LM GUIDE 조립기', id: '검-A-02', type: 'guide' },
+  { no: 'C200 GUIDE 조립기', id: '검-A-09', type: 'guide' },
+  { no: 'AI3 GUIDE 조립기', id: '검-A-10', type: 'guide' },
+  { no: 'IG/YG 와샤조립기', id: '생-B-21', type: 'washer' },
+  { no: 'NE 부쉬 조립기', id: '검-A-09', type: 'washer' },
+  { no: 'BOOT&ROD 조립기', id: '검-A-01', type: 'rod' },
+  { no: 'LM 사상기', id: '생-B-36', type: 'sander' },
+  { no: '댐퍼 사상기', id: '검-A-05', type: 'sander' }
+];
+let safetyCheckCompleted = true;   // 점검이 필요 없는 상태 = 통과
+let safetyBlockReason = '';
+let existingSafetyId = null, existingSafetyTable = null, existingSafetyRow = null;
+let safetySaving = false, safetySeq = 0;
+
+function fillEquipmentSelect() {
+  var sel = document.getElementById('equipment');
+  sel.innerHTML = '<option value="">— 설비 선택 —</option>' + UNI_EQUIPMENTS.map(function(e) {
+    return '<option value="' + esc(e.no) + '">' + esc(e.no) + (e.type === 'manual' ? ' (설비 없음 · 점검 생략)' : ' (' + esc(e.id) + ')') + '</option>';
+  }).join('');
+}
+function setEquipmentValue(v) {
+  var sel = document.getElementById('equipment');
+  var old = sel.querySelector('option[data-legacy]'); if (old) old.remove();
+  if (v && !UNI_EQUIPMENTS.some(function(e) { return e.no === v; })) {
+    var o = document.createElement('option'); o.value = v; o.textContent = v + ' (목록에 없는 과거 입력)'; o.setAttribute('data-legacy', '1'); sel.appendChild(o);
+  }
+  sel.value = v || '';
+}
+function currentEquipment() {
+  var v = document.getElementById('equipment').value;
+  return UNI_EQUIPMENTS.find(function(e) { return e.no === v; }) || null;
+}
+function safetyTableFor(eq) { return eq.type === 'sander' ? 'sasang_safety_check' : 'assembly_safety_check'; }
+
+function setSafetyUI(mode, badge, bodyHtml) {
+  // mode: none(해당 없음) | need(설비 선택 필요) | check(점검 진행) | done(완료)
+  var sec = document.getElementById('safetySection');
+  sec.classList.toggle('sf-none', mode === 'none');
+  document.getElementById('safetyStatus').textContent = badge;
+  if (bodyHtml !== undefined) document.getElementById('safetyBody').innerHTML = bodyHtml;
+  document.getElementById('equipmentReq').style.display = (procState.sasang || procState.assembly) ? 'inline' : 'none';
+}
+function setWorkLock(locked, reason) {
+  safetyCheckCompleted = !locked; safetyBlockReason = reason || '';
+  document.getElementById('workArea').classList.toggle('work-area-locked', !!locked);
+  if (locked) document.getElementById('lockMessage').textContent = reason || '🔒 설비 점검 완료 후 입력·제출 가능';
+}
+
+async function refreshSafety() {
+  var seq = ++safetySeq;
+  var needProc = procState.sasang || procState.assembly;
+  var eq = currentEquipment();
+  var eqText = document.getElementById('equipment').value;
+  existingSafetyId = null; existingSafetyTable = null; existingSafetyRow = null;
+  if (!needProc) {
+    setSafetyUI('none', '해당 없음', '<div class="sf-note">조립 또는 사상을 체크하고 설비를 고르면 그 설비의 오늘 점검 여부를 확인해요. 검사·포장만 하는 경우에는 점검이 필요 없어요.</div>');
+    setWorkLock(false); return;
+  }
+  if (!eq) {
+    if (eqText) {   // 목록에 없는 과거 입력값 (수정 모드)
+      setSafetyUI('none', '점검 대상 아님', '<div class="sf-note">"' + esc(eqText) + '"은(는) 설비 목록에 없는 과거 입력값이라 점검을 확인하지 않아요. 필요하면 목록에서 설비를 다시 골라 주세요.</div>');
+      setWorkLock(false); return;
+    }
+    setSafetyUI('need', '설비 선택 필요', '<div class="sf-note warn">⚠️ 조립·사상을 체크한 경우 <b>설비</b>를 골라야 해요. 위 설비 칸에서 사용 설비를 선택하면 오늘 점검 여부를 확인합니다. (설비 없이 손으로만 작업한 경우 → "수작업" 선택 시 점검 생략)</div>');
+    setWorkLock(!editingGroup, '🔒 설비(또는 수작업)를 선택하면 입력·제출 가능'); return;
+  }
+  if (eq.type === 'manual') {
+    setSafetyUI('none', '수작업 — 점검 생략', '<div class="sf-note">수작업(설비 없음)은 조립·사상 일지와 같이 설비 점검 없이 바로 작성할 수 있어요.</div>');
+    setWorkLock(false); return;
+  }
+  var workDate = document.getElementById('workDate').value;
+  if (!workDate) { setSafetyUI('need', '작업일 필요', '<div class="sf-note warn">작업일을 먼저 입력해 주세요.</div>'); setWorkLock(!editingGroup, '🔒 작업일을 입력해 주세요'); return; }
+  setSafetyUI('check', '확인 중…', '<div class="sf-note">' + esc(eq.no) + ' 의 ' + esc(workDate) + ' 점검 기록을 확인하는 중…</div>');
+  setWorkLock(!editingGroup);
+  // 두 표 모두 조회 — 어느 쪽에든 있으면 통과
+  var own = safetyTableFor(eq), other = own === 'sasang_safety_check' ? 'assembly_safety_check' : 'sasang_safety_check';
+  var found = null;
+  for (var k = 0; k < 2; k++) {
+    var tbl = k === 0 ? own : other;
+    try {
+      var R = await db.from(tbl).select('*').eq('check_date', workDate).eq('equipment_no', eq.no).order('checked_at', { ascending: false }).limit(1);
+      if (R.error) { console.warn('safety lookup', tbl, R.error); continue; }
+      if (R.data && R.data.length) { found = { table: tbl, row: R.data[0] }; break; }
+    } catch (e) { console.warn('safety lookup', tbl, e); }
+  }
+  if (seq !== safetySeq) return;   // 그 사이 설비/공정이 바뀜 → 이 결과는 버림
+  if (found) {
+    existingSafetyId = found.row.id; existingSafetyTable = found.table; existingSafetyRow = found.row;
+    renderSafetyTable(eq, found.row);
+    setSafetyUI('done', '✓ 점검 완료' + safetySummary(found.row, found.table));
+    setWorkLock(false);
+  } else {
+    renderSafetyTable(eq, null);
+    setSafetyUI('check', '점검 진행 중');
+    setWorkLock(!editingGroup);
+  }
+}
+function safetySummary(row, table) {
+  var cnt = { '○': 0, '△': 0, '×': 0, '│': 0 }; var cd = row.check_data || {};
+  Object.keys(cd).forEach(function(k) { if (cnt[cd[k]] !== undefined) cnt[cd[k]]++; });
+  var t = row.checked_at ? new Date(row.checked_at) : null;
+  var when = t && !isNaN(t) ? (String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0')) : '';
+  var parts = [when, row.checked_by_name || '', '정상 ' + cnt['○'] + (cnt['△'] ? ' / 수리요망 ' + cnt['△'] : '') + (cnt['×'] ? ' / 사용불가 ' + cnt['×'] : '') + (cnt['│'] ? ' / 미가동 ' + cnt['│'] : ''),
+               table === 'sasang_safety_check' ? '사상 점검표' : '조립 점검표'].filter(Boolean);
+  return ' · ' + parts.join(' · ');
+}
+function renderSafetyTable(eq, row) {
+  var nums = EQUIPMENT_SAFETY_MAP[eq.no] || [];
+  var cd = (row && row.check_data) || {};
+  var h = '<div style="overflow-x:auto"><table class="safety-table"><thead><tr><th style="width:220px">점검항목 — ' + esc(eq.no) + '</th><th>판정</th></tr></thead><tbody>';
+  nums.forEach(function(num, idx) {
+    var cur = cd[num] || cd[String(num)] || '○';
+    h += '<tr><td class="item-cell"><span class="item-num">' + (idx + 1) + '</span>' + esc(SAFETY_ALL_ITEMS[num] || ('항목 ' + num)) + '</td><td><div class="check-select-safety" data-item="' + num + '">'
+      + SAFETY_OPTIONS.map(function(opt) { return '<button type="button" class="' + opt.class + (opt.value === cur ? ' active' : '') + '" data-value="' + opt.value + '" onclick="setSafetyCheck(this)">' + opt.value + '</button>'; }).join('')
+      + '</div></td></tr>';
+  });
+  h += '</tbody></table></div>';
+  h += '<div class="sf-legend">범례 (클릭 시 전체 적용):'
+    + '<button type="button" onclick="setAllSafety(\'○\')" style="border-color:#10b981;background:#d1fae5;color:#065f46"><i style="background:#10b981">○</i> 정상</button>'
+    + '<button type="button" onclick="setAllSafety(\'△\')" style="border-color:#f59e0b;background:#fef3c7;color:#92400e"><i style="background:#f59e0b">△</i> 수리요망</button>'
+    + '<button type="button" onclick="setAllSafety(\'×\')" style="border-color:#ef4444;background:#fef2f2;color:#991b1b"><i style="background:#ef4444">×</i> 사용불가</button>'
+    + '<button type="button" onclick="setAllSafety(\'│\')" style="border-color:#6b7280;background:#f3f4f6;color:#374151"><i style="background:#6b7280">│</i> 미가동</button></div>';
+  h += '<div style="margin-top:12px"><textarea id="safetyOverallRemarks" placeholder="설비점검 시 발견한 특이사항을 입력하세요" style="width:100%;padding:10px;border:1px solid #e0e4ed;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:52px;background:#fafbfd">' + esc((row && row.overall_remarks) || '') + '</textarea></div>';
+  h += '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px"><div style="font-size:13px;color:#555">'
+    + (row ? '이미 점검된 내용이에요. 고칠 게 있으면 바꾸고 다시 "점검 완료"를 누르세요.' : '✓ 모든 항목 정상(○)으로 자동 설정됨 · 다르면 눌러서 바꾸세요')
+    + '</div><button type="button" onclick="completeSafetyCheck()" style="background:#dc2626;color:white;border:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">점검 완료 ✓</button></div>';
+  document.getElementById('safetyBody').innerHTML = h;
+}
+function setSafetyCheck(btn) {
+  btn.parentElement.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+function setAllSafety(value) {
+  document.querySelectorAll('#safetyBody .check-select-safety').forEach(function(div) {
+    div.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
+    var t = div.querySelector('button[data-value="' + value + '"]'); if (t) t.classList.add('active');
+  });
+  showToast('✓ 전체 항목 "' + value + '"로 설정됨');
+}
+function collectSafetyData(eq) {
+  var result = {};
+  (EQUIPMENT_SAFETY_MAP[eq.no] || []).forEach(function(num) {
+    var a = document.querySelector('#safetyBody .check-select-safety[data-item="' + num + '"] button.active');
+    result[num] = a ? a.dataset.value : '○';
+  });
+  return result;
+}
+async function completeSafetyCheck() {
+  var eq = currentEquipment();
+  if (!eq || eq.type === 'manual') { showToast('설비를 먼저 선택하세요.', 'error'); return; }
+  var workDate = document.getElementById('workDate').value;
+  if (!workDate) { showToast('작업일을 입력하세요.', 'error'); return; }
+  if (safetySaving) return;
+  safetySaving = true;
+  var table = existingSafetyTable || safetyTableFor(eq);
+  try {
+    var rm = document.getElementById('safetyOverallRemarks');
+    var payload = { check_date: workDate, equipment_no: eq.no, equipment_id: eq.id, check_data: collectSafetyData(eq), overall_remarks: (rm && rm.value) || null,
+                    checked_by_emp_code: myInfo && myInfo.emp_code, checked_by_name: myInfo && myInfo.name, checked_at: new Date().toISOString() };
+    var SAFE_RES = existingSafetyId
+      ? await db.from(table).update(payload).eq('id', existingSafetyId).select('id')
+      : await db.from(table).insert(payload).select('id');
+    var SAFE_ERR = SAFE_RES.error || (!SAFE_RES.data || !SAFE_RES.data.length ? { message: '반영 0건(권한 확인)' } : null);
+    if (SAFE_ERR) { safetySaving = false; alert('설비 점검 저장 실패 — 관리자에게 알려주세요.\n' + (SAFE_ERR.message || SAFE_ERR)); return; }
+    if (!existingSafetyId && SAFE_RES.data[0] && SAFE_RES.data[0].id) { existingSafetyId = SAFE_RES.data[0].id; existingSafetyTable = table; }
+    existingSafetyRow = Object.assign({}, existingSafetyRow || {}, payload, { id: existingSafetyId });
+  } catch (e) { safetySaving = false; alert('설비 점검 저장 실패 — 관리자에게 알려주세요.\n' + (e.message || e)); return; }
+  safetySaving = false;
+  setSafetyUI('done', '✓ 점검 완료' + safetySummary(existingSafetyRow, table));
+  setWorkLock(false);
+  showToast('✓ 설비 점검 완료! 수량을 입력하세요.');
+}
 
 // ── 공정 토글 ──
 function toggleProc(p) {
@@ -269,6 +505,7 @@ function toggleProc(p) {
   if (sec) sec.classList.toggle('off', !procState[p]);
   if (p === 'sasang') document.getElementById('m_sasang').style.display = procState[p] ? 'flex' : 'none';
   if (p === 'assembly') document.getElementById('m_assembly').style.display = procState[p] ? 'flex' : 'none';
+  refreshSafety();   // 2026-11-26
 }
 
 // ── 방식 선택 ──
@@ -371,6 +608,7 @@ function lotGuardMessage(lotLists) {   // lotLists: [{sabun, lots:[]}]
 async function submitAll() {
   const anyProc = procState.sasang || procState.assembly || procState.inspect || procState.pack;
   if (!anyProc) { showToast('진행한 공정을 1개 이상 선택하세요.', 'error'); return; }
+  if (!safetyCheckCompleted) { showToast(safetyBlockReason || '설비 점검을 먼저 완료해 주세요.', 'error'); document.getElementById('safetySection').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }   // 2026-11-26
 
   const workDate = document.getElementById('workDate').value;
   const sabun = document.getElementById('sabun').value.trim();
@@ -382,6 +620,7 @@ async function submitAll() {
   const productName = document.getElementById('productName').value.trim() || null;
   const lotNo = getUnifiedLots().join(', ');   // 2026-11-26 LOT 여러 개 → 콤마로 합침
   const equipment = document.getElementById('equipment').value.trim() || null;
+  const equipmentId = (function(){ var e = currentEquipment(); return e && e.id && e.id !== '-' ? e.id : null; })();   // 2026-11-26 관리번호
   const startTime = document.getElementById('startTime').value || null;
   const endTime = document.getElementById('endTime').value || null;
   const note = document.getElementById('note').value.trim() || null;
@@ -398,7 +637,7 @@ async function submitAll() {
   if (procState.sasang) {
     tasks.push({ table: 'sasang_reports', record: {
       work_date: workDate, shift_type: shiftType,
-      equipment_no: equipment, equipment_id: null,
+      equipment_no: equipment, equipment_id: equipmentId,
       start_time: startTime, end_time: endTime, worker_name: workerName,
       sabun: sabun, product_name: productName,
       work_method: getMethod('sasangMethod'),
@@ -409,7 +648,7 @@ async function submitAll() {
   if (procState.assembly) {
     tasks.push({ table: 'assembly_reports', record: {
       work_date: workDate, shift_type: shiftType,
-      equipment_no: equipment, equipment_id: null,
+      equipment_no: equipment, equipment_id: equipmentId,
       start_time: startTime, end_time: endTime, worker_name: workerName,
       sabun: sabun, product_name: productName,
       assembly_type: null, work_method: getMethod('assemblyMethod'),
@@ -588,7 +827,7 @@ function startEdit(gid) {
   // 공통
   if (r) {
     document.getElementById('shiftType').value = r.shift_type || '주간';
-    document.getElementById('equipment').value = r.equipment_no || '';
+    setEquipmentValue(r.equipment_no || '');   // 2026-11-26 (목록에 없는 과거 입력값은 임시 항목으로 표시)
     document.getElementById('startTime').value = r.start_time ? String(r.start_time).slice(0, 5) : '';
     document.getElementById('endTime').value = r.end_time ? String(r.end_time).slice(0, 5) : '';
     document.getElementById('productName').value = r.product_name || '';
@@ -614,6 +853,7 @@ function startEdit(gid) {
   document.getElementById('editBar').classList.add('on');
   document.getElementById('submitBtn').textContent = '수정 저장';
   loadHistory();
+  refreshSafety();   // 2026-11-26 수정 모드에서는 점검 상태만 표시하고 잠그지 않음
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function setSeg(segId, v) {
@@ -625,6 +865,7 @@ function cancelEdit(silent) {
   document.getElementById('editBar').classList.remove('on');
   document.getElementById('submitBtn').textContent = '제출하기';
   resetForm(true);
+  refreshSafety();   // 2026-11-26
   if (!silent) { showToast('수정을 취소했어요'); loadHistory(); }
 }
 

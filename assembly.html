@@ -8,6 +8,8 @@
 <script src="vendor/supabase-2.119.0.js"></script>
 <script src="vendor/zxing-0.21.0.min.js"></script>
 <script src="auth_guard.js"></script>
+<script src="safety_items.js"></script><!-- 2026-11-26 점검 항목 공용 -->
+<script src="safety_collapse.js"></script><!-- 2026-11-26 점검 완료 시 접기 -->
 <script src="i18n.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -304,6 +306,7 @@ let safetySaving = false;  // 점검 저장 연타/재제출 중복 방지 (2026
 // ═══════════════════════════════════════════════
 // 설비 마스터 (8대)
 // ═══════════════════════════════════════════════
+// 2026-11-26 점검 항목(SAFETY_ALL_ITEMS)·설비별 매핑(EQUIPMENT_SAFETY_MAP)·판정(SAFETY_OPTIONS)은 safety_items.js 로 이동 (조립·사상·통합 공용)
 const EQUIPMENTS = [
   { no: 'LM GUIDE 조립기', id: '검-A-02', type: 'guide' },
   { no: 'C200 GUIDE 조립기', id: '검-A-09', type: 'guide' },
@@ -317,43 +320,6 @@ const EQUIPMENTS = [
   { no: '수작업', id: '-', type: 'manual' }
 ];
 
-// 포괄적 점검항목 (전체 통합 — 설비별로 해당 항목만 표시)
-const SAFETY_ALL_ITEMS = {
-  1: '스위치 작동 원활',
-  2: '실린더/압입실린더 작동',
-  3: '에어공급/에어압력 정상',
-  4: '조명상태 정상',
-  5: '청결상태 (3정5S)',
-  6: '비상정지 버튼 작동',
-  7: 'Air Drain기 작동',
-  8: '부트안착핀 높이확인',
-  9: '컨트롤 박스 이상유무',
-  10: '압력게이지 정상 (0.4~0.8MPa)',
-  11: '양수버튼 작동',
-  12: '칼날/샤링칼날 상태',
-  13: '호스 거치 상태',
-  14: '클램프 작동'
-};
-
-// 설비별 점검항목 매핑
-const EQUIPMENT_SAFETY_MAP = {
-  'LM GUIDE 조립기':    [1,2,3,4,5,6],
-  'C200 GUIDE 조립기':  [1,2,3,4,5,6],
-  'AI3 GUIDE 조립기':   [1,2,3,4,5,6],
-  'IG/YG 와샤조립기':   [1,2,10,11,6],
-  'NE 부쉬 조립기':     [1,2,10,11,6],
-  'BOOT&ROD 조립기':    [1,9,2,7,3,4,8,5,6],
-  'LM 사상기':          [1,11,10,12,14],
-  '댐퍼 사상기':         [1,2,11,5,6],
-  '호스 절단기':         [1,10,12,13,5,6]
-};
-
-const SAFETY_OPTIONS = [
-  { value: '○', class: 'normal' },
-  { value: '△', class: 'repair' },
-  { value: '×', class: 'unusable' },
-  { value: '│', class: 'notuse' }
-];
 
 // ═══════════════════════════════════════════════
 // BOM 마스터 (조립품 → 부자재 구성)
