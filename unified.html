@@ -31,6 +31,7 @@
   .chip .dot { width: 9px; height: 9px; border-radius: 50%; background: #d1d5db; }
   .chip.on .dot { background: #243bb2; }
   .methods { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 14px; }
+  .auto-hint { font-size: 11px; color: #16a34a; font-weight: 600; }   /* 2026-11-27 */
   .method-row { display: flex; align-items: center; gap: 10px; }
   .method-row > span { font-size: 13px; color: #555; font-weight: 600; }
   .seg { display: inline-flex; border: 1px solid #e0e4ed; border-radius: 8px; overflow: hidden; }
@@ -145,7 +146,7 @@
       <div class="fld"><label>작업일 <span class="req">*</span></label><input type="date" id="workDate" onchange="loadHistory(); refreshSafety()"></div>
       <div class="fld"><label>근무</label><select id="shiftType"><option value="주간">주간</option><option value="야간">야간</option></select></div>
       <div class="fld"><label>작업자</label><input type="text" id="workerName" placeholder="작업자명"></div>
-      <div class="fld"><label>사번 / 품번 <span class="req">*</span></label><input type="text" id="sabun" placeholder="예) 502209"></div>
+      <div class="fld"><label>사번 / 품번 <span class="req">*</span></label><input type="text" id="sabun" placeholder="예) 502209" onchange="autoMethods()"></div>
       <div class="fld"><label>제품명</label><input type="text" id="productName" placeholder="(선택)"></div>
       <div class="fld"><label>성형 LOT</label>
         <div style="display:flex;gap:6px">
@@ -156,7 +157,7 @@
       <div class="fld" style="grid-column:1 / -1;margin-top:-8px"><div id="lotExtraBox"></div>
         <button type="button" onclick="addUnifiedLotLine('')" style="background:none;border:none;color:#243bb2;font-size:12px;font-weight:700;cursor:pointer;padding:4px 0">+ LOT 추가</button><!-- 2026-11-26 LOT 여러 개 --></div>
       <div class="fld"><label>설비 <span class="req" id="equipmentReq" style="display:none">*</span> <span style="font-weight:500;color:#aaa">(조립·사상 시 선택)</span></label>
-        <select id="equipment" onchange="refreshSafety()"><!-- 2026-11-26 목록 선택 (조립 일지와 같은 설비 목록) --></select>
+        <select id="equipment" onchange="refreshSafety(); autoMethods()"><!-- 2026-11-26 목록 선택 (조립 일지와 같은 설비 목록) --></select>
       </div>
       <div class="fld"><label>시작 시간</label><input type="time" id="startTime"></div>
       <div class="fld"><label>종료 시간</label><input type="time" id="endTime"></div>
@@ -174,18 +175,20 @@
     <div class="methods">
       <div class="method-row" id="m_sasang" style="display:none">
         <span>사상 방식</span>
-        <div class="seg" id="sasangMethod">
-          <button type="button" class="sel" data-v="수사상" onclick="pickMethod('sasangMethod',this)">수사상</button>
-          <button type="button" data-v="기계사상" onclick="pickMethod('sasangMethod',this)">기계사상</button>
+        <div class="seg" id="sasangMethod"><!-- 2026-11-27 저장값(data-v)을 사상 일지와 통일: 수사상 / 자동사상 -->
+          <button type="button" class="sel" data-v="수사상" onclick="pickMethod('sasangMethod',this,true)">수사상</button>
+          <button type="button" data-v="자동사상" onclick="pickMethod('sasangMethod',this,true)">기계사상</button>
         </div>
-        <span style="font-size:11px;color:#aaa;font-weight:500">기계사상 = LM 사상기</span>
+        <span class="auto-hint" id="hint_sasang"></span>
       </div>
       <div class="method-row" id="m_assembly" style="display:none">
         <span>조립 방식</span>
-        <div class="seg" id="assemblyMethod">
-          <button type="button" class="sel" data-v="수동조립" onclick="pickMethod('assemblyMethod',this)">수동조립</button>
-          <button type="button" data-v="자동조립" onclick="pickMethod('assemblyMethod',this)">자동조립</button>
+        <div class="seg" id="assemblyMethod"><!-- 2026-11-27 저장값(data-v)을 조립 일지와 통일: 수동 / 자동 / 수작업 -->
+          <button type="button" class="sel" data-v="수동" onclick="pickMethod('assemblyMethod',this,true)">수동조립</button>
+          <button type="button" data-v="자동" onclick="pickMethod('assemblyMethod',this,true)">자동조립</button>
+          <button type="button" data-v="수작업" onclick="pickMethod('assemblyMethod',this,true)">수작업</button>
         </div>
+        <span class="auto-hint" id="hint_assembly"></span>
       </div>
     </div>
   </div>
@@ -308,6 +311,7 @@ window.onload = async () => {
   document.getElementById('workerName').value = myInfo.name || '';
   document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
   fillEquipmentSelect();   // 2026-11-26
+  loadAssemblyBom();   // 2026-11-27 사번별 조립 방식(자동/수동)
   loadHistory();   // 2026-11-18
   refreshSafety();   // 2026-11-26
 };
@@ -506,14 +510,46 @@ function toggleProc(p) {
   if (p === 'sasang') document.getElementById('m_sasang').style.display = procState[p] ? 'flex' : 'none';
   if (p === 'assembly') document.getElementById('m_assembly').style.display = procState[p] ? 'flex' : 'none';
   refreshSafety();   // 2026-11-26
+  if (procState[p]) autoMethods(p);   // 2026-11-27 켠 공정만 맞춤 (다른 공정의 수동 선택은 유지)
+}
+
+
+// ══ 2026-11-27 설비·사번 → 방식 자동 연동 ══
+//  조립: 수작업 → '수작업' / 설비 → 그 사번의 BOM 방식('자동'/'수동', 없으면 '자동')   ← 조립 일지와 같은 규칙
+//  사상: 수작업 → '수사상' / 설비 → '자동사상'                                           ← 사상 일지와 같은 규칙
+//  자동으로 맞춘 뒤에도 버튼을 눌러 바꿀 수 있음 (바꾸면 "자동" 표시가 사라짐). 수정 모드에서는 저장된 값을 건드리지 않음.
+let ASSEMBLY_BOM = {};
+async function loadAssemblyBom() {
+  try {
+    const R = await db.from('assembly_bom').select('sabun, work_method');
+    if (R.error) { console.warn('assembly_bom', R.error); return; }
+    ASSEMBLY_BOM = {}; (R.data || []).forEach(function(r) { ASSEMBLY_BOM[String(r.sabun).trim()] = r.work_method; });
+    autoMethods();
+  } catch (e) { console.warn('assembly_bom', e); }
+}
+function autoMethods(onlyProc) {
+  if (editingGroup) return;
+  var eq = currentEquipment(); if (!eq) return;   // 설비를 고르기 전에는 손대지 않음
+  var sabun = document.getElementById('sabun').value.trim();
+  if (procState.assembly && (!onlyProc || onlyProc === 'assembly')) {
+    var m, why;
+    if (eq.type === 'manual') { m = '수작업'; why = '수작업 선택 → 자동 설정'; }
+    else { var bm = ASSEMBLY_BOM[sabun]; m = (bm === '수동' || bm === '자동') ? bm : '자동'; why = (bm === '수동' || bm === '자동') ? ('사번 ' + sabun + ' BOM 기준 자동 설정') : (eq.no + ' 선택 → 자동 설정'); }
+    setSeg('assemblyMethod', m); document.getElementById('hint_assembly').textContent = '✓ ' + why + ' · 다르면 눌러서 변경';
+  }
+  if (procState.sasang && (!onlyProc || onlyProc === 'sasang')) {
+    var ms = eq.type === 'manual' ? '수사상' : '자동사상';
+    setSeg('sasangMethod', ms); document.getElementById('hint_sasang').textContent = '✓ ' + (eq.type === 'manual' ? '수작업' : eq.no) + ' 선택 → 자동 설정 · 다르면 눌러서 변경';
+  }
 }
 
 // ── 방식 선택 ──
-function pickMethod(segId, btn) {
+function pickMethod(segId, btn, byUser) {
   document.querySelectorAll('#' + segId + ' button').forEach(b => b.classList.remove('sel'));
   btn.classList.add('sel');
-  if (segId === 'sasangMethod') document.getElementById('lbl_sasang').textContent = btn.dataset.v;
-  if (segId === 'assemblyMethod') document.getElementById('lbl_assembly').textContent = btn.dataset.v;
+  var label = btn.textContent.trim();   // 2026-11-27 화면 글자(수동조립) ≠ 저장값(수동)
+  if (segId === 'sasangMethod') { document.getElementById('lbl_sasang').textContent = label; if (byUser) document.getElementById('hint_sasang').textContent = ''; }
+  if (segId === 'assemblyMethod') { document.getElementById('lbl_assembly').textContent = label; if (byUser) document.getElementById('hint_assembly').textContent = ''; }
 }
 function getMethod(segId) {
   const b = document.querySelector('#' + segId + ' button.sel');
@@ -857,6 +893,8 @@ function startEdit(gid) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function setSeg(segId, v) {
+  const LEGACY = { '수동조립': '수동', '자동조립': '자동', '기계사상': '자동사상' };   // 2026-11-27 과거 통합 일지 저장값
+  v = LEGACY[v] || v;
   const btn = Array.prototype.find.call(document.querySelectorAll('#' + segId + ' button'), function(b){ return b.dataset.v === v; });
   if (btn) pickMethod(segId, btn);
 }
